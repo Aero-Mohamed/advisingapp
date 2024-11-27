@@ -3,7 +3,7 @@
 /*
 <COPYRIGHT>
 
-    Copyright © 2022-2023, Canyon GBS LLC. All rights reserved.
+    Copyright © 2016-2024, Canyon GBS LLC. All rights reserved.
 
     Advising App™ is licensed under the Elastic License 2.0. For more details,
     see https://github.com/canyongbs/advisingapp/blob/main/LICENSE.
@@ -45,12 +45,13 @@ use Spatie\LaravelData\Mappers\SnakeCaseMapper;
 class LicenseLimitsData extends Data
 {
     public function __construct(
-        public int $conversationalAiSeats,
-        public int $retentionCrmSeats,
-        public int $recruitmentCrmSeats,
-        public int $emails,
-        public int $sms,
-        public string $resetDate,
+        public int $conversationalAiSeats = 0,
+        public int $conversationalAiAssistants = 0,
+        public int $retentionCrmSeats = 0,
+        public int $recruitmentCrmSeats = 0,
+        public int $emails = 0,
+        public int $sms = 0,
+        public ?string $resetDate = null,
     ) {}
 
     public function getResetWindow(): array

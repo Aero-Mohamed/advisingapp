@@ -3,7 +3,7 @@
 /*
 <COPYRIGHT>
 
-    Copyright © 2022-2023, Canyon GBS LLC. All rights reserved.
+    Copyright © 2016-2024, Canyon GBS LLC. All rights reserved.
 
     Advising App™ is licensed under the Elastic License 2.0. For more details,
     see https://github.com/canyongbs/advisingapp/blob/main/LICENSE.
@@ -38,71 +38,81 @@ namespace AdvisingApp\Campaign\Filament\Resources\CampaignResource\RelationManag
 
 use Filament\Forms\Form;
 use Filament\Tables\Table;
+use Illuminate\Support\Arr;
+use Filament\Tables\Actions\Action;
+use Filament\Forms\Components\Group;
 use Filament\Forms\Components\Builder;
 use Filament\Tables\Actions\EditAction;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Forms\Components\TextInput;
-use Filament\Tables\Actions\CreateAction;
+use AdvisingApp\Campaign\Models\Campaign;
 use Filament\Tables\Actions\DeleteAction;
 use Filament\Tables\Actions\BulkActionGroup;
 use Filament\Tables\Actions\DeleteBulkAction;
 use AdvisingApp\Campaign\Models\CampaignAction;
 use AdvisingApp\Campaign\Enums\CampaignActionType;
 use AdvisingApp\Campaign\Settings\CampaignSettings;
-use App\Filament\Resources\RelationManagers\RelationManager;
+use Filament\Resources\RelationManagers\RelationManager;
+use Illuminate\Database\Eloquent\Builder as QueryBuilder;
+use AdvisingApp\Campaign\Filament\Blocks\CampaignActionBlock;
 
 class CampaignActionsRelationManager extends RelationManager
 {
     protected static string $relationship = 'actions';
 
+    protected static ?string $title = 'Journey Steps';
+
     public function form(Form $form): Form
     {
-        /** @var CampaignAction $action */
-        $action = $form->model;
-
-        $form->model = $action->type->getModel();
-
         return $form
             ->schema([
                 TextInput::make('type')
                     ->required()
                     ->maxLength(255)
                     ->disabled(),
-                ...$action->type->getEditFields(),
-            ]);
+                Group::make(fn (CampaignAction $record) => $record->type->getEditFields()),
+            ])
+            ->columns(1);
     }
 
     public function table(Table $table): Table
     {
         return $table
             ->recordTitleAttribute('id')
+            ->modifyQueryUsing(fn (QueryBuilder $query) => $query->orderBy('execute_at', 'ASC'))
             ->columns([
-                TextColumn::make('type'),
-                TextColumn::make('execute_at')
+                TextColumn::make('type')->label('Step Type'),
+                TextColumn::make('execute_at')->label('Schedule')
                     ->dateTime(timezone: app(CampaignSettings::class)->getActionExecutionTimezone()),
             ])
             ->headerActions([
-                CreateAction::make()
+                Action::make('create')
+                    ->modalHeading('Create campaign actions')
                     ->form([
                         Builder::make('data')
+                            ->hiddenLabel()
                             ->addActionLabel('Add a new Campaign Action')
-                            ->blocks(CampaignActionType::blocks()),
+                            ->blocks(CampaignActionType::blocks())
+                            ->dehydrated(false)
+                            ->model($this->getOwnerRecord())
+                            ->saveRelationshipsUsing(function (Builder $component, Campaign $record) {
+                                foreach ($component->getChildComponentContainers() as $item) {
+                                    /** @var CampaignActionBlock $block */
+                                    $block = $item->getParentComponent();
+
+                                    $itemData = $item->getState(shouldCallHooksBefore: false);
+
+                                    $action = $record->actions()->create([
+                                        'type' => $block->getName(),
+                                        'data' => Arr::except($itemData, ['execute_at']),
+                                        'execute_at' => $itemData['execute_at'],
+                                    ]);
+
+                                    $item->model($action)->saveRelationships();
+                                }
+                            }),
                     ])
-                    ->using(function (array $data, string $model): CampaignAction {
-                        foreach ($data['data'] as $action) {
-                            $executeAt = $action['data']['execute_at'];
-                            unset($action['data']['execute_at']);
-
-                            $lastModel = $model::create([
-                                'campaign_id' => $this->getOwnerRecord()->id,
-                                'type' => $action['type'],
-                                'data' => $action['data'],
-                                'execute_at' => $executeAt,
-                            ]);
-                        }
-
-                        return $lastModel ?? new CampaignAction();
-                    })
+                    ->action(fn () => null)
                     ->hidden(fn () => $this->getOwnerRecord()->hasBeenExecuted() === true),
             ])
             ->actions([

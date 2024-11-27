@@ -3,7 +3,7 @@
 /*
 <COPYRIGHT>
 
-    Copyright © 2022-2023, Canyon GBS LLC. All rights reserved.
+    Copyright © 2016-2024, Canyon GBS LLC. All rights reserved.
 
     Advising App™ is licensed under the Elastic License 2.0. For more details,
     see https://github.com/canyongbs/advisingapp/blob/main/LICENSE.
@@ -45,6 +45,7 @@ use Filament\Notifications\Notification;
 use Illuminate\Database\Query\Expression;
 use Filament\Forms\Components\Wizard\Step;
 use Filament\Resources\Pages\ManageRelatedRecords;
+use Filament\Resources\RelationManagers\RelationManager;
 use AdvisingApp\Form\Enums\FormSubmissionRequestDeliveryMethod;
 
 class RequestFormSubmission extends Action
@@ -85,7 +86,7 @@ class RequestFormSubmission extends Action
                 ]),
         ]);
 
-        $this->action(function (array $data, ManageRelatedRecords $livewire) {
+        $this->action(function (array $data, ManageRelatedRecords | RelationManager $livewire) {
             $submission = $livewire->getOwnerRecord()->formSubmissions()->requested()->firstOrNew(['form_id' => $data['form_id']]);
             $submission->fill($data);
             $submission->requester()->associate(auth()->user());
@@ -102,6 +103,6 @@ class RequestFormSubmission extends Action
 
     public static function getDefaultName(): ?string
     {
-        return 'requestFormSubmission';
+        return 'Request';
     }
 }

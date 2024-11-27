@@ -3,7 +3,7 @@
 /*
 <COPYRIGHT>
 
-    Copyright © 2022-2023, Canyon GBS LLC. All rights reserved.
+    Copyright © 2016-2024, Canyon GBS LLC. All rights reserved.
 
     Advising App™ is licensed under the Elastic License 2.0. For more details,
     see https://github.com/canyongbs/advisingapp/blob/main/LICENSE.
@@ -34,9 +34,7 @@
 </COPYRIGHT>
 */
 
-use App\Models\User;
 use Illuminate\Support\Facades\Route;
-use App\Notifications\DemoNotification;
 use App\Http\Controllers\ViewPublicUserProfileController;
 
 Route::get('/profiles/{user:public_profile_slug}', ViewPublicUserProfileController::class)
@@ -45,11 +43,3 @@ Route::get('/profiles/{user:public_profile_slug}', ViewPublicUserProfileControll
 Route::middleware(['auth', 'can:authorization.view_api_documentation'])
     ->get('/api-docs', fn () => File::get(storage_path('app/api-docs/index.html')))
     ->name('api-docs');
-
-//TODO: remove
-Route::get('/demo-notification', function () {
-    /** @var User $user */
-    $user = auth()->user();
-
-    return (new DemoNotification($user))->toMail(User::first())->render();
-})->middleware(['auth']);

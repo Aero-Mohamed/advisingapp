@@ -3,7 +3,7 @@
 /*
 <COPYRIGHT>
 
-    Copyright © 2022-2023, Canyon GBS LLC. All rights reserved.
+    Copyright © 2016-2024, Canyon GBS LLC. All rights reserved.
 
     Advising App™ is licensed under the Elastic License 2.0. For more details,
     see https://github.com/canyongbs/advisingapp/blob/main/LICENSE.
@@ -36,9 +36,11 @@
 
 namespace AdvisingApp\Portal\Settings;
 
-use Spatie\LaravelSettings\Settings;
+use App\Settings\SettingsWithMedia;
+use AdvisingApp\Portal\Enums\GdprBannerButtonLabel;
+use AdvisingApp\Portal\Settings\SettingsProperties\PortalSettingsProperty;
 
-class PortalSettings extends Settings
+class PortalSettings extends SettingsWithMedia
 {
     public null $logo = null;
 
@@ -58,8 +60,6 @@ class PortalSettings extends Settings
 
     public bool $has_emergency_alerts = false;
 
-    public bool $has_service_management = false;
-
     public bool $has_notifications = false;
 
     public bool $has_knowledge_base = false;
@@ -74,7 +74,47 @@ class PortalSettings extends Settings
 
     public ?string $footer_color = null;
 
-    public ?string $footer_copyright_statement;
+    public ?array $footer_copyright_statement = null;
+
+    /**
+    * Resource Hub Portal
+    */
+    public bool $knowledge_management_portal_enabled = false;
+
+    public bool $knowledge_management_portal_service_management = false;
+
+    public bool $knowledge_management_portal_requires_authentication = false;
+
+    public ?string $knowledge_management_portal_primary_color = null;
+
+    public ?string $knowledge_management_portal_rounding = null;
+
+    public ?string $knowledge_management_portal_authorized_domain = null;
+
+    public array $gdpr_banner_text = [
+        'type' => 'doc',
+        'content' => [
+            [
+                'type' => 'paragraph',
+                'attrs' => [
+                    'textAlign' => 'start',
+                ],
+                'content' => [
+                    [
+                        'type' => 'text',
+                        'text' => 'We use cookies to personalize content, to provide social media features, and to analyze our traffic. We also share information about your use of our site with our partners who may combine it with other information that you\'ve provided to them or that they\'ve collected from your use of their services.',
+                    ],
+                ],
+            ],
+        ],
+    ];
+
+    public GdprBannerButtonLabel $gdpr_banner_button_label = GdprBannerButtonLabel::AllowCookies;
+
+    public static function getSettingsPropertyModelClass(): string
+    {
+        return PortalSettingsProperty::class;
+    }
 
     public static function group(): string
     {

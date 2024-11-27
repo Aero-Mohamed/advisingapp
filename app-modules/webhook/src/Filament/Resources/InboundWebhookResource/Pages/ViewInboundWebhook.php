@@ -3,7 +3,7 @@
 /*
 <COPYRIGHT>
 
-    Copyright © 2022-2023, Canyon GBS LLC. All rights reserved.
+    Copyright © 2016-2024, Canyon GBS LLC. All rights reserved.
 
     Advising App™ is licensed under the Elastic License 2.0. For more details,
     see https://github.com/canyongbs/advisingapp/blob/main/LICENSE.
@@ -52,14 +52,10 @@ class ViewInboundWebhook extends ViewRecord
             ->schema([
                 Section::make()
                     ->schema([
-                        TextEntry::make('source')
-                            ->translateLabel(),
-                        TextEntry::make('event')
-                            ->translateLabel(),
-                        TextEntry::make('url')
-                            ->translateLabel(),
+                        TextEntry::make('source'),
+                        TextEntry::make('event'),
+                        TextEntry::make('url'),
                         TextEntry::make('payload')
-                            ->translateLabel()
                             ->limit(100),
                     ])
                     ->columns(),

@@ -3,7 +3,7 @@
 /*
 <COPYRIGHT>
 
-    Copyright © 2022-2023, Canyon GBS LLC. All rights reserved.
+    Copyright © 2016-2024, Canyon GBS LLC. All rights reserved.
 
     Advising App™ is licensed under the Elastic License 2.0. For more details,
     see https://github.com/canyongbs/advisingapp/blob/main/LICENSE.
@@ -37,65 +37,22 @@
 namespace AdvisingApp\InAppCommunication\Providers;
 
 use Filament\Panel;
-use Filament\Support\Assets\Js;
 use Illuminate\Support\ServiceProvider;
-use Filament\Support\Facades\FilamentAsset;
 use Illuminate\Database\Eloquent\Relations\Relation;
-use AdvisingApp\Authorization\AuthorizationRoleRegistry;
 use AdvisingApp\InAppCommunication\InAppCommunicationPlugin;
 use AdvisingApp\InAppCommunication\Models\TwilioConversation;
-use AdvisingApp\Authorization\AuthorizationPermissionRegistry;
 
 class InAppCommunicationServiceProvider extends ServiceProvider
 {
     public function register()
     {
-        Panel::configureUsing(fn (Panel $panel) => $panel->plugin(new InAppCommunicationPlugin()));
+        Panel::configureUsing(fn (Panel $panel) => ($panel->getId() !== 'admin') || $panel->plugin(new InAppCommunicationPlugin()));
     }
 
     public function boot()
     {
-        Relation::morphMap(
-            [
-                'twilio_conversation' => TwilioConversation::class,
-            ]
-        );
-
-        $this->registerRolesAndPermissions();
-        $this->registerAssets();
-    }
-
-    public function registerAssets(): void
-    {
-        FilamentAsset::register([
-            Js::make('userToUserChat', __DIR__ . '/../../resources/js/dist/userToUserChat.js')->loadedOnRequest(),
-        ], 'canyon-gbs/in-app-communication');
-    }
-
-    protected function registerRolesAndPermissions()
-    {
-        $permissionRegistry = app(AuthorizationPermissionRegistry::class);
-
-        $permissionRegistry->registerApiPermissions(
-            module: 'in-app-communication',
-            path: 'permissions/api/custom'
-        );
-
-        $permissionRegistry->registerWebPermissions(
-            module: 'in-app-communication',
-            path: 'permissions/web/custom'
-        );
-
-        $roleRegistry = app(AuthorizationRoleRegistry::class);
-
-        $roleRegistry->registerApiRoles(
-            module: 'in-app-communication',
-            path: 'roles/api'
-        );
-
-        $roleRegistry->registerWebRoles(
-            module: 'in-app-communication',
-            path: 'roles/web'
-        );
+        Relation::morphMap([
+            'twilio_conversation' => TwilioConversation::class,
+        ]);
     }
 }

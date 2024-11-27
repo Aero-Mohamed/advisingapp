@@ -1,7 +1,7 @@
 /*
 <COPYRIGHT>
 
-    Copyright © 2022-2023, Canyon GBS LLC. All rights reserved.
+    Copyright © 2016-2024, Canyon GBS LLC. All rights reserved.
 
     Advising App™ is licensed under the Elastic License 2.0. For more details,
     see https://github.com/canyongbs/advisingapp/blob/main/LICENSE.
@@ -31,12 +31,12 @@
 
 </COPYRIGHT>
 */
-import { createApp, defineCustomElement, getCurrentInstance, h } from 'vue';
-import './widget.css';
-import App from './App.vue';
 import { defaultConfig, plugin } from '@formkit/vue';
-import config from './formkit.config.js';
+import { createApp, defineCustomElement, getCurrentInstance, h } from 'vue';
 import VueSignaturePad from 'vue-signature-pad';
+import App from './App.vue';
+import config from './formkit.config.js';
+import './widget.css';
 
 customElements.define(
     'survey-embed',

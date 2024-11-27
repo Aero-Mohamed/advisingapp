@@ -3,7 +3,7 @@
 /*
 <COPYRIGHT>
 
-    Copyright © 2022-2023, Canyon GBS LLC. All rights reserved.
+    Copyright © 2016-2024, Canyon GBS LLC. All rights reserved.
 
     Advising App™ is licensed under the Elastic License 2.0. For more details,
     see https://github.com/canyongbs/advisingapp/blob/main/LICENSE.
@@ -39,34 +39,33 @@ namespace AdvisingApp\Alert\Providers;
 use Filament\Panel;
 use AdvisingApp\Alert\AlertPlugin;
 use AdvisingApp\Alert\Models\Alert;
+use App\Concerns\ImplementsGraphQL;
 use Illuminate\Support\Facades\Event;
-use App\Concerns\GraphSchemaDiscovery;
 use Illuminate\Support\ServiceProvider;
 use AdvisingApp\Alert\Enums\AlertStatus;
 use AdvisingApp\Alert\Enums\AlertSeverity;
 use AdvisingApp\Alert\Events\AlertCreated;
+use AdvisingApp\Alert\Histories\AlertHistory;
 use AdvisingApp\Alert\Observers\AlertObserver;
 use Illuminate\Database\Eloquent\Relations\Relation;
-use AdvisingApp\Authorization\AuthorizationRoleRegistry;
-use AdvisingApp\Authorization\AuthorizationPermissionRegistry;
+use AdvisingApp\Alert\Observers\AlertHistoryObserver;
 use AdvisingApp\Alert\Listeners\NotifySubscribersOfAlertCreated;
 
 class AlertServiceProvider extends ServiceProvider
 {
-    use GraphSchemaDiscovery;
+    use ImplementsGraphQL;
 
     public function register(): void
     {
-        Panel::configureUsing(fn (Panel $panel) => $panel->plugin(new AlertPlugin()));
+        Panel::configureUsing(fn (Panel $panel) => ($panel->getId() !== 'admin') || $panel->plugin(new AlertPlugin()));
     }
 
     public function boot(): void
     {
         Relation::morphMap([
             'alert' => Alert::class,
+            'alert_history' => AlertHistory::class,
         ]);
-
-        $this->registerRolesAndPermissions();
 
         $this->registerObservers();
 
@@ -75,36 +74,10 @@ class AlertServiceProvider extends ServiceProvider
         $this->registerGraphQL();
     }
 
-    protected function registerRolesAndPermissions(): void
-    {
-        $permissionRegistry = app(AuthorizationPermissionRegistry::class);
-
-        $permissionRegistry->registerApiPermissions(
-            module: 'alert',
-            path: 'permissions/api/custom'
-        );
-
-        $permissionRegistry->registerWebPermissions(
-            module: 'alert',
-            path: 'permissions/web/custom'
-        );
-
-        $roleRegistry = app(AuthorizationRoleRegistry::class);
-
-        $roleRegistry->registerApiRoles(
-            module: 'alert',
-            path: 'roles/api'
-        );
-
-        $roleRegistry->registerWebRoles(
-            module: 'alert',
-            path: 'roles/web'
-        );
-    }
-
     protected function registerObservers(): void
     {
         Alert::observe(AlertObserver::class);
+        AlertHistory::observe(AlertHistoryObserver::class);
     }
 
     protected function registerEvents(): void

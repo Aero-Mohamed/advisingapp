@@ -1,7 +1,7 @@
 {{--
 <COPYRIGHT>
 
-    Copyright © 2022-2023, Canyon GBS LLC. All rights reserved.
+    Copyright © 2016-2024, Canyon GBS LLC. All rights reserved.
 
     Advising App™ is licensed under the Elastic License 2.0. For more details,
     see https://github.com/canyongbs/advisingapp/blob/main/LICENSE.
@@ -31,25 +31,70 @@
 
 </COPYRIGHT>
 --}}
-<x-filament-panels::page.simple>
-    @if (filament()->hasRegistration())
-        <x-slot name="subheading">
-            {{ __('filament-panels::pages/auth/login.actions.register.before') }}
 
-            {{ $this->registerAction }}
-        </x-slot>
-    @endif
+@php
+    use AdvisingApp\MultifactorAuthentication\Livewire\MultifactorAuthenticationManagement;
+@endphp
 
-    <x-filament-panels::form wire:submit="authenticate">
-        {{ $this->form }}
+<div class="flex w-full flex-col items-center justify-center gap-8 lg:flex-row">
+    <div class="w-full lg:w-1/2 lg:pr-8">
+        @if (filament()->hasRegistration())
+            <x-slot name="subheading">
+                {{ __('filament-panels::pages/auth/login.actions.register.before') }}
 
-        <x-filament-panels::form.actions
-            :actions="$this->getCachedFormActions()"
-            :full-width="$this->hasFullWidthFormActions()"
-        />
-        <x-filament-panels::form.actions
-            :actions="$this->getSsoFormActions()"
-            :full-width="$this->hasFullWidthFormActions()"
-        />
-    </x-filament-panels::form>
-</x-filament-panels::page.simple>
+                {{ $this->registerAction }}
+            </x-slot>
+        @endif
+
+        <x-filament-panels::form wire:submit="authenticate">
+            @if ($this->needsMfaSetup)
+                <h3 class="flex items-center gap-2 text-lg font-medium">
+                    @svg('heroicon-o-question-mark-circle', 'w-6')
+                    Multifactor authentication is required for your account.
+                </h3>
+                <p class="text-sm">To finish enabling two factor authentication, scan the following QR code using your
+                    phone's authenticator application or enter the setup key and provide the generated OTP code.</p>
+                <div class="mt-3 flex space-x-4">
+                    <div>
+                        {!! $this->getMultifactorQrCode() !!}
+                        <p class="pt-2 text-sm">Setup key {{ decrypt($this->user->multifactor_secret) }}</p>
+                    </div>
+                </div>
+            @endif
+
+            {{ $this->form }}
+
+            <x-filament-panels::form.actions
+                :actions="$this->getCachedFormActions()"
+                :full-width="$this->hasFullWidthFormActions()"
+            />
+            @if (count($this->getSsoFormActions()) > 0)
+                <small class="text-gray-800 dark:text-gray-300">or log in with single sign-on</small>
+            @endif
+            <x-filament-panels::form.actions
+                :actions="$this->getSsoFormActions()"
+                :full-width="$this->hasFullWidthFormActions()"
+            />
+        </x-filament-panels::form>
+        @if ($this->needsMFA && !$this->needsMfaSetup)
+            <x-filament::link
+                class="cursor-pointer"
+                size="sm"
+                wire:click.prevent="toggleUsingRecoveryCodes()"
+                tag="button"
+            >
+                @if ($this->usingRecoveryCode)
+                    Use MFA Code
+                @else
+                    Use Recovery Code
+                @endif
+            </x-filament::link>
+        @endif
+    </div>
+
+    <div class="w-full lg:w-1/2">
+        <x-filament-panels::login-version-card :themeChangelogUrl="$themeChangelogUrl" />
+        <x-filament-panels::login-resource-portal-card :productResourcehubUrl="$productResourcehubUrl" />
+    </div>
+
+</div>

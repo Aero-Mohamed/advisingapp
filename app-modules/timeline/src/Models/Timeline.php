@@ -3,7 +3,7 @@
 /*
 <COPYRIGHT>
 
-    Copyright © 2022-2023, Canyon GBS LLC. All rights reserved.
+    Copyright © 2016-2024, Canyon GBS LLC. All rights reserved.
 
     Advising App™ is licensed under the Elastic License 2.0. For more details,
     see https://github.com/canyongbs/advisingapp/blob/main/LICENSE.
@@ -39,6 +39,7 @@ namespace AdvisingApp\Timeline\Models;
 use App\Models\BaseModel;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Database\Eloquent\Relations\MorphTo;
 
 /**
@@ -46,6 +47,8 @@ use Illuminate\Database\Eloquent\Relations\MorphTo;
  */
 class Timeline extends BaseModel
 {
+    use SoftDeletes;
+
     protected $fillable = [
         'entity_type',
         'entity_id',

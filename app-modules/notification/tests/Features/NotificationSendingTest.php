@@ -3,7 +3,7 @@
 /*
 <COPYRIGHT>
 
-    Copyright © 2022-2023, Canyon GBS LLC. All rights reserved.
+    Copyright © 2016-2024, Canyon GBS LLC. All rights reserved.
 
     Advising App™ is licensed under the Elastic License 2.0. For more details,
     see https://github.com/canyongbs/advisingapp/blob/main/LICENSE.
@@ -35,6 +35,8 @@
 */
 
 use App\Models\User;
+use App\Models\Authenticatable;
+use Tests\Unit\TestEmailNotification;
 use AdvisingApp\Notification\Enums\NotificationChannel;
 use AdvisingApp\Notification\Models\OutboundDeliverable;
 use AdvisingApp\Notification\Notifications\BaseNotification;
@@ -48,12 +50,12 @@ use AdvisingApp\Notification\Notifications\Concerns\DatabaseChannelTrait;
 it('will create an outbound deliverable for the outbound notification', function () {
     $notifiable = User::factory()->create();
 
-    $notification = new Tests\Unit\TestEmailNotification();
+    $notification = new TestEmailNotification();
 
     $notifiable->notify($notification);
 
     expect(OutboundDeliverable::count())->toBe(1);
-    expect(OutboundDeliverable::first()->notification_class)->toBe(Tests\Unit\TestEmailNotification::class);
+    expect(OutboundDeliverable::first()->notification_class)->toBe(TestEmailNotification::class);
 });
 
 it('will create an outbound deliverable for each of the channels that the notification specifies', function () {
@@ -68,6 +70,25 @@ it('will create an outbound deliverable for each of the channels that the notifi
     expect(OutboundDeliverable::where('channel', NotificationChannel::Database)->count())->toBe(1);
 });
 
+it('will not count emails sent to Super Admin Users against quota usage', function () {
+    // Given that we have a super admin user
+    $user = User::factory()->create();
+    $nonSuperAdminUser = User::factory()->create();
+
+    $user->assignRole(Authenticatable::SUPER_ADMIN_ROLE);
+
+    // And they are sent a deliverable of any kind
+    $notification = new TestMultipleChannelNotification();
+    $user->notify($notification);
+
+    $notification = new TestMultipleChannelNotification();
+    $nonSuperAdminUser->notify($notification);
+
+    // Then the quota usage for the super admin user should be 0
+    expect(OutboundDeliverable::where('recipient_id', $user->id)->where('channel', NotificationChannel::Email)->first()->quota_usage)->toBe(0);
+    expect(OutboundDeliverable::where('recipient_id', $nonSuperAdminUser->id)->where('channel', NotificationChannel::Email)->first()->quota_usage)->toBe(1);
+});
+
 class TestMultipleChannelNotification extends BaseNotification implements EmailNotification, DatabaseNotification
 {
     use EmailChannelTrait;
@@ -78,8 +99,7 @@ class TestMultipleChannelNotification extends BaseNotification implements EmailN
         return MailMessage::make()
             ->subject('Test Subject')
             ->greeting('Test Greeting')
-            ->content('This is a test email')
-            ->salutation('Test Salutation');
+            ->content('This is a test email');
     }
 
     public function toDatabase(object $notifiable): array

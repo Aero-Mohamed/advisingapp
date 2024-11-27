@@ -3,7 +3,7 @@
 /*
 <COPYRIGHT>
 
-    Copyright © 2022-2023, Canyon GBS LLC. All rights reserved.
+    Copyright © 2016-2024, Canyon GBS LLC. All rights reserved.
 
     Advising App™ is licensed under the Elastic License 2.0. For more details,
     see https://github.com/canyongbs/advisingapp/blob/main/LICENSE.
@@ -45,16 +45,19 @@ use Filament\Forms\Components\TextInput;
 use Filament\Resources\Pages\EditRecord;
 use AdvisingApp\Division\Models\Division;
 use AdvisingApp\Prospect\Models\Prospect;
+use Illuminate\Database\Eloquent\Builder;
 use Filament\Forms\Components\MorphToSelect;
 use Filament\Forms\Components\DateTimePicker;
+use AdvisingApp\CaseManagement\Models\CaseModel;
 use AdvisingApp\StudentDataModel\Models\Student;
+use App\Models\Scopes\ExcludeConvertedProspects;
+use Filament\Forms\Components\MorphToSelect\Type;
 use AdvisingApp\Interaction\Models\InteractionType;
 use AdvisingApp\Interaction\Models\InteractionDriver;
 use AdvisingApp\Interaction\Models\InteractionStatus;
 use AdvisingApp\Interaction\Models\InteractionOutcome;
-use AdvisingApp\Interaction\Models\InteractionCampaign;
 use AdvisingApp\Interaction\Models\InteractionRelation;
-use AdvisingApp\ServiceManagement\Models\ServiceRequest;
+use AdvisingApp\Interaction\Models\InteractionInitiative;
 use AdvisingApp\Interaction\Filament\Resources\InteractionResource;
 
 class EditInteraction extends EditRecord
@@ -67,27 +70,33 @@ class EditInteraction extends EditRecord
             ->schema([
                 MorphToSelect::make('interactable')
                     ->label('Related To')
-                    ->translateLabel()
                     ->searchable()
                     ->required()
                     ->types([
-                        ...(auth()->user()->hasLicense(Student::getLicenseType()) ? [MorphToSelect\Type::make(Student::class)
+                        ...(auth()->user()->hasLicense(Student::getLicenseType()) ? [Type::make(Student::class)
                             ->titleAttribute(Student::displayNameKey())] : []),
-                        ...(auth()->user()->hasLicense(Prospect::getLicenseType()) ? [MorphToSelect\Type::make(Prospect::class)
-                            ->titleAttribute(Prospect::displayNameKey())] : []),
-                        MorphToSelect\Type::make(ServiceRequest::class)
-                            ->label('Service Request')
-                            ->titleAttribute('service_request_number'),
+                        ...(auth()->user()->hasLicense(Prospect::getLicenseType()) ? [
+                            Type::make(Prospect::class)
+                                ->titleAttribute(Prospect::displayNameKey())
+                                ->modifyOptionsQueryUsing(
+                                    fn (Builder $query, $record) => $query
+                                        ->tap(new ExcludeConvertedProspects())
+                                        ->orWhere('id', '=', $record->interactable_id)
+                                ),
+                        ] : []),
+                        Type::make(CaseModel::class)
+                            ->label('Case')
+                            ->titleAttribute('case_number'),
                     ])
                     ->columnSpanFull(),
                 Fieldset::make('Details')
                     ->schema([
-                        Select::make('interaction_campaign_id')
-                            ->relationship('campaign', 'name')
+                        Select::make('interaction_initiative_id')
+                            ->relationship('initiative', 'name')
                             ->preload()
-                            ->label('Campaign')
+                            ->label('Initiative')
                             ->required()
-                            ->exists((new InteractionCampaign())->getTable(), 'id'),
+                            ->exists((new InteractionInitiative())->getTable(), 'id'),
                         Select::make('interaction_driver_id')
                             ->relationship('driver', 'name')
                             ->preload()
@@ -128,8 +137,10 @@ class EditInteraction extends EditRecord
                 Fieldset::make('Time')
                     ->schema([
                         DateTimePicker::make('start_datetime')
+                            ->seconds(false)
                             ->required(),
                         DateTimePicker::make('end_datetime')
+                            ->seconds(false)
                             ->required(),
                     ]),
                 Fieldset::make('Notes')

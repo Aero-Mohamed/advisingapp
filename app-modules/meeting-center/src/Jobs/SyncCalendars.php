@@ -3,7 +3,7 @@
 /*
 <COPYRIGHT>
 
-    Copyright © 2022-2023, Canyon GBS LLC. All rights reserved.
+    Copyright © 2016-2024, Canyon GBS LLC. All rights reserved.
 
     Advising App™ is licensed under the Elastic License 2.0. For more details,
     see https://github.com/canyongbs/advisingapp/blob/main/LICENSE.
@@ -43,18 +43,18 @@ use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
 use AdvisingApp\MeetingCenter\Models\Calendar;
-use Illuminate\Contracts\Queue\ShouldBeUnique;
+use Illuminate\Queue\Middleware\WithoutOverlapping;
 
-class SyncCalendars implements ShouldQueue, ShouldBeUnique
+class SyncCalendars implements ShouldQueue
 {
     use Dispatchable;
     use InteractsWithQueue;
     use Queueable;
     use SerializesModels;
 
-    public function uniqueId(): string
+    public function __construct()
     {
-        return Tenant::current()->id;
+        $this->onQueue(config('meeting-center.queue'));
     }
 
     public function handle(): void
@@ -63,5 +63,10 @@ class SyncCalendars implements ShouldQueue, ShouldBeUnique
             ->each(
                 fn (Calendar $calendar) => dispatch(new SyncCalendar($calendar))
             );
+    }
+
+    public function middleware(): array
+    {
+        return [(new WithoutOverlapping(Tenant::current()->id))->dontRelease()->expireAfter(180)];
     }
 }

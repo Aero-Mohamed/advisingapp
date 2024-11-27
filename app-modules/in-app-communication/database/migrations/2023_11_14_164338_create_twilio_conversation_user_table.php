@@ -3,7 +3,7 @@
 /*
 <COPYRIGHT>
 
-    Copyright © 2022-2023, Canyon GBS LLC. All rights reserved.
+    Copyright © 2016-2024, Canyon GBS LLC. All rights reserved.
 
     Advising App™ is licensed under the Elastic License 2.0. For more details,
     see https://github.com/canyongbs/advisingapp/blob/main/LICENSE.
@@ -39,9 +39,6 @@ use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Database\Migrations\Migration;
 
 return new class () extends Migration {
-    /**
-     * Run the migrations.
-     */
     public function up(): void
     {
         Schema::create('twilio_conversation_user', function (Blueprint $table) {
@@ -50,6 +47,12 @@ return new class () extends Migration {
             $table->string('participant_sid');
             $table->boolean('is_channel_manager')->default(false);
             $table->boolean('is_pinned')->default(false);
+            $table->string('notification_preference')->default('all');
+            $table->string('first_unread_message_sid')->nullable();
+            $table->dateTime('first_unread_message_at')->nullable();
+            $table->text('last_unread_message_content')->nullable();
+            $table->dateTime('last_read_at')->nullable();
+            $table->unsignedInteger('unread_messages_count')->default(0);
 
             $table->timestamps();
 

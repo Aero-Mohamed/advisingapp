@@ -3,7 +3,7 @@
 /*
 <COPYRIGHT>
 
-    Copyright © 2022-2023, Canyon GBS LLC. All rights reserved.
+    Copyright © 2016-2024, Canyon GBS LLC. All rights reserved.
 
     Advising App™ is licensed under the Elastic License 2.0. For more details,
     see https://github.com/canyongbs/advisingapp/blob/main/LICENSE.
@@ -39,8 +39,8 @@ namespace AdvisingApp\MeetingCenter\Providers;
 use Filament\Panel;
 use App\Models\Tenant;
 use Livewire\Livewire;
+use App\Models\Scopes\SetupIsComplete;
 use Illuminate\Support\ServiceProvider;
-use Spatie\Multitenancy\TenantCollection;
 use AdvisingApp\MeetingCenter\Models\Event;
 use Illuminate\Console\Scheduling\Schedule;
 use AdvisingApp\MeetingCenter\Models\Calendar;
@@ -49,9 +49,7 @@ use AdvisingApp\MeetingCenter\MeetingCenterPlugin;
 use AdvisingApp\MeetingCenter\Models\CalendarEvent;
 use AdvisingApp\MeetingCenter\Models\EventAttendee;
 use Illuminate\Database\Eloquent\Relations\Relation;
-use AdvisingApp\Authorization\AuthorizationRoleRegistry;
 use AdvisingApp\MeetingCenter\Models\EventRegistrationForm;
-use AdvisingApp\Authorization\AuthorizationPermissionRegistry;
 use AdvisingApp\MeetingCenter\Observers\CalendarEventObserver;
 use AdvisingApp\MeetingCenter\Models\EventRegistrationFormStep;
 use AdvisingApp\MeetingCenter\Models\EventRegistrationFormField;
@@ -63,7 +61,9 @@ class MeetingCenterServiceProvider extends ServiceProvider
 {
     public function register(): void
     {
-        Panel::configureUsing(fn (Panel $panel) => $panel->plugin(new MeetingCenterPlugin()));
+        Panel::configureUsing(fn (Panel $panel) => ($panel->getId() !== 'admin') || $panel->plugin(new MeetingCenterPlugin()));
+
+        app('config')->set('meeting-center', require base_path('app-modules/meeting-center/config/meeting-center.php'));
     }
 
     public function boot(): void
@@ -82,53 +82,24 @@ class MeetingCenterServiceProvider extends ServiceProvider
 
         $this->callAfterResolving(Schedule::class, function (Schedule $schedule) {
             $schedule->call(function () {
-                /** @var TenantCollection $tenants */
-                $tenants = Tenant::cursor();
-
-                $tenants->each(function (Tenant $tenant) {
-                    $tenant->execute(function () {
-                        dispatch(new SyncCalendars());
+                Tenant::query()
+                    ->tap(new SetupIsComplete())
+                    ->cursor()
+                    ->each(function (Tenant $tenant) {
+                        $tenant->execute(function () {
+                            dispatch(new SyncCalendars());
+                        });
                     });
-                });
             })
                 ->everyMinute()
-                ->name('SyncCalendars')
+                ->name('SyncCalendarsSchedule')
                 ->onOneServer()
                 ->withoutOverlapping();
         });
 
-        $this->registerRolesAndPermissions();
-
         $this->registerObservers();
 
         Livewire::component('event-attendee-submissions-manager', EventAttendeeSubmissionsManager::class);
-    }
-
-    protected function registerRolesAndPermissions(): void
-    {
-        $permissionRegistry = app(AuthorizationPermissionRegistry::class);
-
-        $permissionRegistry->registerApiPermissions(
-            module: 'meeting-center',
-            path: 'permissions/api/custom'
-        );
-
-        $permissionRegistry->registerWebPermissions(
-            module: 'meeting-center',
-            path: 'permissions/web/custom'
-        );
-
-        $roleRegistry = app(AuthorizationRoleRegistry::class);
-
-        $roleRegistry->registerApiRoles(
-            module: 'meeting-center',
-            path: 'roles/api'
-        );
-
-        $roleRegistry->registerWebRoles(
-            module: 'meeting-center',
-            path: 'roles/web'
-        );
     }
 
     protected function registerObservers(): void

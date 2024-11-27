@@ -3,7 +3,7 @@
 /*
 <COPYRIGHT>
 
-    Copyright © 2022-2023, Canyon GBS LLC. All rights reserved.
+    Copyright © 2016-2024, Canyon GBS LLC. All rights reserved.
 
     Advising App™ is licensed under the Elastic License 2.0. For more details,
     see https://github.com/canyongbs/advisingapp/blob/main/LICENSE.
@@ -36,14 +36,22 @@
 
 namespace App\Providers;
 
+use App\Models\User;
 use App\Models\Export;
 use App\Models\Import;
 use Illuminate\View\View;
 use App\Models\FailedImportRow;
+use App\Settings\DisplaySettings;
 use Filament\Support\Colors\Color;
+use Filament\Forms\Components\Toggle;
+use Filament\Forms\Components\Checkbox;
+use Filament\Tables\Columns\TextColumn;
 use Illuminate\Support\ServiceProvider;
+use Filament\Forms\Components\DatePicker;
 use Filament\Support\Facades\FilamentView;
 use Filament\Support\Facades\FilamentColor;
+use Filament\Infolists\Components\TextEntry;
+use Filament\Forms\Components\DateTimePicker;
 use Filament\Actions\Exports\Models\Export as BaseExport;
 use Filament\Actions\Imports\Models\Import as BaseImport;
 use Filament\Actions\Imports\Models\FailedImportRow as BaseFailedImportRow;
@@ -177,5 +185,70 @@ class FilamentServiceProvider extends ServiceProvider
             'panels::footer',
             fn (): View => view('filament.footer'),
         );
+
+        DateTimePicker::configureUsing(function (DateTimePicker $component) {
+            if ($component instanceof DatePicker) {
+                return;
+            }
+
+            $timezone = app(DisplaySettings::class)->getTimezone();
+            $timezoneLabel = app(DisplaySettings::class)->getTimezoneLabel();
+
+            $component
+                ->timezone($timezone)
+                ->hintIcon('heroicon-m-clock')
+                ->hintIconTooltip("This time is set in {$timezoneLabel}.");
+        });
+
+        TextColumn::configureUsing(function (TextColumn $column) {
+            $timezone = app(DisplaySettings::class)->getTimezone();
+            $timezoneLabel = app(DisplaySettings::class)->getTimezoneLabel();
+
+            $column
+                ->timezone($timezone)
+                ->tooltip(function (TextColumn $column) use ($timezoneLabel): ?string {
+                    if (! ($column->isTime() || $column->isDateTime())) {
+                        return null;
+                    }
+
+                    return "This time is set in {$timezoneLabel}.";
+                });
+        });
+
+        TextEntry::configureUsing(function (TextEntry $entry) {
+            $timezone = app(DisplaySettings::class)->getTimezone();
+            $timezoneLabel = app(DisplaySettings::class)->getTimezoneLabel();
+
+            $entry
+                ->timezone($timezone)
+                ->hintIcon(function (TextEntry $entry): ?string {
+                    if (! ($entry->isTime() || $entry->isDateTime())) {
+                        return null;
+                    }
+
+                    return 'heroicon-m-clock';
+                })
+                ->hintIconTooltip(function (TextEntry $entry) use ($timezoneLabel): ?string {
+                    if (! ($entry->isTime() || $entry->isDateTime())) {
+                        return null;
+                    }
+
+                    return "This time is set in {$timezoneLabel}.";
+                });
+        });
+
+        Toggle::macro('lockedWithoutAnyLicenses', function (User $user, array $licenses) {
+            /** @var Toggle $this */
+            return $this->disabled(! $user->hasAnyLicense($licenses))
+                ->hintIcon(fn (Toggle $component) => $component->isDisabled() ? 'heroicon-m-lock-closed' : null)
+                ->hintIconTooltip('A CRM license is required for our public profile features.');
+        });
+
+        Checkbox::macro('lockedWithoutAnyLicenses', function (User $user, array $licenses) {
+            /** @var Checkbox $this */
+            return $this->disabled(! $user->hasAnyLicense($licenses))
+                ->hintIcon(fn (Checkbox $component) => $component->isDisabled() ? 'heroicon-m-lock-closed' : null)
+                ->hintIconTooltip('A CRM license is required for our public profile features.');
+        });
     }
 }

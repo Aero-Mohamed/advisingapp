@@ -3,7 +3,7 @@
 /*
 <COPYRIGHT>
 
-    Copyright © 2022-2023, Canyon GBS LLC. All rights reserved.
+    Copyright © 2016-2024, Canyon GBS LLC. All rights reserved.
 
     Advising App™ is licensed under the Elastic License 2.0. For more details,
     see https://github.com/canyongbs/advisingapp/blob/main/LICENSE.
@@ -39,17 +39,18 @@ namespace AdvisingApp\Prospect\Filament\Resources\ProspectResource\RelationManag
 use Filament\Forms\Form;
 use Filament\Tables\Table;
 use Filament\Infolists\Infolist;
-use App\Filament\Columns\IdColumn;
+use Illuminate\Support\HtmlString;
 use Filament\Tables\Actions\ViewAction;
 use Filament\Tables\Columns\TextColumn;
 use Illuminate\Database\Eloquent\Model;
+use Filament\Support\Enums\IconPosition;
+use App\Filament\Tables\Columns\IdColumn;
 use Filament\Tables\Actions\CreateAction;
 use Filament\Infolists\Components\Fieldset;
-use Filament\Infolists\Components\IconEntry;
 use Filament\Infolists\Components\TextEntry;
 use AdvisingApp\Engagement\Models\Engagement;
+use Filament\Resources\RelationManagers\RelationManager;
 use AdvisingApp\Engagement\Enums\EngagementDeliveryStatus;
-use App\Filament\Resources\RelationManagers\RelationManager;
 use AdvisingApp\Engagement\Actions\CreateEngagementDeliverable;
 use AdvisingApp\Engagement\Filament\Resources\EngagementResource\Pages\CreateEngagement;
 
@@ -78,8 +79,7 @@ class EngagementsRelationManager extends RelationManager
                         TextEntry::make('subject')
                             ->columnSpanFull(),
                         TextEntry::make('body')
-                            ->getStateUsing(fn (Engagement $engagement): string => $engagement->getBody())
-                            ->markdown()
+                            ->getStateUsing(fn (Engagement $engagement): HtmlString => $engagement->getBody())
                             ->columnSpanFull(),
                     ]),
                 Fieldset::make('deliverable')
@@ -88,18 +88,12 @@ class EngagementsRelationManager extends RelationManager
                     ->schema([
                         TextEntry::make('deliverable.channel')
                             ->label('Channel'),
-                        IconEntry::make('deliverable.delivery_status')
-                            ->icon(fn (EngagementDeliveryStatus $state): string => match ($state) {
-                                EngagementDeliveryStatus::Successful => 'heroicon-o-check-circle',
-                                EngagementDeliveryStatus::Awaiting, EngagementDeliveryStatus::Dispatched => 'heroicon-o-clock',
-                                EngagementDeliveryStatus::Failed, EngagementDeliveryStatus::DispatchFailed, EngagementDeliveryStatus::RateLimited => 'heroicon-o-x-circle',
-                            })
-                            ->color(fn (EngagementDeliveryStatus $state): string => match ($state) {
-                                EngagementDeliveryStatus::Successful => 'success',
-                                EngagementDeliveryStatus::Awaiting, EngagementDeliveryStatus::Dispatched => 'info',
-                                EngagementDeliveryStatus::Failed, EngagementDeliveryStatus::DispatchFailed, EngagementDeliveryStatus::RateLimited => 'danger',
-                            })
-                            ->label('Status'),
+                        TextEntry::make('deliverable.delivery_status')
+                            ->iconPosition(IconPosition::After)
+                            ->icon(fn (EngagementDeliveryStatus $state): string => $state->getIconClass())
+                            ->iconColor(fn (EngagementDeliveryStatus $state): string => $state->getColor())
+                            ->label('Status')
+                            ->formatStateUsing(fn (Engagement $engagement): string => $engagement->deliverable->delivery_status->getMessage()),
                         TextEntry::make('deliverable.delivered_at')
                             ->label('Delivered At')
                             ->hidden(fn (Engagement $engagement): bool => is_null($engagement->deliverable->delivered_at)),

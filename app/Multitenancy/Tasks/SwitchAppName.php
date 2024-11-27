@@ -3,7 +3,7 @@
 /*
 <COPYRIGHT>
 
-    Copyright © 2022-2023, Canyon GBS LLC. All rights reserved.
+    Copyright © 2016-2024, Canyon GBS LLC. All rights reserved.
 
     Advising App™ is licensed under the Elastic License 2.0. For more details,
     see https://github.com/canyongbs/advisingapp/blob/main/LICENSE.
@@ -38,6 +38,7 @@ namespace App\Multitenancy\Tasks;
 
 use Spatie\Multitenancy\Models\Tenant;
 use Spatie\Multitenancy\Tasks\SwitchTenantTask;
+use App\Multitenancy\DataTransferObjects\TenantConfig;
 
 class SwitchAppName implements SwitchTenantTask
 {
@@ -49,7 +50,12 @@ class SwitchAppName implements SwitchTenantTask
 
     public function makeCurrent(Tenant $tenant): void
     {
-        $this->setAppName("{$tenant->name} | {$this->originalAppName}");
+        /** @var TenantConfig $config */
+        $config = $tenant->config;
+
+        $appName = $config->applicationName ?? config('app.name');
+
+        $this->setAppName($appName);
     }
 
     public function forgetCurrent(): void

@@ -3,7 +3,7 @@
 /*
 <COPYRIGHT>
 
-    Copyright © 2022-2023, Canyon GBS LLC. All rights reserved.
+    Copyright © 2016-2024, Canyon GBS LLC. All rights reserved.
 
     Advising App™ is licensed under the Elastic License 2.0. For more details,
     see https://github.com/canyongbs/advisingapp/blob/main/LICENSE.
@@ -150,10 +150,6 @@ return [
     'app_import_data' => 'Import data',
     'app_imported_rows_to_table' => 'Imported :rows rows to :table table',
     'app_parse_csv' => 'Parse CSV',
-    'asset' => 'Asset',
-    'assets' => 'Assets',
-    'assets_history' => 'Assets history',
-    'assets_management' => 'Assets management',
     'assigned_to' => 'Assigned to',
     'assigned_user' => 'Assigned (user)',
     'attachment' => 'Attachment',

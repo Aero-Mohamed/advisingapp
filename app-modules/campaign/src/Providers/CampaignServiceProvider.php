@@ -3,7 +3,7 @@
 /*
 <COPYRIGHT>
 
-    Copyright © 2022-2023, Canyon GBS LLC. All rights reserved.
+    Copyright © 2016-2024, Canyon GBS LLC. All rights reserved.
 
     Advising App™ is licensed under the Elastic License 2.0. For more details,
     see https://github.com/canyongbs/advisingapp/blob/main/LICENSE.
@@ -38,23 +38,21 @@ namespace AdvisingApp\Campaign\Providers;
 
 use Filament\Panel;
 use App\Models\Tenant;
+use App\Models\Scopes\SetupIsComplete;
 use Illuminate\Support\ServiceProvider;
 use AdvisingApp\Campaign\CampaignPlugin;
 use AdvisingApp\Campaign\Models\Campaign;
-use Spatie\Multitenancy\TenantCollection;
 use Illuminate\Console\Scheduling\Schedule;
 use AdvisingApp\Campaign\Models\CampaignAction;
 use AdvisingApp\Campaign\Observers\CampaignObserver;
 use Illuminate\Database\Eloquent\Relations\Relation;
-use AdvisingApp\Authorization\AuthorizationRoleRegistry;
 use AdvisingApp\Campaign\Actions\ExecuteCampaignActions;
-use AdvisingApp\Authorization\AuthorizationPermissionRegistry;
 
 class CampaignServiceProvider extends ServiceProvider
 {
     public function register()
     {
-        Panel::configureUsing(fn (Panel $panel) => $panel->plugin(new CampaignPlugin()));
+        Panel::configureUsing(fn (Panel $panel) => ($panel->getId() !== 'admin') || $panel->plugin(new CampaignPlugin()));
     }
 
     public function boot()
@@ -66,22 +64,20 @@ class CampaignServiceProvider extends ServiceProvider
 
         $this->callAfterResolving(Schedule::class, function (Schedule $schedule) {
             $schedule->call(function () {
-                /** @var TenantCollection $tenants */
-                $tenants = Tenant::cursor();
-
-                $tenants->each(function (Tenant $tenant) {
-                    $tenant->execute(function () {
-                        dispatch(new ExecuteCampaignActions());
+                Tenant::query()
+                    ->tap(new SetupIsComplete())
+                    ->cursor()
+                    ->each(function (Tenant $tenant) {
+                        $tenant->execute(function () {
+                            dispatch(new ExecuteCampaignActions());
+                        });
                     });
-                });
             })
                 ->everyMinute()
-                ->name('ExecuteCampaignActions')
+                ->name('ExecuteCampaignActionsSchedule')
                 ->onOneServer()
                 ->withoutOverlapping();
         });
-
-        $this->registerRolesAndPermissions();
 
         $this->registerObservers();
     }
@@ -89,32 +85,5 @@ class CampaignServiceProvider extends ServiceProvider
     public function registerObservers(): void
     {
         Campaign::observe(CampaignObserver::class);
-    }
-
-    protected function registerRolesAndPermissions()
-    {
-        $permissionRegistry = app(AuthorizationPermissionRegistry::class);
-
-        $permissionRegistry->registerApiPermissions(
-            module: 'campaign',
-            path: 'permissions/api/custom'
-        );
-
-        $permissionRegistry->registerWebPermissions(
-            module: 'campaign',
-            path: 'permissions/web/custom'
-        );
-
-        $roleRegistry = app(AuthorizationRoleRegistry::class);
-
-        $roleRegistry->registerApiRoles(
-            module: 'campaign',
-            path: 'roles/api'
-        );
-
-        $roleRegistry->registerWebRoles(
-            module: 'campaign',
-            path: 'roles/web'
-        );
     }
 }

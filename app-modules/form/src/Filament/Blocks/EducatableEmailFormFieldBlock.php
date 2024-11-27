@@ -3,7 +3,7 @@
 /*
 <COPYRIGHT>
 
-    Copyright © 2022-2023, Canyon GBS LLC. All rights reserved.
+    Copyright © 2016-2024, Canyon GBS LLC. All rights reserved.
 
     Advising App™ is licensed under the Elastic License 2.0. For more details,
     see https://github.com/canyongbs/advisingapp/blob/main/LICENSE.
@@ -83,12 +83,12 @@ class EducatableEmailFormFieldBlock extends FormFieldBlock
         return ['string', 'email', 'max:255'];
     }
 
-    public static function getSubmissionState(mixed $response): array
+    public static function getSubmissionState(SubmissibleField $field, mixed $response): array
     {
         $author = app(ResolveSubmissionAuthorFromEmail::class)($response);
 
         return [
-            'response' => $response,
+            ...parent::getSubmissionState($field, $response),
             'authorKey' => $author ? $author->getKey() : null,
             'authorType' => $author ? $author::class : null,
         ];

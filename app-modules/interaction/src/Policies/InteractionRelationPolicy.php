@@ -3,7 +3,7 @@
 /*
 <COPYRIGHT>
 
-    Copyright © 2022-2023, Canyon GBS LLC. All rights reserved.
+    Copyright © 2016-2024, Canyon GBS LLC. All rights reserved.
 
     Advising App™ is licensed under the Elastic License 2.0. For more details,
     see https://github.com/canyongbs/advisingapp/blob/main/LICENSE.
@@ -64,7 +64,7 @@ class InteractionRelationPolicy
     public function view(Authenticatable $authenticatable, InteractionRelation $relation): Response
     {
         return $authenticatable->canOrElse(
-            abilities: ['interaction_relation.*.view', "interaction_relation.{$relation->id}.view"],
+            abilities: ["interaction_relation.{$relation->id}.view"],
             denyResponse: 'You do not have permission to view this interaction relation.'
         );
     }
@@ -80,7 +80,7 @@ class InteractionRelationPolicy
     public function update(Authenticatable $authenticatable, InteractionRelation $relation): Response
     {
         return $authenticatable->canOrElse(
-            abilities: ['interaction_relation.*.update', "interaction_relation.{$relation->id}.update"],
+            abilities: ["interaction_relation.{$relation->id}.update"],
             denyResponse: 'You do not have permission to update this interaction relation.'
         );
     }
@@ -88,7 +88,7 @@ class InteractionRelationPolicy
     public function delete(Authenticatable $authenticatable, InteractionRelation $relation): Response
     {
         return $authenticatable->canOrElse(
-            abilities: ['interaction_relation.*.delete', "interaction_relation.{$relation->id}.delete"],
+            abilities: ["interaction_relation.{$relation->id}.delete"],
             denyResponse: 'You do not have permission to delete this interaction relation.'
         );
     }
@@ -96,7 +96,7 @@ class InteractionRelationPolicy
     public function restore(Authenticatable $authenticatable, InteractionRelation $relation): Response
     {
         return $authenticatable->canOrElse(
-            abilities: ['interaction_relation.*.restore', "interaction_relation.{$relation->id}.restore"],
+            abilities: ["interaction_relation.{$relation->id}.restore"],
             denyResponse: 'You do not have permission to restore this interaction relation.'
         );
     }
@@ -104,7 +104,7 @@ class InteractionRelationPolicy
     public function forceDelete(Authenticatable $authenticatable, InteractionRelation $relation): Response
     {
         return $authenticatable->canOrElse(
-            abilities: ['interaction_relation.*.force-delete', "interaction_relation.{$relation->id}.force-delete"],
+            abilities: ["interaction_relation.{$relation->id}.force-delete"],
             denyResponse: 'You do not have permission to permanently delete this interaction relation.'
         );
     }

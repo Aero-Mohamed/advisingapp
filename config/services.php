@@ -3,7 +3,7 @@
 /*
 <COPYRIGHT>
 
-    Copyright © 2022-2023, Canyon GBS LLC. All rights reserved.
+    Copyright © 2016-2024, Canyon GBS LLC. All rights reserved.
 
     Advising App™ is licensed under the Elastic License 2.0. For more details,
     see https://github.com/canyongbs/advisingapp/blob/main/LICENSE.
@@ -81,21 +81,6 @@ return [
         'client_id' => env('GOOGLE_CLIENT_ID'),
         'client_secret' => env('GOOGLE_CLIENT_SECRET'),
         'redirect' => env('GOOGLE_REDIRECT_URI'),
-    ],
-
-    'twilio' => [
-        'test_from_number' => env('TWILIO_TEST_FROM_NUMBER'),
-        'test_to_number' => env('TWILIO_TEST_TO_NUMBER'),
-        'enable_test_sender' => env('TWILIO_ENABLE_TEST_SENDER', false),
-    ],
-
-    // TODO Find a way to move this setting to the Integration AI module
-    'azure_open_ai' => [
-        'endpoint' => env('AZURE_OPEN_AI_BASE_ENDPOINT'),
-        'api_key' => env('AZURE_OPEN_AI_API_KEY'),
-        'api_version' => env('AZURE_OPEN_AI_API_VERSION'),
-        'deployment_name' => env('AZURE_OPEN_AI_DEPLOYMENT_NAME'),
-        'enable_test_mode' => env('AZURE_OPEN_AI_ENABLE_TEST_MODE', true),
     ],
 
     'microsoft_graph' => [

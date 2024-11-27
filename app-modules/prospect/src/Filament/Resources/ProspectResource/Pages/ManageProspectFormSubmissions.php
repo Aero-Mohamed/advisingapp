@@ -3,7 +3,7 @@
 /*
 <COPYRIGHT>
 
-    Copyright © 2022-2023, Canyon GBS LLC. All rights reserved.
+    Copyright © 2016-2024, Canyon GBS LLC. All rights reserved.
 
     Advising App™ is licensed under the Elastic License 2.0. For more details,
     see https://github.com/canyongbs/advisingapp/blob/main/LICENSE.
@@ -36,13 +36,15 @@
 
 namespace AdvisingApp\Prospect\Filament\Resources\ProspectResource\Pages;
 
+use App\Enums\Feature;
 use Filament\Tables\Table;
 use Carbon\CarbonInterface;
-use App\Filament\Columns\IdColumn;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Cache;
 use Filament\Tables\Actions\ViewAction;
 use Filament\Tables\Columns\TextColumn;
 use AdvisingApp\Prospect\Models\Prospect;
+use App\Filament\Tables\Columns\IdColumn;
 use Filament\Tables\Actions\DeleteAction;
 use AdvisingApp\Form\Models\FormSubmission;
 use Filament\Tables\Actions\BulkActionGroup;
@@ -50,12 +52,15 @@ use Filament\Tables\Actions\DeleteBulkAction;
 use AdvisingApp\Form\Enums\FormSubmissionStatus;
 use Filament\Resources\Pages\ManageRelatedRecords;
 use AdvisingApp\Form\Filament\Resources\FormResource;
+use AdvisingApp\Prospect\Concerns\ProspectHolisticViewPage;
 use AdvisingApp\Form\Filament\Actions\RequestFormSubmission;
 use AdvisingApp\Prospect\Filament\Resources\ProspectResource;
 use AdvisingApp\Form\Filament\Tables\Filters\FormSubmissionStatusFilter;
 
 class ManageProspectFormSubmissions extends ManageRelatedRecords
 {
+    use ProspectHolisticViewPage;
+
     protected static string $resource = ProspectResource::class;
 
     protected static string $relationship = 'formSubmissions';
@@ -67,6 +72,11 @@ class ManageProspectFormSubmissions extends ManageRelatedRecords
     protected static ?string $breadcrumb = 'Form Submissions';
 
     protected static ?string $navigationIcon = 'heroicon-o-document-text';
+
+    public static function canAccess(array $parameters = []): bool
+    {
+        return parent::canAccess($parameters) && Gate::check(Feature::OnlineForms->getGateName());
+    }
 
     public function table(Table $table): Table
     {
@@ -115,9 +125,9 @@ class ManageProspectFormSubmissions extends ManageRelatedRecords
         $ownerRecord = $urlParameters['record'];
 
         /** @var Prospect $ownerRecord */
-        $formSubmissionsCount = Cache::tags('{form-submission-count}')
+        $formSubmissionsCount = Cache::tags('form-submission-count')
             ->remember(
-                "{form-submission-count-{$ownerRecord->getKey()}}",
+                "form-submission-count-{$ownerRecord->getKey()}",
                 now()->addMinutes(5),
                 function () use ($ownerRecord): int {
                     return $ownerRecord->formSubmissions()->count();

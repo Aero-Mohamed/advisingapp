@@ -3,7 +3,7 @@
 /*
 <COPYRIGHT>
 
-    Copyright © 2022-2023, Canyon GBS LLC. All rights reserved.
+    Copyright © 2016-2024, Canyon GBS LLC. All rights reserved.
 
     Advising App™ is licensed under the Elastic License 2.0. For more details,
     see https://github.com/canyongbs/advisingapp/blob/main/LICENSE.
@@ -42,20 +42,24 @@ use Illuminate\Database\Eloquent\Model;
 use OwenIt\Auditing\Contracts\Auditable;
 use AdvisingApp\Prospect\Models\Prospect;
 use AdvisingApp\Timeline\Models\Timeline;
+use Illuminate\Database\Eloquent\SoftDeletes;
 use AdvisingApp\StudentDataModel\Models\Student;
 use Illuminate\Contracts\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Relations\MorphTo;
 use Illuminate\Database\Eloquent\Relations\MorphOne;
+use AdvisingApp\Engagement\Enums\EngagementDeliveryMethod;
 use AdvisingApp\Timeline\Models\Contracts\ProvidesATimeline;
+use AdvisingApp\Engagement\Models\Contracts\HasDeliveryMethod;
 use AdvisingApp\Timeline\Timelines\EngagementResponseTimeline;
 use AdvisingApp\Audit\Models\Concerns\Auditable as AuditableTrait;
 
 /**
  * @mixin IdeHelperEngagementResponse
  */
-class EngagementResponse extends BaseModel implements Auditable, ProvidesATimeline
+class EngagementResponse extends BaseModel implements Auditable, ProvidesATimeline, HasDeliveryMethod
 {
     use AuditableTrait;
+    use SoftDeletes;
 
     protected $fillable = [
         'sender_id',
@@ -100,5 +104,11 @@ class EngagementResponse extends BaseModel implements Auditable, ProvidesATimeli
     public function scopeSentByProspect(Builder $query): void
     {
         $query->where('sender_type', resolve(Prospect::class)->getMorphClass());
+    }
+
+    public function getDeliveryMethod(): EngagementDeliveryMethod
+    {
+        //Only sms for now
+        return EngagementDeliveryMethod::Sms;
     }
 }

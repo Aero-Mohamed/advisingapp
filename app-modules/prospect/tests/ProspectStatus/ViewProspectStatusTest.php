@@ -3,7 +3,7 @@
 /*
 <COPYRIGHT>
 
-    Copyright © 2022-2023, Canyon GBS LLC. All rights reserved.
+    Copyright © 2016-2024, Canyon GBS LLC. All rights reserved.
 
     Advising App™ is licensed under the Elastic License 2.0. For more details,
     see https://github.com/canyongbs/advisingapp/blob/main/LICENSE.
@@ -38,10 +38,12 @@ use App\Models\User;
 
 use function Tests\asSuperAdmin;
 use function Pest\Laravel\actingAs;
+use function Pest\Livewire\livewire;
 
 use AdvisingApp\Prospect\Models\Prospect;
 use AdvisingApp\Prospect\Models\ProspectStatus;
 use AdvisingApp\Prospect\Filament\Resources\ProspectStatusResource;
+use AdvisingApp\Prospect\Filament\Resources\ProspectStatusResource\Pages\ViewProspectStatus;
 
 test('The correct details are displayed on the ViewProspectStatus page', function () {
     $prospectStatus = ProspectStatus::factory()->create();
@@ -88,4 +90,32 @@ test('ViewProspectStatus is gated with proper access control', function () {
                 'record' => $prospectStatus,
             ])
         )->assertSuccessful();
+});
+
+it('displays the edit action and not the lock when the prospect status is not system protected', function () {
+    $prospectStatus = ProspectStatus::factory()->create();
+
+    asSuperAdmin();
+
+    livewire(ViewProspectStatus::class, [
+        'record' => $prospectStatus->getRouteKey(),
+    ])
+        ->assertDontSeeHtml('data-identifier="prospect_status_system_protected"')
+        ->assertActionVisible('edit')
+        ->assertActionEnabled('edit');
+});
+
+it('displays the lock icon rather than the edit action when the prospect status is system protected', function () {
+    $prospectStatus = ProspectStatus::factory()->create([
+        'is_system_protected' => true,
+    ]);
+
+    asSuperAdmin();
+
+    livewire(ViewProspectStatus::class, [
+        'record' => $prospectStatus->getRouteKey(),
+    ])
+        ->assertSeeHtml('data-identifier="prospect_status_system_protected"')
+        ->assertActionHidden('edit')
+        ->assertActionDisabled('edit');
 });

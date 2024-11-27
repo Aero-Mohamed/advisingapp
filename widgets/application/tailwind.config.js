@@ -1,7 +1,7 @@
 /*
 <COPYRIGHT>
 
-    Copyright © 2022-2023, Canyon GBS LLC. All rights reserved.
+    Copyright © 2016-2024, Canyon GBS LLC. All rights reserved.
 
     Advising App™ is licensed under the Elastic License 2.0. For more details,
     see https://github.com/canyongbs/advisingapp/blob/main/LICENSE.
@@ -35,9 +35,5 @@ import preset from '../form/tailwind.config.preset.js';
 
 export default {
     presets: [preset],
-    content: [
-        './src/**/*.vue',
-        '../form/src/**/*.vue',
-        '../form/src/FormKit/theme.js',
-    ],
+    content: ['./src/**/*.vue', '../form/src/**/*.vue', '../form/src/FormKit/theme.js'],
 };

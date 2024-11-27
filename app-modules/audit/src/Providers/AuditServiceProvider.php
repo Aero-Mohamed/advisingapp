@@ -3,7 +3,7 @@
 /*
 <COPYRIGHT>
 
-    Copyright © 2022-2023, Canyon GBS LLC. All rights reserved.
+    Copyright © 2016-2024, Canyon GBS LLC. All rights reserved.
 
     Advising App™ is licensed under the Elastic License 2.0. For more details,
     see https://github.com/canyongbs/advisingapp/blob/main/LICENSE.
@@ -39,46 +39,27 @@ namespace AdvisingApp\Audit\Providers;
 use Filament\Panel;
 use AdvisingApp\Audit\AuditPlugin;
 use AdvisingApp\Audit\Models\Audit;
+use App\Concerns\ImplementsGraphQL;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Database\Eloquent\Relations\Relation;
-use AdvisingApp\Authorization\AuthorizationRoleRegistry;
-use AdvisingApp\Authorization\AuthorizationPermissionRegistry;
 
 class AuditServiceProvider extends ServiceProvider
 {
+    use ImplementsGraphQL;
+
     public function register(): void
     {
-        Panel::configureUsing(fn (Panel $panel) => $panel->plugin(new AuditPlugin()));
+        Panel::configureUsing(fn (Panel $panel) => ($panel->getId() !== 'admin') || $panel->plugin(new AuditPlugin()));
 
         app('config')->set('audit', require base_path('app-modules/audit/config/audit.php'));
     }
 
-    public function boot(AuthorizationPermissionRegistry $permissionRegistry, AuthorizationRoleRegistry $roleRegistry): void
+    public function boot(): void
     {
-        Relation::morphMap(
-            [
-                'audit' => Audit::class,
-            ]
-        );
+        Relation::morphMap([
+            'audit' => Audit::class,
+        ]);
 
-        $permissionRegistry->registerApiPermissions(
-            module: 'audit',
-            path: 'permissions/api/custom'
-        );
-
-        $permissionRegistry->registerWebPermissions(
-            module: 'audit',
-            path: 'permissions/web/custom'
-        );
-
-        $roleRegistry->registerApiRoles(
-            module: 'audit',
-            path: 'roles/api'
-        );
-
-        $roleRegistry->registerWebRoles(
-            module: 'audit',
-            path: 'roles/web'
-        );
+        $this->discoverSchema(__DIR__ . '/../../graphql/audit.graphql');
     }
 }

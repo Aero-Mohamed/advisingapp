@@ -3,7 +3,7 @@
 /*
 <COPYRIGHT>
 
-    Copyright © 2022-2023, Canyon GBS LLC. All rights reserved.
+    Copyright © 2016-2024, Canyon GBS LLC. All rights reserved.
 
     Advising App™ is licensed under the Elastic License 2.0. For more details,
     see https://github.com/canyongbs/advisingapp/blob/main/LICENSE.
@@ -37,5 +37,15 @@
 return [
     'super_admin' => [
         'email' => 'sampleadmin@advising.app',
+    ],
+    'internal_users' => [
+        'emails' => env('DEMO_INTERNAL_USER_EMAILS') ? explode(',', env('DEMO_INTERNAL_USER_EMAILS')) : null,
+    ],
+    'twilio' => [
+        'account_sid' => env('TWILIO_ACCOUNT_SID'),
+        'auth_token' => env('TWILIO_AUTH_TOKEN'),
+        'from_number' => env('TWILIO_TEST_FROM_NUMBER', env('TWILIO_FROM_NUMBER', env('TWILIO_PHONE_NUMBER'))),
+        'to_number' => env('TWILIO_TEST_TO_NUMBER', env('TWILIO_TO_NUMBER')),
+        'enable_test_sender' => env('TWILIO_ENABLE_TEST_SENDER', false),
     ],
 ];

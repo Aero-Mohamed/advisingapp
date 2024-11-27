@@ -3,7 +3,7 @@
 /*
 <COPYRIGHT>
 
-    Copyright © 2022-2023, Canyon GBS LLC. All rights reserved.
+    Copyright © 2016-2024, Canyon GBS LLC. All rights reserved.
 
     Advising App™ is licensed under the Elastic License 2.0. For more details,
     see https://github.com/canyongbs/advisingapp/blob/main/LICENSE.
@@ -35,7 +35,11 @@
 */
 
 use AdvisingApp\Audit\Models\Audit;
-use OwenIt\Auditing\Listeners\ProcessDispatchAudit;
+use OwenIt\Auditing\Resolvers\UrlResolver;
+use OwenIt\Auditing\Resolvers\UserResolver;
+use App\AuditResolvers\ChangeAgentNameResolver;
+use OwenIt\Auditing\Resolvers\IpAddressResolver;
+use OwenIt\Auditing\Resolvers\UserAgentResolver;
 
 return [
     'enabled' => env('AUDITING_ENABLED', true),
@@ -67,7 +71,7 @@ return [
             'api',
             'sanctum',
         ],
-        'resolver' => OwenIt\Auditing\Resolvers\UserResolver::class,
+        'resolver' => UserResolver::class,
     ],
 
     /*
@@ -79,9 +83,10 @@ return [
     |
     */
     'resolvers' => [
-        'ip_address' => OwenIt\Auditing\Resolvers\IpAddressResolver::class,
-        'user_agent' => OwenIt\Auditing\Resolvers\UserAgentResolver::class,
-        'url' => OwenIt\Auditing\Resolvers\UrlResolver::class,
+        'ip_address' => IpAddressResolver::class,
+        'user_agent' => UserAgentResolver::class,
+        'url' => UrlResolver::class,
+        'change_agent_name' => ChangeAgentNameResolver::class,
     ],
 
     /*
@@ -138,7 +143,7 @@ return [
     |
     */
 
-    'empty_values' => true,
+    'empty_values' => env('AUDIT_EMPTY_VALUES', true),
     'allowed_empty_values' => [
         'retrieved',
     ],
@@ -152,7 +157,7 @@ return [
     |
     */
 
-    'timestamps' => true,
+    'timestamps' => env('AUDIT_TIMESTAMPS', true),
 
     /*
     |--------------------------------------------------------------------------
@@ -203,9 +208,9 @@ return [
     */
 
     'queue' => [
-        'dispatch_listener' => ProcessDispatchAudit::class,
+        'enable' => true,
         'connection' => env('AUDIT_QUEUE_CONNECTION', 'sync'),
-        'queue' => env('SQS_QUEUE', 'default'),
+        'queue' => env('AUDIT_QUEUE_QUEUE', env('SQS_QUEUE', 'default')),
         'delay' => 0,
     ],
 
@@ -218,5 +223,5 @@ return [
     |
     */
 
-    'console' => true,
+    'console' => env('AUDIT_CONSOLE', true),
 ];

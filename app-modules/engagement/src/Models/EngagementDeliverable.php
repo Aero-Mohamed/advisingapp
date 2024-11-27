@@ -3,7 +3,7 @@
 /*
 <COPYRIGHT>
 
-    Copyright © 2022-2023, Canyon GBS LLC. All rights reserved.
+    Copyright © 2016-2024, Canyon GBS LLC. All rights reserved.
 
     Advising App™ is licensed under the Elastic License 2.0. For more details,
     see https://github.com/canyongbs/advisingapp/blob/main/LICENSE.
@@ -36,15 +36,17 @@
 
 namespace AdvisingApp\Engagement\Models;
 
+use Carbon\Carbon;
 use App\Models\BaseModel;
 use OwenIt\Auditing\Contracts\Auditable;
-use AdvisingApp\Engagement\Drivers\SmsDriver;
-use AdvisingApp\Engagement\Drivers\EmailDriver;
-use AdvisingApp\Engagement\Drivers\DeliverableDriver;
+use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use AdvisingApp\Engagement\Drivers\EngagementSmsDriver;
+use AdvisingApp\Engagement\Drivers\EngagementEmailDriver;
 use AdvisingApp\Engagement\Enums\EngagementDeliveryMethod;
 use AdvisingApp\Engagement\Enums\EngagementDeliveryStatus;
 use AdvisingApp\Audit\Models\Concerns\Auditable as AuditableTrait;
+use AdvisingApp\Engagement\Drivers\Contracts\EngagementDeliverableDriver;
 
 /**
  * @mixin IdeHelperEngagementDeliverable
@@ -52,6 +54,7 @@ use AdvisingApp\Audit\Models\Concerns\Auditable as AuditableTrait;
 class EngagementDeliverable extends BaseModel implements Auditable
 {
     use AuditableTrait;
+    use SoftDeletes;
 
     protected $fillable = [
         'external_reference_id',
@@ -80,18 +83,18 @@ class EngagementDeliverable extends BaseModel implements Auditable
         return ! is_null($this->delivered_at);
     }
 
-    public function markDeliverySuccessful(): void
+    public function markDeliverySuccessful(?Carbon $at = null): void
     {
         if (! $this->hasBeenDelivered()) {
             $this->update([
                 'delivery_status' => EngagementDeliveryStatus::Successful,
-                'delivered_at' => now(),
-                'last_delivery_attempt' => now(),
+                'delivered_at' => $at ?? now(),
+                'last_delivery_attempt' => $at ?? now(),
             ]);
         }
     }
 
-    public function markDeliveryFailed(string $reason): void
+    public function markDeliveryFailed(?string $reason): void
     {
         if (! $this->hasBeenDelivered()) {
             $this->update([
@@ -102,11 +105,11 @@ class EngagementDeliverable extends BaseModel implements Auditable
         }
     }
 
-    public function driver(): DeliverableDriver
+    public function driver(): EngagementDeliverableDriver
     {
         return match ($this->channel) {
-            EngagementDeliveryMethod::Email => new EmailDriver($this),
-            EngagementDeliveryMethod::Sms => new SmsDriver($this),
+            EngagementDeliveryMethod::Email => new EngagementEmailDriver($this),
+            EngagementDeliveryMethod::Sms => new EngagementSmsDriver($this),
         };
     }
 }

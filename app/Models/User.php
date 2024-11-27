@@ -3,7 +3,7 @@
 /*
 <COPYRIGHT>
 
-    Copyright © 2022-2023, Canyon GBS LLC. All rights reserved.
+    Copyright © 2016-2024, Canyon GBS LLC. All rights reserved.
 
     Advising App™ is licensed under the Elastic License 2.0. For more details,
     see https://github.com/canyongbs/advisingapp/blob/main/LICENSE.
@@ -43,53 +43,54 @@ use AdvisingApp\Task\Models\Task;
 use AdvisingApp\Team\Models\Team;
 use Spatie\MediaLibrary\HasMedia;
 use App\Support\HasAdvancedFilter;
+use AdvisingApp\Ai\Models\AiThread;
 use AdvisingApp\Team\Models\TeamUser;
+use AdvisingApp\Segment\Models\Segment;
 use App\Filament\Resources\UserResource;
 use Filament\Models\Contracts\HasAvatar;
 use Illuminate\Notifications\Notifiable;
 use OwenIt\Auditing\Contracts\Auditable;
+use AdvisingApp\Ai\Models\AiThreadFolder;
 use AdvisingApp\CareTeam\Models\CareTeam;
 use AdvisingApp\Prospect\Models\Prospect;
 use AdvisingApp\Authorization\Models\Role;
 use Lab404\Impersonate\Models\Impersonate;
 use Filament\Models\Contracts\FilamentUser;
 use Spatie\MediaLibrary\InteractsWithMedia;
+use AdvisingApp\Ai\Models\AiAssistantUpvote;
 use AdvisingApp\Authorization\Models\License;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use AdvisingApp\MeetingCenter\Models\Calendar;
-use AdvisingApp\Assistant\Models\AssistantChat;
 use AdvisingApp\Authorization\Enums\LicenseType;
 use AdvisingApp\StudentDataModel\Models\Student;
 use Staudenmeir\EloquentHasManyDeep\HasManyDeep;
 use AdvisingApp\Notification\Models\Subscription;
 use Illuminate\Database\Eloquent\Relations\HasOne;
-use AdvisingApp\CaseloadManagement\Models\Caseload;
 use AdvisingApp\Consent\Models\Concerns\CanConsent;
 use AdvisingApp\MeetingCenter\Models\CalendarEvent;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Relations\HasMany;
-use AdvisingApp\Assistant\Models\AssistantChatFolder;
+use AdvisingApp\CaseManagement\Models\ChangeRequest;
+use AdvisingApp\CaseManagement\Models\CaseAssignment;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Staudenmeir\EloquentHasManyDeep\HasRelationships;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Spatie\MediaLibrary\MediaCollections\Models\Media;
-use AdvisingApp\ServiceManagement\Models\ChangeRequest;
 use Illuminate\Database\Eloquent\Relations\MorphToMany;
-use AdvisingApp\Assistant\Models\AssistantChatMessageLog;
+use AdvisingApp\CaseManagement\Models\ChangeRequestType;
 use Illuminate\Contracts\Translation\HasLocalePreference;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
-use AdvisingApp\ServiceManagement\Models\ChangeRequestType;
+use AdvisingApp\CaseManagement\Enums\CaseAssignmentStatus;
+use AdvisingApp\CaseManagement\Models\ChangeRequestResponse;
 use AdvisingApp\InAppCommunication\Models\TwilioConversation;
 use AdvisingApp\Engagement\Models\Concerns\HasManyEngagements;
+use AdvisingApp\Notification\Models\Concerns\NotifiableViaSms;
 use AdvisingApp\Timeline\Models\Contracts\HasFilamentResource;
-use AdvisingApp\Authorization\Models\Pivots\RoleGroupUserPivot;
-use AdvisingApp\ServiceManagement\Models\ChangeRequestResponse;
 use AdvisingApp\InAppCommunication\Models\TwilioConversationUser;
 use AdvisingApp\Audit\Models\Concerns\Auditable as AuditableTrait;
 use AdvisingApp\Notification\Models\Contracts\NotifiableInterface;
-use AdvisingApp\ServiceManagement\Models\ServiceRequestAssignment;
 use AdvisingApp\Engagement\Models\Concerns\HasManyEngagementBatches;
-use AdvisingApp\ServiceManagement\Enums\ServiceRequestAssignmentStatus;
+use AdvisingApp\MultifactorAuthentication\Traits\MultifactorAuthenticatable;
 
 /**
  * @mixin IdeHelperUser
@@ -108,6 +109,8 @@ class User extends Authenticatable implements HasLocalePreference, FilamentUser,
     use CanConsent;
     use Impersonate;
     use InteractsWithMedia;
+    use NotifiableViaSms;
+    use MultifactorAuthenticatable;
 
     protected $hidden = [
         'remember_token',
@@ -134,6 +137,7 @@ class User extends Authenticatable implements HasLocalePreference, FilamentUser,
         'working_hours_are_enabled' => 'boolean',
         'are_working_hours_visible_on_profile' => 'boolean',
         'working_hours' => 'array',
+        'last_chat_ping_at' => 'immutable_datetime',
     ];
 
     protected $fillable = [
@@ -165,7 +169,10 @@ class User extends Authenticatable implements HasLocalePreference, FilamentUser,
         'is_phone_number_visible_on_profile',
         'working_hours_are_enabled',
         'are_working_hours_visible_on_profile',
-        'working_hours' => 'array',
+        'working_hours',
+        'job_title',
+        'last_chat_ping_at',
+        'is_branding_bar_dismissed',
     ];
 
     public $orderable = [
@@ -199,15 +206,21 @@ class User extends Authenticatable implements HasLocalePreference, FilamentUser,
                 'participant_sid',
                 'is_channel_manager',
                 'is_pinned',
+                'notification_preference',
+                'first_unread_message_sid',
+                'first_unread_message_at',
+                'last_unread_message_content',
+                'last_read_at',
+                'unread_messages_count',
             ])
             ->withTimestamps()
             ->as('participant')
             ->using(TwilioConversationUser::class);
     }
 
-    public function caseloads(): HasMany
+    public function segments(): HasMany
     {
-        return $this->hasMany(Caseload::class);
+        return $this->hasMany(Segment::class);
     }
 
     public function licenses(): HasMany
@@ -283,26 +296,20 @@ class User extends Authenticatable implements HasLocalePreference, FilamentUser,
         return $this->hasMany(CareTeam::class);
     }
 
-    public function roleGroups(): BelongsToMany
-    {
-        return $this->traitRoleGroups()
-            ->using(RoleGroupUserPivot::class);
-    }
-
     public function permissionsFromRoles(): HasManyDeep
     {
         return $this->hasManyDeepFromRelations($this->roles(), (new Role())->permissions());
     }
 
-    public function serviceRequestAssignments(): HasMany
+    public function caseAssignments(): HasMany
     {
-        return $this->hasMany(ServiceRequestAssignment::class)
-            ->where('status', ServiceRequestAssignmentStatus::Active);
+        return $this->hasMany(CaseAssignment::class)
+            ->where('status', CaseAssignmentStatus::Active);
     }
 
-    public function serviceRequests(): HasManyDeep
+    public function cases(): HasManyDeep
     {
-        return $this->hasManyDeepFromRelations($this->serviceRequestAssignments(), (new ServiceRequestAssignment())->serviceRequest());
+        return $this->hasManyDeepFromRelations($this->caseAssignments(), (new CaseAssignment())->case());
     }
 
     public function changeRequests(): HasMany
@@ -322,7 +329,7 @@ class User extends Authenticatable implements HasLocalePreference, FilamentUser,
 
     public function getIsAdminAttribute()
     {
-        return $this->roles()->where('title', 'Admin')->exists();
+        return $this->roles()->where('name', Authenticatable::SUPER_ADMIN_ROLE)->exists();
     }
 
     public function scopeAdmins()
@@ -345,14 +352,19 @@ class User extends Authenticatable implements HasLocalePreference, FilamentUser,
         return $this->locale;
     }
 
-    public function assistantChats(): HasMany
+    public function aiThreads(): HasMany
     {
-        return $this->hasMany(AssistantChat::class);
+        return $this->hasMany(AiThread::class);
     }
 
-    public function assistantChatFolders(): HasMany
+    public function aiThreadFolders(): HasMany
     {
-        return $this->hasMany(AssistantChatFolder::class);
+        return $this->hasMany(AiThreadFolder::class);
+    }
+
+    public function aiAssistantUpvotes(): HasMany
+    {
+        return $this->hasMany(AiAssistantUpvote::class);
     }
 
     public function events(): HasMany
@@ -365,19 +377,12 @@ class User extends Authenticatable implements HasLocalePreference, FilamentUser,
         return $this
             ->belongsToMany(Team::class, 'team_user', 'user_id', 'team_id')
             ->using(TeamUser::class)
-            //TODO: remove this if we support multiple teams
-            ->limit(1)
             ->withTimestamps();
     }
 
     public function calendar(): HasOne
     {
         return $this->hasOne(Calendar::class);
-    }
-
-    public function assistantChatMessageLogs(): HasMany
-    {
-        return $this->hasMany(AssistantChatMessageLog::class);
     }
 
     public function canAccessPanel(Panel $panel): bool
@@ -392,7 +397,7 @@ class User extends Authenticatable implements HasLocalePreference, FilamentUser,
 
     public function canBeImpersonated(): bool
     {
-        return ! $this->hasRole('authorization.super_admin');
+        return ! $this->isSuperAdmin();
     }
 
     public function registerMediaCollections(): void
@@ -481,7 +486,32 @@ class User extends Authenticatable implements HasLocalePreference, FilamentUser,
 
     public function revokeLicense(LicenseType $type): bool
     {
-        return (bool) $this->licenses()->where('type', $type)->delete();
+        return (bool) $this->licenses()->where('type', $type)->get()->each->delete();
+    }
+
+    public function getDynamicContext(): string
+    {
+        $context = "My name is \"{$this->name}\"";
+
+        if ($this->job_title) {
+            $context .= " and my job title is \"{$this->job_title}\"";
+        }
+
+        return "{$context}. When you respond please use this information about me to tailor your response. You should refer to me by my name and remember what my name and job title are, using it in your responses when appropriate.";
+    }
+
+    public function routeNotificationForSms(): string
+    {
+        return $this->phone_number;
+    }
+
+    public function assignTeam($teamId)
+    {
+        // Remove the current team if exists
+        $this->teams()->detach();
+
+        // Assign the new team
+        $this->teams()->attach($teamId);
     }
 
     protected function serializeDate(DateTimeInterface $date): string

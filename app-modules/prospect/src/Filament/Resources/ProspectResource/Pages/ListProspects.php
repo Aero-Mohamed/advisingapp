@@ -3,7 +3,7 @@
 /*
 <COPYRIGHT>
 
-    Copyright © 2022-2023, Canyon GBS LLC. All rights reserved.
+    Copyright © 2016-2024, Canyon GBS LLC. All rights reserved.
 
     Advising App™ is licensed under the Elastic License 2.0. For more details,
     see https://github.com/canyongbs/advisingapp/blob/main/LICENSE.
@@ -36,15 +36,14 @@
 
 namespace AdvisingApp\Prospect\Filament\Resources\ProspectResource\Pages;
 
-use App\Models\User;
 use Filament\Forms\Get;
 use Filament\Tables\Table;
-use App\Filament\Columns\IdColumn;
 use Filament\Actions\CreateAction;
 use Filament\Actions\ImportAction;
 use Filament\Tables\Filters\Filter;
 use Filament\Forms\Components\Radio;
 use Filament\Forms\Components\Select;
+use AdvisingApp\Segment\Models\Segment;
 use Filament\Forms\Components\Textarea;
 use Filament\Tables\Actions\BulkAction;
 use Filament\Tables\Actions\EditAction;
@@ -53,23 +52,24 @@ use Filament\Tables\Columns\TextColumn;
 use Filament\Forms\Components\TextInput;
 use Filament\Notifications\Notification;
 use AdvisingApp\Prospect\Models\Prospect;
+use App\Filament\Tables\Columns\IdColumn;
 use Filament\Resources\Pages\ListRecords;
 use Filament\Tables\Filters\SelectFilter;
 use Illuminate\Database\Eloquent\Builder;
+use AdvisingApp\Segment\Enums\SegmentModel;
 use Filament\Tables\Actions\BulkActionGroup;
 use Illuminate\Database\Eloquent\Collection;
 use Filament\Tables\Actions\DeleteBulkAction;
 use AdvisingApp\Prospect\Models\ProspectSource;
 use AdvisingApp\Prospect\Models\ProspectStatus;
 use AdvisingApp\Prospect\Imports\ProspectImporter;
-use AdvisingApp\CaseloadManagement\Models\Caseload;
-use AdvisingApp\CaseloadManagement\Enums\CaseloadModel;
+use AdvisingApp\Segment\Actions\BulkSegmentAction;
+use AdvisingApp\Segment\Actions\TranslateSegmentFilters;
 use AdvisingApp\Prospect\Filament\Resources\ProspectResource;
 use AdvisingApp\Engagement\Filament\Actions\BulkEngagementAction;
 use AdvisingApp\Notification\Filament\Actions\SubscribeBulkAction;
 use AdvisingApp\CareTeam\Filament\Actions\ToggleCareTeamBulkAction;
 use AdvisingApp\Notification\Filament\Actions\SubscribeTableAction;
-use AdvisingApp\CaseloadManagement\Actions\TranslateCaseloadFilters;
 use AdvisingApp\Engagement\Filament\Actions\Contracts\HasBulkEngagementAction;
 use AdvisingApp\Engagement\Filament\Actions\Concerns\ImplementsHasBulkEngagementAction;
 
@@ -90,60 +90,52 @@ class ListProspects extends ListRecords implements HasBulkEngagementAction
                     ->sortable(),
                 TextColumn::make('email')
                     ->label('Email')
-                    ->translateLabel()
                     ->searchable()
                     ->sortable(),
                 TextColumn::make('mobile')
                     ->label('Mobile')
-                    ->translateLabel()
                     ->searchable()
                     ->sortable(),
-                TextColumn::make('status')
+                TextColumn::make('status.name')
                     ->badge()
-                    ->translateLabel()
-                    ->state(function (Prospect $record) {
-                        return $record->status->name;
-                    })
-                    ->color(function (Prospect $record) {
-                        return $record->status->color->value;
-                    })
-                    ->sortable(query: function (Builder $query, string $direction): Builder {
-                        return $query
-                            ->join('prospect_statuses', 'prospects.status_id', '=', 'prospect_statuses.id')
-                            ->orderBy('prospect_statuses.name', $direction);
-                    }),
+                    ->color(fn (Prospect $record) => $record->status->color->value)
+                    ->toggleable()
+                    ->sortable(['sort']),
                 TextColumn::make('source.name')
                     ->label('Source')
-                    ->translateLabel()
+                    ->toggleable()
                     ->sortable(),
                 TextColumn::make('created_at')
                     ->label('Created')
                     ->dateTime('g:ia - M j, Y')
+                    ->toggleable()
                     ->sortable(),
             ])
             ->filters([
-                SelectFilter::make('my_caseloads')
-                    ->label('My Caseloads')
+                SelectFilter::make('my_segments')
+                    ->label('My Population Segments')
                     ->options(
-                        auth()->user()->caseloads()
-                            ->where('model', CaseloadModel::Prospect)
+                        auth()->user()->segments()
+                            ->where('model', SegmentModel::Prospect)
                             ->pluck('name', 'id'),
                     )
                     ->searchable()
                     ->optionsLimit(20)
-                    ->query(fn (Builder $query, array $data) => $this->caseloadFilter($query, $data)),
-                SelectFilter::make('all_caseloads')
-                    ->label('All Caseloads')
+                    ->query(fn (Builder $query, array $data) => $this->segmentFilter($query, $data)),
+                SelectFilter::make('all_segments')
+                    ->label('All Population Segments')
                     ->options(
-                        Caseload::all()
-                            ->where('model', CaseloadModel::Prospect)
+                        Segment::all()
+                            ->where('model', SegmentModel::Prospect)
                             ->pluck('name', 'id'),
                     )
                     ->searchable()
                     ->optionsLimit(20)
-                    ->query(fn (Builder $query, array $data) => $this->caseloadFilter($query, $data)),
+                    ->query(fn (Builder $query, array $data) => $this->segmentFilter($query, $data)),
+                Filter::make('subscribed')
+                    ->query(fn (Builder $query): Builder => $query->whereRelation('subscriptions.user', 'id', auth()->id())),
                 SelectFilter::make('status_id')
-                    ->relationship('status', 'name')
+                    ->relationship('status', 'name', fn (Builder $query) => $query->orderBy('sort'))
                     ->multiple()
                     ->preload(),
                 SelectFilter::make('source_id')
@@ -176,7 +168,6 @@ class ListProspects extends ListRecords implements HasBulkEngagementAction
                         ->form([
                             Select::make('field')
                                 ->options([
-                                    'assigned_to_id' => 'Assigned To',
                                     'description' => 'Description',
                                     'email_bounce' => 'Email Bounce',
                                     'hsgrad' => 'High School Graduation Date',
@@ -186,16 +177,6 @@ class ListProspects extends ListRecords implements HasBulkEngagementAction
                                 ])
                                 ->required()
                                 ->live(),
-                            Select::make('assigned_to_id')
-                                ->label('Assigned To')
-                                ->relationship('assignedTo', 'name')
-                                ->searchable()
-                                ->exists(
-                                    table: (new User())->getTable(),
-                                    column: (new User())->getKeyName()
-                                )
-                                ->required()
-                                ->visible(fn (Get $get) => $get('field') === 'assigned_to_id'),
                             Textarea::make('description')
                                 ->string()
                                 ->required()
@@ -228,7 +209,7 @@ class ListProspects extends ListRecords implements HasBulkEngagementAction
                                 ->visible(fn (Get $get) => $get('field') === 'source_id'),
                             Select::make('status_id')
                                 ->label('Status')
-                                ->relationship('status', 'name')
+                                ->relationship('status', 'name', fn (Builder $query) => $query->orderBy('sort'))
                                 ->exists(
                                     table: (new ProspectStatus())->getTable(),
                                     column: (new ProspectStatus())->getKeyName()
@@ -248,18 +229,19 @@ class ListProspects extends ListRecords implements HasBulkEngagementAction
                                 ->success()
                                 ->send();
                         }),
+                    BulkSegmentAction::make(segmentModel: SegmentModel::Prospect),
                 ]),
             ]);
     }
 
-    protected function caseloadFilter(Builder $query, array $data): void
+    protected function segmentFilter(Builder $query, array $data): void
     {
         if (blank($data['value'])) {
             return;
         }
 
         $query->whereKey(
-            app(TranslateCaseloadFilters::class)
+            app(TranslateSegmentFilters::class)
                 ->handle($data['value'])
                 ->pluck($query->getModel()->getQualifiedKeyName()),
         );

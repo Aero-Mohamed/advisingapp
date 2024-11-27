@@ -3,7 +3,7 @@
 /*
 <COPYRIGHT>
 
-    Copyright © 2022-2023, Canyon GBS LLC. All rights reserved.
+    Copyright © 2016-2024, Canyon GBS LLC. All rights reserved.
 
     Advising App™ is licensed under the Elastic License 2.0. For more details,
     see https://github.com/canyongbs/advisingapp/blob/main/LICENSE.
@@ -63,10 +63,23 @@ trait EmailChannelTrait
                     );
                 }
 
-                if (! empty($this->metadata['outbound_deliverable_id'])) {
+                if (
+                    ! empty($this->metadata['outbound_deliverable_id'])
+                    || ! empty($this->metadata['tenant_id'])
+                ) {
+                    $tagString = '';
+
+                    if (! empty($this->metadata['outbound_deliverable_id'])) {
+                        $tagString .= "outbound_deliverable_id={$this->metadata['outbound_deliverable_id']}, ";
+                    }
+
+                    if (! empty($this->metadata['tenant_id'])) {
+                        $tagString .= "tenant_id={$this->metadata['tenant_id']}, ";
+                    }
+
                     $message->getHeaders()->addTextHeader(
                         'X-SES-MESSAGE-TAGS',
-                        "outbound_deliverable_id={$this->metadata['outbound_deliverable_id']}"
+                        rtrim($tagString, ', ')
                     );
                 }
             });

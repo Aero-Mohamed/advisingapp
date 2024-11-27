@@ -3,7 +3,7 @@
 /*
 <COPYRIGHT>
 
-    Copyright © 2022-2023, Canyon GBS LLC. All rights reserved.
+    Copyright © 2016-2024, Canyon GBS LLC. All rights reserved.
 
     Advising App™ is licensed under the Elastic License 2.0. For more details,
     see https://github.com/canyongbs/advisingapp/blob/main/LICENSE.
@@ -64,7 +64,7 @@ class InteractionDriverPolicy
     public function view(Authenticatable $authenticatable, InteractionDriver $driver): Response
     {
         return $authenticatable->canOrElse(
-            abilities: ['interaction_driver.*.view', "interaction_driver.{$driver->id}.view"],
+            abilities: ["interaction_driver.{$driver->id}.view"],
             denyResponse: 'You do not have permission to view this interaction driver.'
         );
     }
@@ -80,7 +80,7 @@ class InteractionDriverPolicy
     public function update(Authenticatable $authenticatable, InteractionDriver $driver): Response
     {
         return $authenticatable->canOrElse(
-            abilities: ['interaction_driver.*.update', "interaction_driver.{$driver->id}.update"],
+            abilities: ["interaction_driver.{$driver->id}.update"],
             denyResponse: 'You do not have permission to update this interaction driver.'
         );
     }
@@ -88,7 +88,7 @@ class InteractionDriverPolicy
     public function delete(Authenticatable $authenticatable, InteractionDriver $driver): Response
     {
         return $authenticatable->canOrElse(
-            abilities: ['interaction_driver.*.delete', "interaction_driver.{$driver->id}.delete"],
+            abilities: ["interaction_driver.{$driver->id}.delete"],
             denyResponse: 'You do not have permission to delete this interaction driver.'
         );
     }
@@ -96,7 +96,7 @@ class InteractionDriverPolicy
     public function restore(Authenticatable $authenticatable, InteractionDriver $driver): Response
     {
         return $authenticatable->canOrElse(
-            abilities: ['interaction_driver.*.restore', "interaction_driver.{$driver->id}.restore"],
+            abilities: ["interaction_driver.{$driver->id}.restore"],
             denyResponse: 'You do not have permission to restore this interaction driver.'
         );
     }
@@ -104,7 +104,7 @@ class InteractionDriverPolicy
     public function forceDelete(Authenticatable $authenticatable, InteractionDriver $driver): Response
     {
         return $authenticatable->canOrElse(
-            abilities: ['interaction_driver.*.force-delete', "interaction_driver.{$driver->id}.force-delete"],
+            abilities: ["interaction_driver.{$driver->id}.force-delete"],
             denyResponse: 'You do not have permission to permanently delete this interaction driver.'
         );
     }

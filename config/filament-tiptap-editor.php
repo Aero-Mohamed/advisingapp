@@ -3,7 +3,7 @@
 /*
 <COPYRIGHT>
 
-    Copyright © 2022-2023, Canyon GBS LLC. All rights reserved.
+    Copyright © 2016-2024, Canyon GBS LLC. All rights reserved.
 
     Advising App™ is licensed under the Elastic License 2.0. For more details,
     see https://github.com/canyongbs/advisingapp/blob/main/LICENSE.
@@ -34,11 +34,14 @@
 </COPYRIGHT>
 */
 
+use FilamentTiptapEditor\Actions\LinkAction;
+use FilamentTiptapEditor\Enums\TiptapOutput;
 use FilamentTiptapEditor\Actions\MediaAction;
 
 return [
     'direction' => 'ltr',
     'max_content_width' => '5xl',
+    'disable_link_as_button' => true,
 
     /*
     |--------------------------------------------------------------------------
@@ -84,7 +87,7 @@ return [
     |
     */
     'media_action' => MediaAction::class,
-    'link_action' => FilamentTiptapEditor\Actions\LinkAction::class,
+    'link_action' => LinkAction::class,
 
     /*
     |--------------------------------------------------------------------------
@@ -95,7 +98,7 @@ return [
     |
     | See: https://tiptap.dev/guide/output
     */
-    'output' => FilamentTiptapEditor\Enums\TiptapOutput::Html,
+    'output' => TiptapOutput::Json,
 
     /*
     |--------------------------------------------------------------------------

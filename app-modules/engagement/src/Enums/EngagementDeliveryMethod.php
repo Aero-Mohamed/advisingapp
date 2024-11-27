@@ -3,7 +3,7 @@
 /*
 <COPYRIGHT>
 
-    Copyright © 2022-2023, Canyon GBS LLC. All rights reserved.
+    Copyright © 2016-2024, Canyon GBS LLC. All rights reserved.
 
     Advising App™ is licensed under the Elastic License 2.0. For more details,
     see https://github.com/canyongbs/advisingapp/blob/main/LICENSE.
@@ -36,9 +36,12 @@
 
 namespace AdvisingApp\Engagement\Enums;
 
+use App\Enums\Integration;
+use Filament\Support\Contracts\HasIcon;
+use App\Exceptions\IntegrationException;
 use Filament\Support\Contracts\HasLabel;
 
-enum EngagementDeliveryMethod: string implements HasLabel
+enum EngagementDeliveryMethod: string implements HasLabel, HasIcon
 {
     case Email = 'email';
     case Sms = 'sms';
@@ -46,8 +49,67 @@ enum EngagementDeliveryMethod: string implements HasLabel
     public function getLabel(): ?string
     {
         return match ($this) {
-            static::Email => 'Email',
-            static::Sms => 'SMS',
+            EngagementDeliveryMethod::Email => 'Email',
+            EngagementDeliveryMethod::Sms => 'Text',
+        };
+    }
+
+    public function getIcon(): ?string
+    {
+        return match ($this) {
+            EngagementDeliveryMethod::Email => 'heroicon-o-envelope',
+            EngagementDeliveryMethod::Sms => 'heroicon-o-chat-bubble-bottom-center-text',
+        };
+    }
+
+    public function getDefault(): EngagementDeliveryMethod
+    {
+        return EngagementDeliveryMethod::Email;
+    }
+
+    public function getCaseDisabled(): bool
+    {
+        return $this->caseDependsOnIntegration()?->isOff() ?? false;
+    }
+
+    public function getLabelForIntegrationState(): string
+    {
+        $integration = $this->caseDependsOnIntegration();
+
+        return $this->getCaseDisabled() && $integration
+            ? sprintf(
+                '%s (%s)',
+                $this->getLabel(),
+                IntegrationException::make($integration)->getMessage()
+            )
+            : $this->getLabel();
+    }
+
+    public static function getOptions(): array
+    {
+        return collect(EngagementDeliveryMethod::cases())
+            ->mapWithKeys(fn (EngagementDeliveryMethod $method) => [$method->value => $method->getLabelForIntegrationState()])
+            ->toArray();
+    }
+
+    public static function parse(string | self | null $value): ?self
+    {
+        if (blank($value)) {
+            return null;
+        }
+
+        if ($value instanceof self) {
+            return $value;
+        }
+
+        return self::tryFrom($value);
+    }
+
+    private function caseDependsOnIntegration(): ?Integration
+    {
+        return match ($this) {
+            EngagementDeliveryMethod::Sms => Integration::Twilio,
+            default => null,
         };
     }
 }

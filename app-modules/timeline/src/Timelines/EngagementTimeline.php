@@ -3,7 +3,7 @@
 /*
 <COPYRIGHT>
 
-    Copyright © 2022-2023, Canyon GBS LLC. All rights reserved.
+    Copyright © 2016-2024, Canyon GBS LLC. All rights reserved.
 
     Advising App™ is licensed under the Elastic License 2.0. For more details,
     see https://github.com/canyongbs/advisingapp/blob/main/LICENSE.
@@ -39,6 +39,7 @@ namespace AdvisingApp\Timeline\Timelines;
 use Filament\Actions\ViewAction;
 use AdvisingApp\Engagement\Models\Engagement;
 use AdvisingApp\Timeline\Models\CustomTimeline;
+use AdvisingApp\Engagement\Enums\EngagementDeliveryMethod;
 use AdvisingApp\Engagement\Filament\Resources\EngagementResource\Components\EngagementViewAction;
 
 // TODO Decide where these belong - might want to keep these in the context of the original module
@@ -50,7 +51,11 @@ class EngagementTimeline extends CustomTimeline
 
     public function icon(): string
     {
-        return 'heroicon-o-arrow-small-right';
+        return match ($this->engagement->getDeliveryMethod()) {
+            EngagementDeliveryMethod::Email => 'heroicon-o-envelope',
+            EngagementDeliveryMethod::Sms => 'heroicon-o-chat-bubble-left',
+            default => 'heroicon-o-arrow-small-right',
+        };
     }
 
     public function sortableBy(): string

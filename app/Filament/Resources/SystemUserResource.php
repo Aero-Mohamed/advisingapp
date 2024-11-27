@@ -3,7 +3,7 @@
 /*
 <COPYRIGHT>
 
-    Copyright © 2022-2023, Canyon GBS LLC. All rights reserved.
+    Copyright © 2016-2024, Canyon GBS LLC. All rights reserved.
 
     Advising App™ is licensed under the Elastic License 2.0. For more details,
     see https://github.com/canyongbs/advisingapp/blob/main/LICENSE.
@@ -38,6 +38,7 @@ namespace App\Filament\Resources;
 
 use App\Models\SystemUser;
 use Filament\Resources\Resource;
+use App\Filament\Clusters\UserManagement;
 use App\Filament\Resources\SystemUserResource\Pages\EditSystemUser;
 use App\Filament\Resources\SystemUserResource\Pages\ListSystemUsers;
 use App\Filament\Resources\SystemUserResource\Pages\CreateSystemUser;
@@ -47,9 +48,9 @@ class SystemUserResource extends Resource
 {
     protected static ?string $model = SystemUser::class;
 
-    protected static ?string $navigationIcon = 'heroicon-o-rectangle-stack';
+    protected static ?string $navigationIcon = 'heroicon-o-wrench-screwdriver';
 
-    protected static ?string $navigationGroup = 'Users and Permissions';
+    protected static ?string $cluster = UserManagement::class;
 
     protected static ?string $navigationLabel = 'Programmatic Users';
 
@@ -57,7 +58,7 @@ class SystemUserResource extends Resource
 
     protected static ?string $breadcrumb = 'Programmatic Users';
 
-    protected static ?int $navigationSort = 40;
+    protected static ?int $navigationSort = 60;
 
     public static function getRelations(): array
     {

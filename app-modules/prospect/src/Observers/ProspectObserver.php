@@ -3,7 +3,7 @@
 /*
 <COPYRIGHT>
 
-    Copyright © 2022-2023, Canyon GBS LLC. All rights reserved.
+    Copyright © 2016-2024, Canyon GBS LLC. All rights reserved.
 
     Advising App™ is licensed under the Elastic License 2.0. For more details,
     see https://github.com/canyongbs/advisingapp/blob/main/LICENSE.
@@ -37,6 +37,7 @@
 namespace AdvisingApp\Prospect\Observers;
 
 use App\Models\User;
+use Illuminate\Support\Facades\Cache;
 use AdvisingApp\Prospect\Models\Prospect;
 
 class ProspectObserver
@@ -48,5 +49,15 @@ class ProspectObserver
         if ($user instanceof User && ! $prospect->createdBy) {
             $prospect->createdBy()->associate($user);
         }
+    }
+
+    public function created(): void
+    {
+        Cache::tags('prospects')->flush();
+    }
+
+    public function deleted(): void
+    {
+        Cache::tags('prospects')->flush();
     }
 }

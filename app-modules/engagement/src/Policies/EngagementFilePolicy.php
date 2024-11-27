@@ -3,7 +3,7 @@
 /*
 <COPYRIGHT>
 
-    Copyright © 2022-2023, Canyon GBS LLC. All rights reserved.
+    Copyright © 2016-2024, Canyon GBS LLC. All rights reserved.
 
     Advising App™ is licensed under the Elastic License 2.0. For more details,
     see https://github.com/canyongbs/advisingapp/blob/main/LICENSE.
@@ -38,6 +38,7 @@ namespace AdvisingApp\Engagement\Policies;
 
 use App\Models\Authenticatable;
 use Illuminate\Auth\Access\Response;
+use AdvisingApp\Prospect\Models\Prospect;
 use AdvisingApp\Engagement\Models\EngagementFile;
 
 class EngagementFilePolicy
@@ -53,13 +54,17 @@ class EngagementFilePolicy
     public function view(Authenticatable $authenticatable, EngagementFile $engagementFile): Response
     {
         return $authenticatable->canOrElse(
-            abilities: ['engagement_file.*.view', "engagement_file.{$engagementFile->id}.view"],
+            abilities: ["engagement_file.{$engagementFile->id}.view"],
             denyResponse: 'You do not have permissions to view this engagement file.'
         );
     }
 
-    public function create(Authenticatable $authenticatable): Response
+    public function create(Authenticatable $authenticatable, ?Prospect $prospect = null): Response
     {
+        if ($prospect?->student()->exists()) {
+            return Response::deny('You cannot create engagement files for a Prospect that has been converted to a Student.');
+        }
+
         return $authenticatable->canOrElse(
             abilities: 'engagement_file.create',
             denyResponse: 'You do not have permissions to create engagement files.'
@@ -68,8 +73,12 @@ class EngagementFilePolicy
 
     public function update(Authenticatable $authenticatable, EngagementFile $engagementFile): Response
     {
+        if ($engagementFile->prospects()->whereNotNull('student_id')->exists()) {
+            return Response::deny('You cannot edit engagement file as the related Prospect has been converted to a Student.');
+        }
+
         return $authenticatable->canOrElse(
-            abilities: ['engagement_file.*.update', "engagement_file.{$engagementFile->id}.update"],
+            abilities: ["engagement_file.{$engagementFile->id}.update"],
             denyResponse: 'You do not have permissions to update this engagement file.'
         );
     }
@@ -77,7 +86,7 @@ class EngagementFilePolicy
     public function delete(Authenticatable $authenticatable, EngagementFile $engagementFile): Response
     {
         return $authenticatable->canOrElse(
-            abilities: ['engagement_file.*.delete', "engagement_file.{$engagementFile->id}.delete"],
+            abilities: ["engagement_file.{$engagementFile->id}.delete"],
             denyResponse: 'You do not have permissions to delete this engagement file.'
         );
     }
@@ -85,7 +94,7 @@ class EngagementFilePolicy
     public function restore(Authenticatable $authenticatable, EngagementFile $engagementFile): Response
     {
         return $authenticatable->canOrElse(
-            abilities: ['engagement_file.*.restore', "engagement_file.{$engagementFile->id}.restore"],
+            abilities: ["engagement_file.{$engagementFile->id}.restore"],
             denyResponse: 'You do not have permissions to restore this engagement file.'
         );
     }
@@ -93,7 +102,7 @@ class EngagementFilePolicy
     public function forceDelete(Authenticatable $authenticatable, EngagementFile $engagementFile): Response
     {
         return $authenticatable->canOrElse(
-            abilities: ['engagement_file.*.force-delete', "engagement_file.{$engagementFile->id}.force-delete"],
+            abilities: ["engagement_file.{$engagementFile->id}.force-delete"],
             denyResponse: 'You do not have permissions to force delete this engagement file.'
         );
     }

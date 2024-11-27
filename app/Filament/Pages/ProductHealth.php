@@ -3,7 +3,7 @@
 /*
 <COPYRIGHT>
 
-    Copyright © 2022-2023, Canyon GBS LLC. All rights reserved.
+    Copyright © 2016-2024, Canyon GBS LLC. All rights reserved.
 
     Advising App™ is licensed under the Elastic License 2.0. For more details,
     see https://github.com/canyongbs/advisingapp/blob/main/LICENSE.
@@ -61,7 +61,7 @@ class ProductHealth extends HealthCheckResults
 
     public static function getNavigationSort(): ?int
     {
-        return 20;
+        return 30;
     }
 
     public static function getNavigationBadge(): ?string
@@ -69,7 +69,7 @@ class ProductHealth extends HealthCheckResults
         $count = app(ResultStore::class)
             ->latestResults()
             ?->storedCheckResults
-            ->filter(fn ($check) => $check->status !== Status::ok()->value)
+            ->filter(fn ($check) => ! in_array($check->status, [Status::ok()->value, Status::skipped()->value]))
             ->count();
 
         return $count > 0 ? $count : null;

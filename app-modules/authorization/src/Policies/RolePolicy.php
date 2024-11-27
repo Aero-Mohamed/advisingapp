@@ -3,7 +3,7 @@
 /*
 <COPYRIGHT>
 
-    Copyright © 2022-2023, Canyon GBS LLC. All rights reserved.
+    Copyright © 2016-2024, Canyon GBS LLC. All rights reserved.
 
     Advising App™ is licensed under the Elastic License 2.0. For more details,
     see https://github.com/canyongbs/advisingapp/blob/main/LICENSE.
@@ -53,33 +53,48 @@ class RolePolicy
     public function view(Authenticatable $authenticatable, Role $role): Response
     {
         return $authenticatable->canOrElse(
-            abilities: ['role.*.view', "role.{$role->id}.view"],
+            abilities: ["role.{$role->id}.view"],
             denyResponse: 'You do not have permission to view this role.'
         );
     }
 
     public function create(Authenticatable $authenticatable): Response
     {
-        return Response::deny('Roles cannot be created.');
+        return $authenticatable->canOrElse(
+            abilities: 'role.create',
+            denyResponse: 'You do not have permission to create roles.'
+        );
     }
 
     public function update(Authenticatable $authenticatable, Role $role): Response
     {
-        return Response::deny('Roles cannot be updated.');
+        return $authenticatable->canOrElse(
+            abilities: ["role.{$role->id}.update"],
+            denyResponse: 'You do not have permission to update this role.'
+        );
     }
 
     public function delete(Authenticatable $authenticatable, Role $role): Response
     {
-        return Response::deny('Roles cannot be deleted.');
+        return $authenticatable->canOrElse(
+            abilities: ["role.{$role->id}.delete"],
+            denyResponse: 'You do not have permission to delete this role.'
+        );
     }
 
     public function restore(Authenticatable $authenticatable, Role $role): Response
     {
-        return Response::deny('Roles cannot be restored.');
+        return $authenticatable->canOrElse(
+            abilities: ["role.{$role->id}.restore"],
+            denyResponse: 'You do not have permission to restore this role.'
+        );
     }
 
     public function forceDelete(Authenticatable $authenticatable, Role $role): Response
     {
-        return Response::deny('Roles cannot be force deleted.');
+        return $authenticatable->canOrElse(
+            abilities: ["role.{$role->id}.force-delete"],
+            denyResponse: 'You do not have permission to permanently delete this role.'
+        );
     }
 }

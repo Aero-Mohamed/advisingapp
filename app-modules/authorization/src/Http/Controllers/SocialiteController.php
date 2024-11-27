@@ -3,7 +3,7 @@
 /*
 <COPYRIGHT>
 
-    Copyright © 2022-2023, Canyon GBS LLC. All rights reserved.
+    Copyright © 2016-2024, Canyon GBS LLC. All rights reserved.
 
     Advising App™ is licensed under the Elastic License 2.0. For more details,
     see https://github.com/canyongbs/advisingapp/blob/main/LICENSE.
@@ -36,6 +36,7 @@
 
 namespace AdvisingApp\Authorization\Http\Controllers;
 
+use Throwable;
 use App\Models\User;
 use Illuminate\Support\Str;
 use Illuminate\Http\Request;
@@ -44,6 +45,7 @@ use App\Http\Controllers\Controller;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Http;
 use Filament\Notifications\Notification;
+use Illuminate\Database\Query\Expression;
 use AdvisingApp\Authorization\Enums\SocialiteProvider;
 
 class SocialiteController extends Controller
@@ -76,7 +78,7 @@ class SocialiteController extends Controller
 
         /** @var User $user */
         $user = User::query()
-            ->where('email', $socialiteUser->getEmail())
+            ->where(new Expression('lower(email)'), strtolower($socialiteUser->getEmail()))
             ->first();
 
         if (! $user?->is_external) {
@@ -89,11 +91,17 @@ class SocialiteController extends Controller
         }
 
         if ($provider === SocialiteProvider::Azure) {
-            $request = Http::withToken($socialiteUser->token)
-                ->contentType('image/jpeg')
-                ->get('https://graph.microsoft.com/v1.0/me/photo/$value');
+            try {
+                $request = Http::withToken($socialiteUser->token)
+                    ->contentType('image/jpeg')
+                    ->retry(3, 500)
+                    ->get('https://graph.microsoft.com/v1.0/me/photo/$value')
+                    ->throw();
 
-            $user->addMediaFromString($request->body())->usingFileName(Str::uuid() . '.jpg')->toMediaCollection('avatar');
+                $user->addMediaFromString($request->body())->usingFileName(Str::uuid() . '.jpg')->toMediaCollection('avatar');
+            } catch (Throwable $e) {
+                report($e);
+            }
         }
 
         $user->update([

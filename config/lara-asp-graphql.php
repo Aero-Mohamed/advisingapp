@@ -3,7 +3,7 @@
 /*
 <COPYRIGHT>
 
-    Copyright © 2022-2023, Canyon GBS LLC. All rights reserved.
+    Copyright © 2016-2024, Canyon GBS LLC. All rights reserved.
 
     Advising App™ is licensed under the Elastic License 2.0. For more details,
     see https://github.com/canyongbs/advisingapp/blob/main/LICENSE.
@@ -37,6 +37,9 @@
 declare(strict_types = 1);
 
 use LastDragon_ru\LaraASP\GraphQL\Builder\Contracts\Operator;
+use LastDragon_ru\LaraASP\GraphQL\SortBy\Definitions\SortByDirective;
+use LastDragon_ru\LaraASP\GraphQL\Stream\Definitions\StreamDirective;
+use LastDragon_ru\LaraASP\GraphQL\SearchBy\Definitions\SearchByDirective;
 
 /**
  * -----------------------------------------------------------------------------
@@ -77,7 +80,7 @@ use LastDragon_ru\LaraASP\GraphQL\Builder\Contracts\Operator;
  */
 $settings = [
     /**
-     * Settings for {@see LastDragon_ru\LaraASP\GraphQL\SearchBy\Definitions\SearchByDirective @searchBy} directive.
+     * Settings for {@see SearchByDirective @searchBy} directive.
      */
     'search_by' => [
         /**
@@ -97,7 +100,7 @@ $settings = [
     ],
 
     /**
-     * Settings for {@see LastDragon_ru\LaraASP\GraphQL\SortBy\Definitions\SortByDirective @sortBy} directive.
+     * Settings for {@see SortByDirective @sortBy} directive.
      */
     'sort_by' => [
         /**
@@ -117,7 +120,7 @@ $settings = [
     ],
 
     /**
-     * Settings for {@see LastDragon_ru\LaraASP\GraphQL\Stream\Definitions\StreamDirective @stream} directive.
+     * Settings for {@see StreamDirective @stream} directive.
      */
     'stream' => [
         'search' => [

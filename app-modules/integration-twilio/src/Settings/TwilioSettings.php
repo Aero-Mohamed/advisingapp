@@ -3,7 +3,7 @@
 /*
 <COPYRIGHT>
 
-    Copyright © 2022-2023, Canyon GBS LLC. All rights reserved.
+    Copyright © 2016-2024, Canyon GBS LLC. All rights reserved.
 
     Advising App™ is licensed under the Elastic License 2.0. For more details,
     see https://github.com/canyongbs/advisingapp/blob/main/LICENSE.
@@ -36,20 +36,22 @@
 
 namespace AdvisingApp\IntegrationTwilio\Settings;
 
-use Spatie\LaravelSettings\Settings;
+use App\Settings\IntegrationSettings;
 use AdvisingApp\IntegrationTwilio\DataTransferObjects\TwilioApiKey;
 
-class TwilioSettings extends Settings
+class TwilioSettings extends IntegrationSettings
 {
-    public bool $is_enabled;
+    public bool $is_enabled = false;
 
-    public ?TwilioApiKey $api_key;
+    public bool $is_demo_mode_enabled = false;
 
-    public ?string $account_sid;
+    public ?TwilioApiKey $api_key = null;
 
-    public ?string $auth_token;
+    public ?string $account_sid = null;
 
-    public ?string $from_number;
+    public ?string $auth_token = null;
+
+    public ?string $from_number = null;
 
     public static function group(): string
     {
@@ -64,5 +66,10 @@ class TwilioSettings extends Settings
             'auth_token',
             'from_number',
         ];
+    }
+
+    public function isConfigured(): bool
+    {
+        return $this->account_sid && $this->auth_token && $this->from_number || $this->is_demo_mode_enabled ?? false;
     }
 }

@@ -3,7 +3,7 @@
 /*
 <COPYRIGHT>
 
-    Copyright © 2022-2023, Canyon GBS LLC. All rights reserved.
+    Copyright © 2016-2024, Canyon GBS LLC. All rights reserved.
 
     Advising App™ is licensed under the Elastic License 2.0. For more details,
     see https://github.com/canyongbs/advisingapp/blob/main/LICENSE.
@@ -38,8 +38,8 @@ namespace AdvisingApp\Prospect\Filament\Resources;
 
 use Filament\Forms\Form;
 use Filament\Resources\Resource;
-use App\Filament\Clusters\ProspectManagement;
 use AdvisingApp\Prospect\Models\ProspectStatus;
+use App\Filament\Clusters\ConstituentManagement;
 use AdvisingApp\Prospect\Filament\Resources\ProspectStatusResource\Pages\EditProspectStatus;
 use AdvisingApp\Prospect\Filament\Resources\ProspectStatusResource\Pages\ViewProspectStatus;
 use AdvisingApp\Prospect\Filament\Resources\ProspectStatusResource\Pages\CreateProspectStatus;
@@ -55,7 +55,9 @@ class ProspectStatusResource extends Resource
 
     protected static ?int $navigationSort = 1;
 
-    protected static ?string $cluster = ProspectManagement::class;
+    protected static ?string $cluster = ConstituentManagement::class;
+
+    protected static ?string $navigationGroup = 'Prospects';
 
     public static function form(Form $form): Form
     {

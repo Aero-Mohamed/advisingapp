@@ -3,7 +3,7 @@
 /*
 <COPYRIGHT>
 
-    Copyright © 2022-2023, Canyon GBS LLC. All rights reserved.
+    Copyright © 2016-2024, Canyon GBS LLC. All rights reserved.
 
     Advising App™ is licensed under the Elastic License 2.0. For more details,
     see https://github.com/canyongbs/advisingapp/blob/main/LICENSE.
@@ -38,12 +38,12 @@ namespace AdvisingApp\Report\Filament\Resources\ReportResource\Pages;
 
 use App\Models\User;
 use Filament\Tables\Table;
-use App\Filament\Columns\IdColumn;
 use Filament\Actions\CreateAction;
 use Filament\Tables\Filters\Filter;
 use Filament\Tables\Actions\EditAction;
 use Filament\Tables\Columns\TextColumn;
 use AdvisingApp\Prospect\Models\Prospect;
+use App\Filament\Tables\Columns\IdColumn;
 use Filament\Resources\Pages\ListRecords;
 use Filament\Tables\Actions\DeleteAction;
 use AdvisingApp\StudentDataModel\Models\Student;
@@ -51,7 +51,7 @@ use AdvisingApp\Report\Filament\Resources\ReportResource;
 
 class ListReports extends ListRecords
 {
-    protected ?string $heading = 'Report Management';
+    protected ?string $heading = 'Custom Reports';
 
     protected static string $resource = ReportResource::class;
 
@@ -69,7 +69,7 @@ class ListReports extends ListRecords
                     ->label('Owner')
                     ->sortable()
                     ->hidden(function (Table $table) {
-                        return $table->getFilter('my_reports')->getState()['isActive'];
+                        return $table->getFilter('my_reports')->getState()['isActive'] ?? false;
                     }),
             ])
             ->actions([
@@ -78,7 +78,7 @@ class ListReports extends ListRecords
             ])
             ->filters([
                 Filter::make('my_reports')
-                    ->label('My Reports')
+                    ->label('My Custom Reports')
                     ->query(
                         fn ($query) => $query->where('user_id', auth()->id())
                     )

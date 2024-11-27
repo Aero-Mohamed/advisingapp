@@ -3,7 +3,7 @@
 /*
 <COPYRIGHT>
 
-    Copyright © 2022-2023, Canyon GBS LLC. All rights reserved.
+    Copyright © 2016-2024, Canyon GBS LLC. All rights reserved.
 
     Advising App™ is licensed under the Elastic License 2.0. For more details,
     see https://github.com/canyongbs/advisingapp/blob/main/LICENSE.
@@ -37,10 +37,15 @@
 use App\Models\User;
 
 use function Tests\asSuperAdmin;
+
+use Illuminate\View\ViewException;
+
 use function Pest\Laravel\actingAs;
 use function Pest\Livewire\livewire;
+use function Pest\Laravel\assertDatabaseHas;
 
 use STS\FilamentImpersonate\Pages\Actions\Impersonate;
+use App\Filament\Resources\UserResource\Pages\EditUser;
 use App\Filament\Resources\UserResource\Pages\ViewUser;
 
 it('renders impersonate button for non super admin users when user is super admin', function () {
@@ -48,31 +53,11 @@ it('renders impersonate button for non super admin users when user is super admi
 
     $user = User::factory()->create();
 
-    $component = livewire(ViewUser::class, [
+    livewire(ViewUser::class, [
         'record' => $user->getRouteKey(),
-    ]);
-
-    $component
+    ])
         ->assertSuccessful()
         ->assertActionVisible(Impersonate::class);
-});
-
-it('does not render impersonate button for super admin users when user is not super admin', function () {
-    $superAdmin = User::factory()->create();
-    asSuperAdmin($superAdmin);
-
-    $user = User::factory()
-        ->create()
-        ->givePermissionTo('user.view-any', 'user.*.view');
-    actingAs($user);
-
-    $component = livewire(ViewUser::class, [
-        'record' => $superAdmin->getRouteKey(),
-    ]);
-
-    $component
-        ->assertSuccessful()
-        ->assertActionHidden(Impersonate::class);
 });
 
 it('does not render impersonate button for super admin users at all', function () {
@@ -82,33 +67,29 @@ it('does not render impersonate button for super admin users at all', function (
     $user = User::factory()->create();
     asSuperAdmin($user);
 
-    $component = livewire(ViewUser::class, [
+    livewire(ViewUser::class, [
         'record' => $superAdmin->getRouteKey(),
-    ]);
-
-    $component
+    ])
         ->assertSuccessful()
         ->assertActionHidden(Impersonate::class);
 });
 
-it('does not render impersonate button for super admin users even if user has permission', function () {
+it('does not render super admin profile for regular user', function () {
+    // Create a super admin user
     $superAdmin = User::factory()->create();
     asSuperAdmin($superAdmin);
 
-    $user = User::factory()
-        ->create()
-        ->givePermissionTo('user.view-any', 'user.*.view', 'authorization.impersonate');
+    // Verify super admin user exists
+    assertDatabaseHas('users', ['id' => $superAdmin->id]);
 
+    // Create another user
+    $user = User::factory()->create();
     actingAs($user);
 
-    $component = livewire(ViewUser::class, [
-        'record' => $superAdmin->getRouteKey(),
-    ]);
-
-    $component
-        ->assertSuccessful()
-        ->assertActionHidden(Impersonate::class);
-});
+    // Attempt to load the EditUser component with the super admin's route key
+    livewire(ViewUser::class, ['record' => $superAdmin->getRouteKey()])
+        ->assertStatus(404);
+})->throws(ViewException::class);
 
 it('allows super admin user to impersonate', function () {
     $superAdmin = User::factory()->create();
@@ -116,11 +97,9 @@ it('allows super admin user to impersonate', function () {
 
     $user = User::factory()->create();
 
-    $component = livewire(ViewUser::class, [
+    livewire(ViewUser::class, [
         'record' => $user->getRouteKey(),
-    ]);
-
-    $component
+    ])
         ->assertSuccessful()
         ->callAction(Impersonate::class);
 
@@ -135,14 +114,160 @@ it('allows user with permission to impersonate', function () {
 
     $second = User::factory()->create();
 
-    $component = livewire(ViewUser::class, [
+    livewire(ViewUser::class, [
         'record' => $second->getRouteKey(),
-    ]);
-
-    $component
+    ])
         ->assertSuccessful()
         ->callAction(Impersonate::class);
 
     expect($second->isImpersonated())->toBeTrue();
     expect(auth()->id())->toBe($second->id);
+});
+
+it('does not display the mfa_status for an external User', function () {
+    $user = User::factory()->external()->create();
+
+    asSuperAdmin();
+
+    livewire(ViewUser::class, [
+        'record' => $user->getRouteKey(),
+    ])
+        ->assertDontSeeHtml('data-identifier="mfa-enabled"')
+        ->assertDontSeeHtml('data-identifier="mfa-not-confirmed"')
+        ->assertDontSeeHtml('data-identifier="mfa-disabled"');
+});
+
+it('displays the proper mfa_status for an internal User without MFA enabled', function () {
+    $user = User::factory()->internal()->create();
+
+    asSuperAdmin();
+
+    livewire(ViewUser::class, [
+        'record' => $user->getRouteKey(),
+    ])
+        ->assertSeeHtml('data-identifier="mfa-disabled"');
+});
+
+it('displays the proper mfa_status for an internal User with MFA enabled but not confirmed', function () {
+    $user = User::factory()->internal()->create();
+
+    $user->enableMultifactorAuthentication();
+
+    asSuperAdmin();
+
+    livewire(ViewUser::class, [
+        'record' => $user->getRouteKey(),
+    ])
+        ->assertSeeHtml('data-identifier="mfa-not-confirmed"');
+});
+
+it('displays the proper mfa_status for an internal User with MFA enabled and confirmed', function () {
+    $user = User::factory()->internal()->create();
+
+    $user->enableMultifactorAuthentication();
+
+    $user->confirmMultifactorAuthentication();
+
+    asSuperAdmin();
+
+    livewire(ViewUser::class, [
+        'record' => $user->getRouteKey(),
+    ])
+        ->assertSeeHtml('data-identifier="mfa-enabled"');
+});
+
+it('does not display the mfa_reset Action if the user is external', function () {
+    $user = User::factory()->external()->create();
+
+    asSuperAdmin();
+
+    livewire(ViewUser::class, [
+        'record' => $user->getRouteKey(),
+    ])
+        ->assertActionHidden('mfa_reset');
+});
+
+it('does not display the mfa_reset Action if the authed user does not have the proper permission', function () {
+    $user = User::factory()->external()->create();
+
+    $user->enableMultifactorAuthentication();
+
+    $user->confirmMultifactorAuthentication();
+
+    $actingAsUser = User::factory()->create();
+    $actingAsUser->givePermissionTo('user.view-any', 'user.*.view');
+    actingAs($actingAsUser);
+
+    livewire(ViewUser::class, [
+        'record' => $user->getRouteKey(),
+    ])
+        ->assertActionHidden('mfa_reset');
+});
+
+it('does not display the mfa_reset Action if the user is internal but has not enabled and/or confirmed MFA', function () {
+    $user = User::factory()->internal()->create();
+
+    asSuperAdmin();
+
+    livewire(ViewUser::class, [
+        'record' => $user->getRouteKey(),
+    ])
+        ->assertActionHidden('mfa_reset');
+});
+
+it('displays the mfa_reset Action if the user is internal, has MFA enabled and/or confirmed, and the authed user has proper permission', function (User $user) {
+    $actingAsUser = User::factory()->create();
+    $actingAsUser->givePermissionTo('user.view-any', 'user.*.view', 'user.*.update');
+    actingAs($actingAsUser);
+
+    livewire(ViewUser::class, [
+        'record' => $user->getRouteKey(),
+    ])
+        ->assertActionVisible('mfa_reset');
+})->with([
+    'Has MFA Enabled' => function () {
+        return tap(
+            User::factory()->internal()->create(),
+            function (User $user) {
+                $user->enableMultifactorAuthentication();
+            }
+        );
+    },
+    'Has MFA Confirmed' => function () {
+        return tap(
+            User::factory()->internal()->create(),
+            function (User $user) {
+                $user->enableMultifactorAuthentication();
+
+                $user->confirmMultifactorAuthentication();
+            }
+        );
+    },
+]);
+
+it('resets the users MFA when the mfa_reset Action is triggered', function () {
+    $user = User::factory()->internal()->create();
+
+    $user->enableMultifactorAuthentication();
+
+    $user->confirmMultifactorAuthentication();
+
+    $user->refresh();
+
+    expect($user->multifactor_confirmed_at)->not()->toBeNull()
+        ->and($user->multifactor_secret)->not()->toBeNull()
+        ->and($user->multifactor_recovery_codes)->not()->toBeNull();
+
+    asSuperAdmin();
+
+    livewire(ViewUser::class, [
+        'record' => $user->getRouteKey(),
+    ])
+        ->callAction('mfa_reset');
+
+    $user->refresh();
+
+    expect($user->multifactor_confirmed_at)->toBeNull()
+        ->and($user->multifactor_secret)->toBeNull()
+        ->and($user->multifactor_recovery_codes)->toBeNull();
 });

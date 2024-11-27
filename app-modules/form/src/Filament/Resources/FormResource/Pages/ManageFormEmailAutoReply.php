@@ -3,7 +3,7 @@
 /*
 <COPYRIGHT>
 
-    Copyright © 2022-2023, Canyon GBS LLC. All rights reserved.
+    Copyright © 2016-2024, Canyon GBS LLC. All rights reserved.
 
     Advising App™ is licensed under the Elastic License 2.0. For more details,
     see https://github.com/canyongbs/advisingapp/blob/main/LICENSE.
@@ -50,7 +50,6 @@ use Filament\Forms\Form as FilamentForm;
 use Filament\Resources\Pages\EditRecord;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Query\Expression;
-use FilamentTiptapEditor\Enums\TiptapOutput;
 use Filament\Forms\Components\Actions\Action;
 use AdvisingApp\Engagement\Models\EmailTemplate;
 use AdvisingApp\Form\Filament\Resources\FormResource;
@@ -95,14 +94,14 @@ class ManageFormEmailAutoReply extends EditRecord
                             ->columnSpanFull(),
                         TiptapEditor::make('body')
                             ->disk('s3-public')
-                            ->visibility('public')
-                            ->directory('editor-images/engagements')
                             ->mergeTags([
+                                'student first name',
+                                'student last name',
                                 'student full name',
                                 'student email',
+                                'student preferred name',
                             ])
                             ->profile('email')
-                            ->output(TiptapOutput::Json)
                             ->required(fn (Get $get) => $get('is_enabled'))
                             ->hintAction(fn (TiptapEditor $component) => Action::make('loadEmailTemplate')
                                 ->form([
@@ -157,7 +156,9 @@ class ManageFormEmailAutoReply extends EditRecord
                                         return;
                                     }
 
-                                    $component->state($template->content);
+                                    $component->state(
+                                        $component->generateImageUrls($template->content),
+                                    );
                                 }))
                             ->helperText('You can insert student information by typing {{ and choosing a merge value to insert.')
                             ->columnSpanFull()

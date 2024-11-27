@@ -3,7 +3,7 @@
 /*
 <COPYRIGHT>
 
-    Copyright © 2022-2023, Canyon GBS LLC. All rights reserved.
+    Copyright © 2016-2024, Canyon GBS LLC. All rights reserved.
 
     Advising App™ is licensed under the Elastic License 2.0. For more details,
     see https://github.com/canyongbs/advisingapp/blob/main/LICENSE.
@@ -36,6 +36,9 @@
 
 namespace AdvisingApp\StudentDataModel\Database\Factories;
 
+use DateTime;
+use Carbon\Carbon;
+use AdvisingApp\StudentDataModel\Models\Student;
 use AdvisingApp\StudentDataModel\Models\Enrollment;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
@@ -47,21 +50,35 @@ class EnrollmentFactory extends Factory
     public function definition(): array
     {
         return [
-            // TODO: Determine if we can have a different ID as the primary
-            'sisid' => $this->faker->randomNumber(9),
-            'acad_career' => $this->faker->randomElement(['NC', 'CRED']),
-            'division' => $this->faker->randomElement(['ABC01', 'ABD02', 'ABE03']),
-            'semester' => $this->faker->randomNumber(4),
-            'class_nbr' => $this->faker->randomNumber(5),
-            'subject' => $this->faker->randomElement(['ACC', 'FITNESS', 'MATH']),
-            'catalog_nbr' => $this->faker->randomNumber(3) . '-' . $this->faker->randomNumber(5),
-            'enrl_status' => $this->faker->randomElement(['DROP', 'ENRL']),
-            'enrl_add_dt' => $this->faker->dateTime(),
-            'enrl_drop_dt' => $this->faker->dateTime(),
-            'crse_grade_off' => $this->faker->randomElement(['A', 'B', 'C', 'D', 'W']),
-            'unt_taken' => $this->faker->randomNumber(1),
-            'unt_earned' => $this->faker->randomNumber(1),
-            'last_upd_dt_stmp' => $this->faker->dateTime(),
+            'sisid' => Student::factory(),
+            'division' => fake()->randomElement(['ABC01', 'ABD02', 'ABE03']),
+            'class_nbr' => fake()->numerify('19###'),
+            'crse_grade_off' => fake()->randomElement(['A', 'B', 'C', 'D', 'W']),
+            'unt_taken' => fake()->numberBetween(1, 4),
+            'unt_earned' => function (array $attributes) {
+                return $attributes['unt_taken'] - fake()->numberBetween(0, $attributes['unt_taken']);
+            },
+            'last_upd_dt_stmp' => fake()->dateTime(),
+            'section' => fake()->numerify('####'),
+            'name' => fake()->randomElement(['Introduction to Mathematics', 'College Algebra', 'Business Communication: Writing for the Workplace']),
+            'department' => fake()->optional(0.8)->randomElement(['Business', 'Business Administration', 'BA: Business Administration']),
+            'faculty_name' => fake()->name(),
+            'faculty_email' => fake()->safeEmail(),
+            'semester_code' => fake()->optional(0.8)->numerify('42##'),
+            'semester_name' => fake()->optional(0.8)->randomElement(['Fall 2006', 'Spring Cohort A 2006', 'Summer A 2006', 'Summer 2012']),
+            'start_date' => fake()->optional(0.8)->dateTime(),
+            'end_date' => function (array $attributes) {
+                /** @var ?DateTime $start */
+                $start = $attributes['start_date'];
+
+                $days = fake()->numberBetween(1, 7);
+
+                return $start
+                    ? fake()->boolean(80)
+                        ? Carbon::make($start)->addDays($days)
+                        : null
+                    : fake()->optional(0.8)->dateTime();
+            },
         ];
     }
 }

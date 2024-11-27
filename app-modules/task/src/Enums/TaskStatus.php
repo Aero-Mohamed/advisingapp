@@ -3,7 +3,7 @@
 /*
 <COPYRIGHT>
 
-    Copyright © 2022-2023, Canyon GBS LLC. All rights reserved.
+    Copyright © 2016-2024, Canyon GBS LLC. All rights reserved.
 
     Advising App™ is licensed under the Elastic License 2.0. For more details,
     see https://github.com/canyongbs/advisingapp/blob/main/LICENSE.
@@ -45,16 +45,17 @@ enum TaskStatus: string implements HasColor, HasLabel
 {
     #[InitialState]
     #[AllowTransitionTo(self::InProgress)]
-    #[AllowTransitionTo(self::Cancelled)]
+    #[AllowTransitionTo(self::Canceled)]
     case Pending = 'pending';
 
     #[AllowTransitionTo(self::Completed)]
-    #[AllowTransitionTo(self::Cancelled)]
+    #[AllowTransitionTo(self::Canceled)]
     case InProgress = 'in_progress';
 
     case Completed = 'completed';
 
-    case Cancelled = 'cancelled';
+    #[AllowTransitionTo(self::InProgress)]
+    case Canceled = 'canceled';
 
     public function getColor(): string
     {
@@ -62,7 +63,7 @@ enum TaskStatus: string implements HasColor, HasLabel
             self::Pending => 'gray',
             self::InProgress => 'primary',
             self::Completed => 'success',
-            self::Cancelled => 'danger',
+            self::Canceled => 'danger',
         };
     }
 

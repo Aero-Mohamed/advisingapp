@@ -3,7 +3,7 @@
 /*
 <COPYRIGHT>
 
-    Copyright © 2022-2023, Canyon GBS LLC. All rights reserved.
+    Copyright © 2016-2024, Canyon GBS LLC. All rights reserved.
 
     Advising App™ is licensed under the Elastic License 2.0. For more details,
     see https://github.com/canyongbs/advisingapp/blob/main/LICENSE.
@@ -41,64 +41,38 @@ use Illuminate\Support\Facades\Event;
 use Illuminate\Support\ServiceProvider;
 use AdvisingApp\Authorization\Models\Role;
 use AdvisingApp\Authorization\Models\License;
-use AdvisingApp\Authorization\Models\RoleGroup;
 use AdvisingApp\Authorization\Models\Permission;
 use AdvisingApp\Authorization\AuthorizationPlugin;
 use SocialiteProviders\Azure\AzureExtendSocialite;
 use SocialiteProviders\Manager\SocialiteWasCalled;
 use Illuminate\Database\Eloquent\Relations\Relation;
 use SocialiteProviders\Google\GoogleExtendSocialite;
-use AdvisingApp\Authorization\AuthorizationRoleRegistry;
 use AdvisingApp\Authorization\Observers\LicenseObserver;
-use AdvisingApp\Authorization\AuthorizationPermissionRegistry;
+use AdvisingApp\Authorization\Http\Controllers\Auth\LogoutController;
+use Filament\Http\Controllers\Auth\LogoutController as FilamentLogoutController;
 
 class AuthorizationServiceProvider extends ServiceProvider
 {
     public function register(): void
     {
-        Panel::configureUsing(fn (Panel $panel) => $panel->plugin(new AuthorizationPlugin()));
+        Panel::configureUsing(fn (Panel $panel) => ($panel->getId() !== 'admin') || $panel->plugin(new AuthorizationPlugin()));
 
-        $this->app->singleton(AuthorizationPermissionRegistry::class, function ($app) {
-            return new AuthorizationPermissionRegistry();
-        });
-
-        $this->app->singleton(AuthorizationRoleRegistry::class, function ($app) {
-            return new AuthorizationRoleRegistry();
+        $this->app->bind(FilamentLogoutController::class, function () {
+            return new LogoutController();
         });
 
         app('config')->set('permission', require base_path('app-modules/authorization/config/permission.php'));
     }
 
-    public function boot(AuthorizationPermissionRegistry $permissionRegistry, AuthorizationRoleRegistry $roleRegistry): void
+    public function boot(): void
     {
         Relation::morphMap([
             'role' => Role::class,
             'permission' => Permission::class,
-            'role_group' => RoleGroup::class,
             'license' => License::class,
         ]);
 
         $this->registerObservers();
-
-        $permissionRegistry->registerApiPermissions(
-            module: 'authorization',
-            path: 'permissions/api/custom'
-        );
-
-        $permissionRegistry->registerWebPermissions(
-            module: 'authorization',
-            path: 'permissions/web/custom'
-        );
-
-        $roleRegistry->registerApiRoles(
-            module: 'authorization',
-            path: 'roles/api'
-        );
-
-        $roleRegistry->registerWebRoles(
-            module: 'authorization',
-            path: 'roles/web'
-        );
 
         Event::listen(
             events: SocialiteWasCalled::class,

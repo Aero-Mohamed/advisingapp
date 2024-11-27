@@ -3,7 +3,7 @@
 /*
 <COPYRIGHT>
 
-    Copyright © 2022-2023, Canyon GBS LLC. All rights reserved.
+    Copyright © 2016-2024, Canyon GBS LLC. All rights reserved.
 
     Advising App™ is licensed under the Elastic License 2.0. For more details,
     see https://github.com/canyongbs/advisingapp/blob/main/LICENSE.
@@ -37,20 +37,22 @@
 namespace AdvisingApp\Consent\Providers;
 
 use Filament\Panel;
+use App\Concerns\ImplementsGraphQL;
 use AdvisingApp\Consent\ConsentPlugin;
 use Illuminate\Support\ServiceProvider;
 use AdvisingApp\Consent\Models\ConsentAgreement;
+use AdvisingApp\Consent\Enums\ConsentAgreementType;
 use AdvisingApp\Consent\Models\UserConsentAgreement;
 use Illuminate\Database\Eloquent\Relations\Relation;
-use AdvisingApp\Authorization\AuthorizationRoleRegistry;
 use AdvisingApp\Consent\Observers\ConsentAgreementObserver;
-use AdvisingApp\Authorization\AuthorizationPermissionRegistry;
 
 class ConsentServiceProvider extends ServiceProvider
 {
+    use ImplementsGraphQL;
+
     public function register()
     {
-        Panel::configureUsing(fn (Panel $panel) => $panel->plugin(new ConsentPlugin()));
+        Panel::configureUsing(fn (Panel $panel) => ($panel->getId() !== 'admin') || $panel->plugin(new ConsentPlugin()));
     }
 
     public function boot()
@@ -60,40 +62,14 @@ class ConsentServiceProvider extends ServiceProvider
             'user_consent_agreement' => UserConsentAgreement::class,
         ]);
 
-        $this->registerRolesAndPermissions();
-
         $this->registerObservers();
+
+        $this->discoverSchema(__DIR__ . '/../../graphql/*');
+        $this->registerEnum(ConsentAgreementType::class);
     }
 
     public function registerObservers(): void
     {
         ConsentAgreement::observe(ConsentAgreementObserver::class);
-    }
-
-    protected function registerRolesAndPermissions()
-    {
-        $permissionRegistry = app(AuthorizationPermissionRegistry::class);
-
-        $permissionRegistry->registerApiPermissions(
-            module: 'consent',
-            path: 'permissions/api/custom'
-        );
-
-        $permissionRegistry->registerWebPermissions(
-            module: 'consent',
-            path: 'permissions/web/custom'
-        );
-
-        $roleRegistry = app(AuthorizationRoleRegistry::class);
-
-        $roleRegistry->registerApiRoles(
-            module: 'consent',
-            path: 'roles/api'
-        );
-
-        $roleRegistry->registerWebRoles(
-            module: 'consent',
-            path: 'roles/web'
-        );
     }
 }

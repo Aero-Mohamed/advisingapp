@@ -3,7 +3,7 @@
 /*
 <COPYRIGHT>
 
-    Copyright © 2022-2023, Canyon GBS LLC. All rights reserved.
+    Copyright © 2016-2024, Canyon GBS LLC. All rights reserved.
 
     Advising App™ is licensed under the Elastic License 2.0. For more details,
     see https://github.com/canyongbs/advisingapp/blob/main/LICENSE.
@@ -38,6 +38,7 @@ namespace AdvisingApp\Form\Actions;
 
 use AdvisingApp\Form\Models\Submission;
 use AdvisingApp\Form\Models\SubmissibleField;
+use AdvisingApp\Form\Filament\Blocks\FormFieldBlock;
 
 class InjectSubmissionStateIntoTipTapContent
 {
@@ -64,6 +65,7 @@ class InjectSubmissionStateIntoTipTapContent
                 continue;
             }
 
+            /** @var FormFieldBlock $block */
             $block = $blocks[$componentAttributes['type']] ?? null;
 
             if (blank($block)) {
@@ -79,7 +81,7 @@ class InjectSubmissionStateIntoTipTapContent
 
             $content[$componentKey]['attrs']['data'] = [
                 ...$component['attrs']['data'],
-                ...$block::getSubmissionState($field->pivot->response),
+                ...$block::getSubmissionState($field, $field->pivot->response),
             ];
         }
 

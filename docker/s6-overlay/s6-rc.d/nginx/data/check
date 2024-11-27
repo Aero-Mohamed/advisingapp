@@ -1,0 +1,10 @@
+#!/command/with-contenv bash
+response=$(curl -s -o /dev/null -w "%{http_code}" -L --insecure http://localhost/ping)
+
+if [[ $response == "200" ]]; then
+	exit 0
+else
+	echo "❌ There seems to be a failure in checking the web server. Here's the response:"
+	echo "$response"
+	exit 1
+fi

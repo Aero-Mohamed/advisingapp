@@ -3,7 +3,7 @@
 /*
 <COPYRIGHT>
 
-    Copyright © 2022-2023, Canyon GBS LLC. All rights reserved.
+    Copyright © 2016-2024, Canyon GBS LLC. All rights reserved.
 
     Advising App™ is licensed under the Elastic License 2.0. For more details,
     see https://github.com/canyongbs/advisingapp/blob/main/LICENSE.
@@ -50,6 +50,10 @@ class TwilioMessage implements Message
         $settings = app(TwilioSettings::class);
 
         $this->from ??= $settings->from_number;
+
+        if (empty($this->from) && $settings->is_demo_mode_enabled) {
+            $this->from = '+11111111111';
+        }
     }
 
     public static function make(object $notifiable): static

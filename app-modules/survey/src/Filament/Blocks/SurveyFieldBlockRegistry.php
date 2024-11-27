@@ -3,7 +3,7 @@
 /*
 <COPYRIGHT>
 
-    Copyright © 2022-2023, Canyon GBS LLC. All rights reserved.
+    Copyright © 2016-2024, Canyon GBS LLC. All rights reserved.
 
     Advising App™ is licensed under the Elastic License 2.0. For more details,
     see https://github.com/canyongbs/advisingapp/blob/main/LICENSE.
@@ -54,7 +54,7 @@ class SurveyFieldBlockRegistry
             TextAreaSurveyFieldBlock::class,
             SelectSurveyFieldBlock::class,
             RadioSurveyFieldBlock::class,
-            CheckboxSurveyFieldBlock::class,
+            CheckboxesSurveyFieldBlock::class,
             EmailFormFieldBlock::class,
             NumberFormFieldBlock::class,
             LikertScaleSurveyBlock::class,

@@ -3,7 +3,7 @@
 /*
 <COPYRIGHT>
 
-    Copyright © 2022-2023, Canyon GBS LLC. All rights reserved.
+    Copyright © 2016-2024, Canyon GBS LLC. All rights reserved.
 
     Advising App™ is licensed under the Elastic License 2.0. For more details,
     see https://github.com/canyongbs/advisingapp/blob/main/LICENSE.
@@ -38,17 +38,15 @@ namespace AdvisingApp\Audit\Filament\Pages;
 
 use App\Models\User;
 use Filament\Forms\Form;
+use App\Models\Authenticatable;
 use Filament\Pages\SettingsPage;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
-use App\Filament\Clusters\GlobalSettings;
 use AdvisingApp\Audit\Settings\AuditSettings;
 use AdvisingApp\Audit\Actions\Finders\AuditableModels;
 
 class ManageAuditSettings extends SettingsPage
 {
-    protected static ?string $navigationIcon = 'heroicon-o-cog-6-tooth';
-
     protected static ?string $navigationLabel = 'Auditing';
 
     protected static ?int $navigationSort = 20;
@@ -57,21 +55,21 @@ class ManageAuditSettings extends SettingsPage
 
     protected static ?string $title = 'Auditing';
 
-    protected static ?string $cluster = GlobalSettings::class;
+    protected static ?string $navigationGroup = 'Global Administration';
 
     public static function canAccess(): bool
     {
         /** @var User $user */
         $user = auth()->user();
 
-        return $user->can('audit.view_audit_settings');
+        return $user->hasRole(Authenticatable::SUPER_ADMIN_ROLE) && parent::canAccess();
     }
 
     public function form(Form $form): Form
     {
         return $form
             ->schema([
-                Select::make('audited_models')
+                Select::make('audited_models_exclude')
                     ->options(AuditableModels::all())
                     ->multiple()
                     ->in(AuditableModels::all()->keys()->toArray())
@@ -82,7 +80,7 @@ class ManageAuditSettings extends SettingsPage
                     )
                     ->hintIcon(
                         icon: 'heroicon-m-question-mark-circle',
-                        tooltip: 'Items added here will be tracked by the audit trail.'
+                        tooltip: 'Models added here will not be tracked by the audit trail.'
                     )
                     ->columnSpanFull(),
                 TextInput::make('retention_duration_in_days')

@@ -3,7 +3,7 @@
 /*
 <COPYRIGHT>
 
-    Copyright © 2022-2023, Canyon GBS LLC. All rights reserved.
+    Copyright © 2016-2024, Canyon GBS LLC. All rights reserved.
 
     Advising App™ is licensed under the Elastic License 2.0. For more details,
     see https://github.com/canyongbs/advisingapp/blob/main/LICENSE.
@@ -36,14 +36,16 @@
 
 namespace AdvisingApp\Campaign\Observers;
 
+use App\Models\User;
 use AdvisingApp\Campaign\Models\Campaign;
 
 class CampaignObserver
 {
     public function creating(Campaign $campaign): void
     {
-        if (is_null($campaign->user_id) && ! is_null(auth()->user())) {
-            $campaign->user_id = auth()->user()->id;
+        if (is_null($campaign->created_by_id) && ! is_null(auth()->user())) {
+            $campaign->created_by_type = (new User())->getMorphClass();
+            $campaign->created_by_id = auth()->user()->getKey();
         }
     }
 }

@@ -3,7 +3,7 @@
 /*
 <COPYRIGHT>
 
-    Copyright © 2022-2023, Canyon GBS LLC. All rights reserved.
+    Copyright © 2016-2024, Canyon GBS LLC. All rights reserved.
 
     Advising App™ is licensed under the Elastic License 2.0. For more details,
     see https://github.com/canyongbs/advisingapp/blob/main/LICENSE.
@@ -36,14 +36,10 @@
 
 namespace AdvisingApp\Notification\DataTransferObjects;
 
-use Twilio\Rest\Api\V2010\Account\MessageInstance;
-
 class DatabaseChannelResultData extends NotificationResultData
 {
     public function __construct(
         public bool $success,
-        // TODO Is there something we can add here?
-        // public ?MessageInstance $message = null,
         public ?string $error = null,
     ) {}
 }

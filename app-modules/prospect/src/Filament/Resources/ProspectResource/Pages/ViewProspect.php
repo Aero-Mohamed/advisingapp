@@ -3,7 +3,7 @@
 /*
 <COPYRIGHT>
 
-    Copyright © 2022-2023, Canyon GBS LLC. All rights reserved.
+    Copyright © 2016-2024, Canyon GBS LLC. All rights reserved.
 
     Advising App™ is licensed under the Elastic License 2.0. For more details,
     see https://github.com/canyongbs/advisingapp/blob/main/LICENSE.
@@ -41,12 +41,18 @@ use Filament\Infolists\Infolist;
 use Filament\Resources\Pages\ViewRecord;
 use AdvisingApp\Prospect\Models\Prospect;
 use Filament\Infolists\Components\Section;
+use Filament\Infolists\Components\IconEntry;
 use Filament\Infolists\Components\TextEntry;
+use AdvisingApp\Prospect\Concerns\ProspectHolisticViewPage;
 use AdvisingApp\Prospect\Filament\Resources\ProspectResource;
 use AdvisingApp\Notification\Filament\Actions\SubscribeHeaderAction;
+use AdvisingApp\Prospect\Filament\Resources\ProspectResource\Actions\ConvertToStudent;
+use AdvisingApp\Prospect\Filament\Resources\ProspectResource\Actions\DisassociateStudent;
 
 class ViewProspect extends ViewRecord
 {
+    use ProspectHolisticViewPage;
+
     protected static string $resource = ProspectResource::class;
 
     // TODO: Automatically set from Filament
@@ -56,75 +62,81 @@ class ViewProspect extends ViewRecord
     {
         return $infolist
             ->schema([
-                Section::make()
+                Section::make('Demographics')
+                    ->schema([
+                        TextEntry::make('first_name')
+                            ->label('First Name'),
+                        TextEntry::make('last_name')
+                            ->label('Last Name'),
+                        TextEntry::make(Prospect::displayNameKey())
+                            ->label('Full Name'),
+                        TextEntry::make('preferred')
+                            ->label('Preferred Name'),
+                        TextEntry::make('birthdate')
+                            ->label('Birthdate'),
+                        TextEntry::make('hsgrad')
+                            ->label('High School Grad'),
+                    ])
+                    ->columns(2),
+                Section::make('Contact Information')
+                    ->schema([
+                        TextEntry::make('email')
+                            ->label('Email'),
+                        TextEntry::make('email_2')
+                            ->label('Alternate Email'),
+                        TextEntry::make('mobile')
+                            ->label('Mobile'),
+                        TextEntry::make('phone')
+                            ->label('Phone'),
+                        TextEntry::make('address')
+                            ->label('Address'),
+                        TextEntry::make('address_2')
+                            ->label('Apartment/Unit Number'),
+                        TextEntry::make('address_3')
+                            ->label('Additional Address'),
+                        TextEntry::make('city')
+                            ->label('City'),
+                        TextEntry::make('state')
+                            ->label('State'),
+                        TextEntry::make('postal')
+                            ->label('Postal'),
+                    ])
+                    ->columns(2),
+                Section::make('Classification')
                     ->schema([
                         TextEntry::make('status.name')
-                            ->label('Status')
-                            ->translateLabel(),
+                            ->label('Status'),
                         TextEntry::make('source.name')
-                            ->label('Source')
-                            ->translateLabel(),
-                        TextEntry::make('first_name')
-                            ->label('First Name')
-                            ->translateLabel(),
-                        TextEntry::make('last_name')
-                            ->label('Last Name')
-                            ->translateLabel(),
-                        TextEntry::make(Prospect::displayNameKey())
-                            ->label('Full Name')
-                            ->translateLabel(),
-                        TextEntry::make('preferred')
-                            ->label('Preferred Name')
-                            ->translateLabel(),
+                            ->label('Source'),
                         TextEntry::make('description')
                             ->label('Description')
-                            ->translateLabel(),
-                        TextEntry::make('email')
-                            ->label('Email')
-                            ->translateLabel(),
-                        TextEntry::make('email_2')
-                            ->label('Email 2')
-                            ->translateLabel(),
-                        TextEntry::make('mobile')
-                            ->label('Mobile')
-                            ->translateLabel(),
-                        TextEntry::make('sms_opt_out')
-                            ->label('SMS Opt Out')
-                            ->translateLabel()
-                            ->formatStateUsing(fn (bool $state): string => $state ? 'Yes' : 'No'),
-                        TextEntry::make('email_bounce')
-                            ->label('Email Bounce')
-                            ->translateLabel()
-                            ->formatStateUsing(fn (bool $state): string => $state ? 'Yes' : 'No'),
-                        TextEntry::make('phone')
-                            ->label('Phone')
-                            ->translateLabel(),
-                        TextEntry::make('address')
-                            ->label('Address')
-                            ->translateLabel(),
-                        TextEntry::make('address_2')
-                            ->label('Address 2')
-                            ->translateLabel(),
-                        TextEntry::make('birthdate')
-                            ->label('Birthdate')
-                            ->translateLabel(),
-                        TextEntry::make('hsgrad')
-                            ->label('High School Grad')
-                            ->translateLabel(),
-                        TextEntry::make('assignedTo.name')
-                            ->label('Assigned To')
-                            ->translateLabel(),
-                        TextEntry::make('createdBy.name')
-                            ->label('Created By')
-                            ->translateLabel(),
+                            ->columnSpanFull(),
                     ])
-                    ->columns(),
+                    ->columns(2),
+                Section::make('Engagement Restrictions')
+                    ->schema([
+                        IconEntry::make('sms_opt_out')
+                            ->label('SMS Opt Out')
+                            ->boolean(),
+                        IconEntry::make('email_bounce')
+                            ->label('Email Bounce')
+                            ->boolean(),
+                    ])
+                    ->columns(2),
+                Section::make('Record Details')
+                    ->schema([
+                        TextEntry::make('createdBy.name')
+                            ->label('Created By'),
+                    ])
+                    ->columns(2),
             ]);
     }
 
     protected function getHeaderActions(): array
     {
         return [
+            ConvertToStudent::make()->visible(fn (Prospect $record) => ! $record->student()->exists()),
+            DisassociateStudent::make()->visible(fn (Prospect $record) => $record->student()->exists()),
             EditAction::make(),
             SubscribeHeaderAction::make(),
         ];

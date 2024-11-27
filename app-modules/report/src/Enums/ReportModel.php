@@ -3,7 +3,7 @@
 /*
 <COPYRIGHT>
 
-    Copyright © 2022-2023, Canyon GBS LLC. All rights reserved.
+    Copyright © 2016-2024, Canyon GBS LLC. All rights reserved.
 
     Advising App™ is licensed under the Elastic License 2.0. For more details,
     see https://github.com/canyongbs/advisingapp/blob/main/LICENSE.
@@ -39,16 +39,15 @@ namespace AdvisingApp\Report\Enums;
 use App\Models\User;
 use Filament\Tables\Table;
 use App\Models\Authenticatable;
-use App\Filament\Tables\UsersTable;
 use Filament\Support\Contracts\HasLabel;
 use AdvisingApp\Prospect\Models\Prospect;
 use Illuminate\Database\Eloquent\Builder;
 use AdvisingApp\StudentDataModel\Models\Student;
 use AdvisingApp\Report\Filament\Exports\UserExporter;
-use AdvisingApp\Prospect\Filament\Tables\ProspectsTable;
 use AdvisingApp\Report\Filament\Exports\StudentExporter;
 use AdvisingApp\Report\Filament\Exports\ProspectExporter;
-use AdvisingApp\StudentDataModel\Filament\Tables\StudentsTable;
+use AdvisingApp\Prospect\Filament\Resources\ProspectResource\Tables\ProspectsTable;
+use AdvisingApp\StudentDataModel\Filament\Resources\StudentResource\Tables\StudentsTable;
 
 enum ReportModel: string implements HasLabel
 {
@@ -79,11 +78,10 @@ enum ReportModel: string implements HasLabel
 
     public function table(Table $table): Table
     {
-        return $table->tap(app(match ($this) {
+        return (match ($this) {
             static::Student => StudentsTable::class,
             static::Prospect => ProspectsTable::class,
-            static::User => UsersTable::class,
-        }));
+        })::configure($table);
     }
 
     public function class(): string

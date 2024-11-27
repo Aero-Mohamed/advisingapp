@@ -3,7 +3,7 @@
 /*
 <COPYRIGHT>
 
-    Copyright © 2022-2023, Canyon GBS LLC. All rights reserved.
+    Copyright © 2016-2024, Canyon GBS LLC. All rights reserved.
 
     Advising App™ is licensed under the Elastic License 2.0. For more details,
     see https://github.com/canyongbs/advisingapp/blob/main/LICENSE.
@@ -69,14 +69,24 @@ class CreateEngagementBatch implements ShouldQueue
             'user_id' => $this->data->user->id,
         ]);
 
-        $this->data->records->each(function (Student|Prospect $record) use ($engagementBatch) {
+        $deliveryMethod = $this->data->deliveryMethod;
+
+        [$body] = tiptap_converter()->saveImages(
+            $this->data->body,
+            disk: 's3-public',
+            record: $engagementBatch,
+            recordAttribute: 'body',
+            newImages: $this->data->temporaryBodyImages,
+        );
+
+        $this->data->records->each(function (Student|Prospect $record) use ($body, $engagementBatch) {
             /** @var Engagement $engagement */
             $engagement = $engagementBatch->engagements()->create([
                 'user_id' => $engagementBatch->user_id,
                 'recipient_id' => $record->identifier(),
                 'recipient_type' => $record->getMorphClass(),
+                'body' => $body,
                 'subject' => $this->data->subject,
-                'body' => $this->data->body,
                 'scheduled' => false,
             ]);
 
@@ -93,12 +103,12 @@ class CreateEngagementBatch implements ShouldQueue
             return $deliverable->driver()->jobForDelivery();
         });
 
-        $engagementBatch->user->notify(new EngagementBatchStartedNotification($engagementBatch, $deliverableJobs->count()));
+        $engagementBatch->user->notify(new EngagementBatchStartedNotification($engagementBatch, $deliverableJobs->count(), $deliveryMethod));
 
         Bus::batch($deliverableJobs)
             ->name("Process Bulk Engagement {$engagementBatch->id}")
-            ->finally(function (Batch $batchQueue) use ($engagementBatch) {
-                $engagementBatch->user->notify(new EngagementBatchFinishedNotification($engagementBatch, $batchQueue->totalJobs, $batchQueue->failedJobs));
+            ->finally(function (Batch $batchQueue) use ($engagementBatch, $deliveryMethod) {
+                $engagementBatch->user->notify(new EngagementBatchFinishedNotification($engagementBatch, $batchQueue->totalJobs, $batchQueue->failedJobs, $deliveryMethod));
             })
             ->allowFailures()
             ->dispatch();

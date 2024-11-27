@@ -3,7 +3,7 @@
 /*
 <COPYRIGHT>
 
-    Copyright © 2022-2023, Canyon GBS LLC. All rights reserved.
+    Copyright © 2016-2024, Canyon GBS LLC. All rights reserved.
 
     Advising App™ is licensed under the Elastic License 2.0. For more details,
     see https://github.com/canyongbs/advisingapp/blob/main/LICENSE.
@@ -38,6 +38,7 @@ namespace AdvisingApp\Campaign\Filament\Resources\CampaignResource\Pages;
 
 use Filament\Actions\EditAction;
 use Filament\Infolists\Infolist;
+use App\Features\AddCreatedByFeature;
 use Filament\Resources\Pages\ViewRecord;
 use AdvisingApp\Campaign\Models\Campaign;
 use Filament\Infolists\Components\Section;
@@ -56,15 +57,17 @@ class ViewCampaign extends ViewRecord
                 Section::make()
                     ->schema([
                         TextEntry::make('name'),
-                        // TODO Make link to caseload
-                        TextEntry::make('caseload.name')
-                            ->label('Caseload'),
+                        TextEntry::make('segment.name')
+                            ->label('Population Segment'),
                         IconEntry::make('enabled')
                             ->boolean(),
                         IconEntry::make('execution_status')
                             ->label('Has Been Executed?')
                             ->getStateUsing(fn (Campaign $record) => $record->hasBeenExecuted())
                             ->boolean(),
+                        TextEntry::make('createdBy.name')
+                            ->label('Created By')
+                            ->visible(fn () => AddCreatedByFeature::active()),
                     ]),
             ]);
     }

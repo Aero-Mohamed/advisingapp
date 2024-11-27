@@ -3,7 +3,7 @@
 /*
 <COPYRIGHT>
 
-    Copyright © 2022-2023, Canyon GBS LLC. All rights reserved.
+    Copyright © 2016-2024, Canyon GBS LLC. All rights reserved.
 
     Advising App™ is licensed under the Elastic License 2.0. For more details,
     see https://github.com/canyongbs/advisingapp/blob/main/LICENSE.
@@ -36,9 +36,22 @@
 
 namespace App\Multitenancy\Actions;
 
+use Throwable;
 use App\Models\Tenant;
+use App\Jobs\CreateTenantUser;
+use App\Jobs\SeedTenantDatabase;
+use App\Jobs\MigrateTenantDatabase;
+use Illuminate\Support\Facades\Bus;
 use Illuminate\Encryption\Encrypter;
+use App\Jobs\UpdateTenantLicenseData;
+use Illuminate\Support\Facades\Event;
+use AdvisingApp\Theme\Jobs\UpdateTenantTheme;
+use App\Jobs\DispatchTenantSetupCompleteEvent;
+use App\Multitenancy\Events\NewTenantSetupFailure;
+use App\Multitenancy\DataTransferObjects\TenantUser;
+use AdvisingApp\Theme\DataTransferObjects\ThemeConfig;
 use App\Multitenancy\DataTransferObjects\TenantConfig;
+use App\DataTransferObjects\LicenseManagement\LicenseData;
 
 class CreateTenant
 {
@@ -46,16 +59,36 @@ class CreateTenant
         string $name,
         string $domain,
         TenantConfig $config,
+        ?TenantUser $user = null,
+        ?LicenseData $licenseData = null,
+        ?ThemeConfig $themeConfig = null,
+        bool $seedTenantDatabase = true,
     ): ?Tenant {
-        return Tenant::query()
-            ->create(
-                [
-                    'name' => $name,
-                    'domain' => $domain,
-                    'key' => $this->generateTenantKey(),
-                    'config' => $config,
-                ]
-            );
+        $tenant = Tenant::query()->create([
+            'name' => $name,
+            'domain' => $domain,
+            'key' => $this->generateTenantKey(),
+            'config' => $config,
+        ]);
+
+        Bus::batch([
+            [
+                new MigrateTenantDatabase($tenant),
+                ...($seedTenantDatabase ? [new SeedTenantDatabase($tenant)] : []),
+                ...($licenseData ? [new UpdateTenantLicenseData($tenant, $licenseData)] : []),
+                ...($themeConfig ? [new UpdateTenantTheme($tenant, $themeConfig)] : []),
+                ...($user ? [new CreateTenantUser($tenant, $user)] : []),
+                new DispatchTenantSetupCompleteEvent($tenant),
+            ],
+        ])
+            ->name("deploy-tenant-{$tenant->getKey()}-{$domain}")
+            ->onQueue(config('queue.landlord_queue'))
+            ->catch(function (Throwable $exception) use ($tenant) {
+                Event::dispatch(new NewTenantSetupFailure($tenant, $exception));
+            })
+            ->dispatch();
+
+        return $tenant;
     }
 
     protected function generateTenantKey(): string

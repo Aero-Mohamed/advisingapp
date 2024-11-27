@@ -3,7 +3,7 @@
 /*
 <COPYRIGHT>
 
-    Copyright © 2022-2023, Canyon GBS LLC. All rights reserved.
+    Copyright © 2016-2024, Canyon GBS LLC. All rights reserved.
 
     Advising App™ is licensed under the Elastic License 2.0. For more details,
     see https://github.com/canyongbs/advisingapp/blob/main/LICENSE.
@@ -47,8 +47,10 @@ class EngagementObserver
 {
     public function creating(Engagement $engagement): void
     {
-        if (is_null($engagement->user_id) && ! is_null(auth()->user())) {
-            $engagement->user_id = auth()->user()->id;
+        $user = auth()->user();
+
+        if ($user instanceof User && is_null($engagement->user_id)) {
+            $engagement->user_id = $user->id;
         }
     }
 

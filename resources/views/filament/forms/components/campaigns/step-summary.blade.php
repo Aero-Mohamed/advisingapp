@@ -1,7 +1,7 @@
 {{--
 <COPYRIGHT>
 
-    Copyright © 2022-2023, Canyon GBS LLC. All rights reserved.
+    Copyright © 2016-2024, Canyon GBS LLC. All rights reserved.
 
     Advising App™ is licensed under the Elastic License 2.0. For more details,
     see https://github.com/canyongbs/advisingapp/blob/main/LICENSE.
@@ -43,12 +43,12 @@
 
 <div>
     <div class="flex flex-col space-y-4">
-        @foreach ($sortedActions as $action)
+        @foreach ($sortedActions as $actionIndex => $action)
             @php
                 $view = CampaignActionType::from($action['type'])->getStepSummaryView();
             @endphp
 
-            @include($view, ['action' => $action['data']])
+            @include($view, ['action' => $action['data'], 'actionIndex' => $actionIndex])
         @endforeach
     </div>
 

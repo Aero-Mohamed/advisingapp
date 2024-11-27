@@ -3,7 +3,7 @@
 /*
 <COPYRIGHT>
 
-    Copyright © 2022-2023, Canyon GBS LLC. All rights reserved.
+    Copyright © 2016-2024, Canyon GBS LLC. All rights reserved.
 
     Advising App™ is licensed under the Elastic License 2.0. For more details,
     see https://github.com/canyongbs/advisingapp/blob/main/LICENSE.
@@ -38,19 +38,19 @@ namespace AdvisingApp\Alert\Filament\Resources\AlertResource\Pages;
 
 use Filament\Tables\Table;
 use Filament\Infolists\Infolist;
-use App\Filament\Columns\IdColumn;
 use Filament\Actions\CreateAction;
 use AdvisingApp\Alert\Models\Alert;
 use Filament\Tables\Filters\Filter;
 use Filament\Forms\Components\Group;
 use Filament\Forms\Components\Select;
+use AdvisingApp\Segment\Models\Segment;
 use Filament\Forms\Components\Textarea;
 use Filament\Tables\Actions\ViewAction;
 use Filament\Tables\Columns\TextColumn;
 use Illuminate\Database\Eloquent\Model;
 use AdvisingApp\Alert\Enums\AlertStatus;
 use AdvisingApp\Prospect\Models\Prospect;
-use App\Filament\Fields\EducatableSelect;
+use App\Filament\Tables\Columns\IdColumn;
 use Filament\Resources\Pages\ListRecords;
 use Filament\Tables\Filters\SelectFilter;
 use Illuminate\Database\Eloquent\Builder;
@@ -59,12 +59,12 @@ use Filament\Infolists\Components\TextEntry;
 use Filament\Tables\Actions\BulkActionGroup;
 use Filament\Tables\Actions\DeleteBulkAction;
 use AdvisingApp\StudentDataModel\Models\Student;
-use AdvisingApp\CaseloadManagement\Models\Caseload;
+use App\Filament\Forms\Components\EducatableSelect;
 use AdvisingApp\Alert\Filament\Resources\AlertResource;
+use AdvisingApp\Segment\Actions\TranslateSegmentFilters;
 use AdvisingApp\StudentDataModel\Models\Scopes\EducatableSearch;
-use AdvisingApp\CaseloadManagement\Actions\TranslateCaseloadFilters;
+use AdvisingApp\StudentDataModel\Filament\Resources\StudentResource;
 use AdvisingApp\Prospect\Filament\Resources\ProspectResource\Pages\ManageProspectAlerts;
-use AdvisingApp\StudentDataModel\Filament\Resources\StudentResource\Pages\ManageStudentAlerts;
 
 class ListAlerts extends ListRecords
 {
@@ -79,7 +79,7 @@ class ListAlerts extends ListRecords
                     ->label('Related To')
                     ->getStateUsing(fn (Alert $record): ?string => $record->concern?->{$record->concern::displayNameKey()})
                     ->url(fn (Alert $record) => match ($record->concern ? $record->concern::class : null) {
-                        Student::class => ManageStudentAlerts::getUrl(['record' => $record->concern]),
+                        Student::class => StudentResource::getUrl('view', ['record' => $record->concern]),
                         Prospect::class => ManageProspectAlerts::getUrl(['record' => $record->concern]),
                         default => null,
                     }),
@@ -99,7 +99,7 @@ class ListAlerts extends ListRecords
                     ->label('Related To')
                     ->getStateUsing(fn (Alert $record): ?string => $record->concern?->{$record->concern::displayNameKey()})
                     ->url(fn (Alert $record) => match ($record->concern ? $record->concern::class : null) {
-                        Student::class => ManageStudentAlerts::getUrl(['record' => $record->concern]),
+                        Student::class => StudentResource::getUrl('view', ['record' => $record->concern]),
                         Prospect::class => ManageProspectAlerts::getUrl(['record' => $record->concern]),
                         default => null,
                     })
@@ -132,24 +132,24 @@ class ListAlerts extends ListRecords
                             callback: fn (Builder $query) => $query->whereRelation('careTeam', 'user_id', auth()->id())
                         )
                     ),
-                SelectFilter::make('my_caseloads')
-                    ->label('My Caseloads')
+                SelectFilter::make('my_segments')
+                    ->label('My Population Segments')
                     ->options(
-                        auth()->user()->caseloads()
+                        auth()->user()->segments()
                             ->pluck('name', 'id'),
                     )
                     ->searchable()
                     ->optionsLimit(20)
-                    ->query(fn (Builder $query, array $data) => $this->caseloadFilter($query, $data)),
-                SelectFilter::make('all_caseloads')
-                    ->label('All Caseloads')
+                    ->query(fn (Builder $query, array $data) => $this->segmentFilter($query, $data)),
+                SelectFilter::make('all_segments')
+                    ->label('All Population Segments')
                     ->options(
-                        Caseload::all()
+                        Segment::all()
                             ->pluck('name', 'id'),
                     )
                     ->searchable()
                     ->optionsLimit(20)
-                    ->query(fn (Builder $query, array $data) => $this->caseloadFilter($query, $data)),
+                    ->query(fn (Builder $query, array $data) => $this->segmentFilter($query, $data)),
                 SelectFilter::make('severity')
                     ->options(AlertSeverity::class),
                 SelectFilter::make('status')
@@ -202,20 +202,20 @@ class ListAlerts extends ListRecords
         ];
     }
 
-    protected function caseloadFilter(Builder $query, array $data): void
+    protected function segmentFilter(Builder $query, array $data): void
     {
         if (blank($data['value'])) {
             return;
         }
 
-        $caseload = Caseload::find($data['value']);
+        $segment = Segment::find($data['value']);
 
         /** @var Model $model */
-        $model = resolve($caseload->model->class());
+        $model = resolve($segment->model->class());
 
         $query->whereIn(
             'concern_id',
-            app(TranslateCaseloadFilters::class)
+            app(TranslateSegmentFilters::class)
                 ->handle($data['value'])
                 ->pluck($model->getQualifiedKeyName()),
         );

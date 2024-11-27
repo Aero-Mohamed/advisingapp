@@ -1,7 +1,7 @@
 {{--
 <COPYRIGHT>
 
-    Copyright © 2022-2023, Canyon GBS LLC. All rights reserved.
+    Copyright © 2016-2024, Canyon GBS LLC. All rights reserved.
 
     Advising App™ is licensed under the Elastic License 2.0. For more details,
     see https://github.com/canyongbs/advisingapp/blob/main/LICENSE.
@@ -39,6 +39,6 @@
         icon="heroicon-o-rectangle-group"
     />
 
-    <span class="mt-2 block text-sm font-semibold text-gray-800 dark:text-gray-200">Select an item from the lefthand menu
-        to see engagements</span>
+    <span class="mt-2 block text-sm font-semibold text-gray-800 dark:text-gray-200">Select a record to see related emails
+        and text messages</span>
 </div>

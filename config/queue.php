@@ -3,7 +3,7 @@
 /*
 <COPYRIGHT>
 
-    Copyright © 2022-2023, Canyon GBS LLC. All rights reserved.
+    Copyright © 2016-2024, Canyon GBS LLC. All rights reserved.
 
     Advising App™ is licensed under the Elastic License 2.0. For more details,
     see https://github.com/canyongbs/advisingapp/blob/main/LICENSE.
@@ -83,8 +83,23 @@ return [
             'after_commit' => false,
         ],
 
+        /*
+        |--------------------------------------------------------------------------
+        | SQS Disk Queue Configuration
+        |--------------------------------------------------------------------------
+        |
+        |
+        | always_store: Determines if all payloads should be stored on a disk regardless if they are over SQS's 256KB limit.
+        | cleanup:      Determines if the payload files should be removed from the disk once the job is processed. Leaveing the
+        |                 files behind can be useful to replay the queue jobs later for debugging reasons.
+        | disk:         The disk to save SQS payloads to.  This disk should be configured in your Laravel filesystems.php config file.
+        | prefix        The prefix (folder) to store the payloads with.  This is useful if you are sharing a disk with other SQS queues.
+        |                 Using a prefix allows for the queue:clear command to destroy the files separately from other sqs-disk backed queues
+        |                 sharing the same disk.
+        |
+        */
         'sqs' => [
-            'driver' => 'sqs',
+            'driver' => 'canyongbs-sqs-disk',
             'key' => env('AWS_SQS_ACCESS_KEY_ID'),
             'secret' => env('AWS_SQS_SECRET_ACCESS_KEY'),
             'prefix' => env('SQS_PREFIX', 'https://sqs.us-east-1.amazonaws.com/your-account-id'),
@@ -92,6 +107,12 @@ return [
             'suffix' => env('SQS_SUFFIX'),
             'region' => env('AWS_SQS_DEFAULT_REGION', 'us-east-1'),
             'after_commit' => false,
+            'disk_options' => [
+                'always_store' => false,
+                'cleanup' => true,
+                'disk' => env('FILESYSTEM_DISK', 'local'),
+                'prefix' => 'sqs-payloads',
+            ],
         ],
 
         'redis' => [
@@ -122,4 +143,8 @@ return [
     ],
 
     'landlord_queue' => env('LANDLORD_SQS_QUEUE', 'landlord'),
+
+    'outbound_communication_queue' => env('OUTBOUND_COMMUNICATION_QUEUE', env('SQS_QUEUE', 'default')),
+
+    'import_export_queue' => env('IMPORT_EXPORT_QUEUE', env('SQS_QUEUE', 'default')),
 ];

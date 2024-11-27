@@ -3,7 +3,7 @@
 /*
 <COPYRIGHT>
 
-    Copyright © 2022-2023, Canyon GBS LLC. All rights reserved.
+    Copyright © 2016-2024, Canyon GBS LLC. All rights reserved.
 
     Advising App™ is licensed under the Elastic License 2.0. For more details,
     see https://github.com/canyongbs/advisingapp/blob/main/LICENSE.
@@ -53,7 +53,7 @@ class DivisionPolicy
     public function view(Authenticatable $authenticatable, Division $division): Response
     {
         return $authenticatable->canOrElse(
-            abilities: ['division.*.view', "division.{$division->id}.view"],
+            abilities: ["division.{$division->id}.view"],
             denyResponse: 'You do not have permission to view this division.'
         );
     }
@@ -69,7 +69,7 @@ class DivisionPolicy
     public function update(Authenticatable $authenticatable, Division $division): Response
     {
         return $authenticatable->canOrElse(
-            abilities: ['division.*.update', "division.{$division->id}.update"],
+            abilities: ["division.{$division->id}.update"],
             denyResponse: 'You do not have permission to update this division.'
         );
     }
@@ -77,7 +77,7 @@ class DivisionPolicy
     public function delete(Authenticatable $authenticatable, Division $division): Response
     {
         return $authenticatable->canOrElse(
-            abilities: ['division.*.delete', "division.{$division->id}.delete"],
+            abilities: ["division.{$division->id}.delete"],
             denyResponse: 'You do not have permission to delete this division.'
         );
     }
@@ -85,7 +85,7 @@ class DivisionPolicy
     public function restore(Authenticatable $authenticatable, Division $division): Response
     {
         return $authenticatable->canOrElse(
-            abilities: ['division.*.restore', "division.{$division->id}.restore"],
+            abilities: ["division.{$division->id}.restore"],
             denyResponse: 'You do not have permission to restore this division.'
         );
     }
@@ -93,7 +93,7 @@ class DivisionPolicy
     public function forceDelete(Authenticatable $authenticatable, Division $division): Response
     {
         return $authenticatable->canOrElse(
-            abilities: ['division.*.force-delete', "division.{$division->id}.force-delete"],
+            abilities: ["division.{$division->id}.force-delete"],
             denyResponse: 'You do not have permission to permanently delete this division.'
         );
     }

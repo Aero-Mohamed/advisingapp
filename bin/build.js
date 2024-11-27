@@ -1,7 +1,7 @@
 /*
 <COPYRIGHT>
 
-    Copyright © 2022-2023, Canyon GBS LLC. All rights reserved.
+    Copyright © 2016-2024, Canyon GBS LLC. All rights reserved.
 
     Advising App™ is licensed under the Elastic License 2.0. For more details,
     see https://github.com/canyongbs/advisingapp/blob/main/LICENSE.
@@ -86,12 +86,25 @@ const defaultOptions = {
 
 compile({
     ...defaultOptions,
-    entryPoints: ['./app-modules/assistant/resources/js/assistantCurrentResponse.js'],
-    outfile: './app-modules/assistant/resources/js/dist/assistantCurrentResponse.js',
+    entryPoints: ['./app-modules/ai/resources/js/chat.js'],
+    outfile: './public/js/canyon-gbs/ai/chat.js',
 })
 
 compile({
     ...defaultOptions,
-    entryPoints: ['./app-modules/in-app-communication/resources/js/userToUserChat.js'],
-    outfile: './app-modules/in-app-communication/resources/js/dist/userToUserChat.js',
+    entryPoints: ['./app-modules/ai/resources/js/chats.js'],
+    outfile: './public/js/canyon-gbs/ai/chats.js',
 })
+
+compile({
+    ...defaultOptions,
+    entryPoints: ['./app-modules/task/resources/js/kanban.js'],
+    outfile: './public/js/canyon-gbs/task/kanban.js',
+})
+
+compile({
+    ...defaultOptions,
+    entryPoints: ['./app-modules/prospect/resources/js/kanban.js'],
+    outfile: './public/js/canyon-gbs/prospect-pipeline/kanban.js',
+})
+

@@ -3,7 +3,7 @@
 /*
 <COPYRIGHT>
 
-    Copyright © 2022-2023, Canyon GBS LLC. All rights reserved.
+    Copyright © 2016-2024, Canyon GBS LLC. All rights reserved.
 
     Advising App™ is licensed under the Elastic License 2.0. For more details,
     see https://github.com/canyongbs/advisingapp/blob/main/LICENSE.
@@ -37,7 +37,7 @@
 namespace AdvisingApp\Campaign\Database\Factories;
 
 use App\Models\User;
-use AdvisingApp\CaseloadManagement\Models\Caseload;
+use AdvisingApp\Segment\Models\Segment;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
@@ -48,11 +48,19 @@ class CampaignFactory extends Factory
     public function definition(): array
     {
         return [
-            'user_id' => User::factory(),
-            'caseload_id' => Caseload::factory(),
+            'created_by_id' => User::factory(),
+            'created_by_type' => 'user',
+            'segment_id' => Segment::factory(),
             'name' => fake()->catchPhrase(),
             'enabled' => true,
         ];
+    }
+
+    public function enabled(): self
+    {
+        return $this->state([
+            'enabled' => true,
+        ]);
     }
 
     public function disabled(): self

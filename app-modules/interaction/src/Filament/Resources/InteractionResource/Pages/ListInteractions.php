@@ -3,7 +3,7 @@
 /*
 <COPYRIGHT>
 
-    Copyright © 2022-2023, Canyon GBS LLC. All rights reserved.
+    Copyright © 2016-2024, Canyon GBS LLC. All rights reserved.
 
     Advising App™ is licensed under the Elastic License 2.0. For more details,
     see https://github.com/canyongbs/advisingapp/blob/main/LICENSE.
@@ -36,13 +36,13 @@
 
 namespace AdvisingApp\Interaction\Filament\Resources\InteractionResource\Pages;
 
-use Filament\Actions;
 use Filament\Tables\Table;
 use Carbon\CarbonInterface;
-use App\Filament\Columns\IdColumn;
+use Filament\Actions\CreateAction;
 use Filament\Actions\ImportAction;
 use Filament\Tables\Actions\EditAction;
 use Filament\Tables\Columns\TextColumn;
+use App\Filament\Tables\Columns\IdColumn;
 use Filament\Resources\Pages\ListRecords;
 use Filament\Tables\Actions\BulkActionGroup;
 use Filament\Tables\Actions\DeleteBulkAction;
@@ -59,7 +59,7 @@ class ListInteractions extends ListRecords
         return $table
             ->columns([
                 IdColumn::make(),
-                TextColumn::make('campaign.name')
+                TextColumn::make('initiative.name')
                     ->searchable(),
                 TextColumn::make('driver.name')
                     ->searchable(),
@@ -103,7 +103,7 @@ class ListInteractions extends ListRecords
             ImportAction::make()
                 ->importer(InteractionsImporter::class)
                 ->authorize('import', Interaction::class),
-            Actions\CreateAction::make(),
+            CreateAction::make(),
         ];
     }
 }

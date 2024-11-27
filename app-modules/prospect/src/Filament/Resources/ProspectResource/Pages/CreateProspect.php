@@ -3,7 +3,7 @@
 /*
 <COPYRIGHT>
 
-    Copyright © 2022-2023, Canyon GBS LLC. All rights reserved.
+    Copyright © 2016-2024, Canyon GBS LLC. All rights reserved.
 
     Advising App™ is licensed under the Elastic License 2.0. For more details,
     see https://github.com/canyongbs/advisingapp/blob/main/LICENSE.
@@ -36,11 +36,12 @@
 
 namespace AdvisingApp\Prospect\Filament\Resources\ProspectResource\Pages;
 
-use App\Models\User;
+use Filament\Forms\Get;
+use Filament\Forms\Set;
 use Filament\Forms\Form;
-use App\Models\Scopes\HasLicense;
 use Filament\Forms\Components\Radio;
 use Filament\Forms\Components\Select;
+use Filament\Forms\Components\Section;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
 use AdvisingApp\Prospect\Models\Prospect;
@@ -57,95 +58,150 @@ class CreateProspect extends CreateRecord
 
     public function form(Form $form): Form
     {
+        $generateFullName = function (Get $get, Set $set) {
+            $firstName = trim($get('first_name'));
+
+            if (blank($firstName)) {
+                return;
+            }
+
+            $lastName = trim($get('last_name'));
+
+            if (blank($lastName)) {
+                return;
+            }
+
+            $set(Prospect::displayNameKey(), "{$firstName} {$lastName}");
+        };
+
         return $form
             ->schema([
-                Select::make('status_id')
-                    ->label('Status')
-                    ->required()
-                    ->relationship('status', 'name')
-                    ->exists(
-                        table: (new ProspectStatus())->getTable(),
-                        column: (new ProspectStatus())->getKeyName()
-                    ),
-                Select::make('source_id')
-                    ->label('Source')
-                    ->required()
-                    ->relationship('source', 'name')
-                    ->exists(
-                        table: (new ProspectSource())->getTable(),
-                        column: (new ProspectSource())->getKeyName()
-                    ),
-                TextInput::make('first_name')
-                    ->label('First Name')
-                    ->required()
-                    ->string(),
-                TextInput::make('last_name')
-                    ->label('Last Name')
-                    ->required()
-                    ->string(),
-                TextInput::make(Prospect::displayNameKey())
-                    ->label('Full Name')
-                    ->required()
-                    ->string(),
-                TextInput::make('preferred')
-                    ->label('Preferred Name')
-                    ->string(),
-                Textarea::make('description')
-                    ->label('Description')
-                    ->string(),
-                TextInput::make('email')
-                    ->label('Primary Email')
-                    ->email(),
-                TextInput::make('email_2')
-                    ->label('Other Email')
-                    ->email(),
-                TextInput::make('mobile')
-                    ->label('Mobile')
-                    ->string(),
-                Radio::make('sms_opt_out')
-                    ->label('SMS Opt Out')
-                    ->default(false)
-                    ->boolean(),
-                Radio::make('email_bounce')
-                    ->label('Email Bounce')
-                    ->default(false)
-                    ->boolean(),
-                TextInput::make('phone')
-                    ->label('Other Phone')
-                    ->string(),
-                TextInput::make('address')
-                    ->label('Address')
-                    ->string(),
-                TextInput::make('address_2')
-                    ->label('Address 2')
-                    ->string(),
-                // TODO: Display this based on system configurable data format
-                DatePicker::make('birthdate')
-                    ->label('Birthdate')
-                    ->native(false)
-                    ->closeOnDateSelection()
-                    ->format('Y-m-d')
-                    ->displayFormat('Y-m-d')
-                    ->maxDate(now()),
-                TextInput::make('hsgrad')
-                    ->label('High School Graduation Date')
-                    ->nullable()
-                    ->numeric()
-                    ->minValue(1920)
-                    ->maxValue(now()->addYears(25)->year),
-                Select::make('assigned_to_id')
-                    ->label('Assigned To')
-                    ->relationship(
-                        'assignedTo',
-                        'name',
-                        fn (Builder $query) => $query->tap(new HasLicense(Prospect::getLicenseType())),
-                    )
-                    ->searchable()
-                    ->nullable()
-                    ->exists(
-                        table: (new User())->getTable(),
-                        column: (new User())->getKeyName()
-                    ),
+                Section::make('Demographics')
+                    ->schema([
+                        TextInput::make('first_name')
+                            ->label('First Name')
+                            ->required()
+                            ->string()
+                            ->live(onBlur: true)
+                            ->afterStateUpdated($generateFullName),
+                        TextInput::make('last_name')
+                            ->label('Last Name')
+                            ->required()
+                            ->string()
+                            ->live(onBlur: true)
+                            ->afterStateUpdated($generateFullName),
+                        TextInput::make(Prospect::displayNameKey())
+                            ->label('Full Name')
+                            ->required()
+                            ->string()
+                            ->disabled()
+                            ->dehydrated()
+                            ->maxLength(255),
+                        TextInput::make('preferred')
+                            ->label('Preferred Name')
+                            ->string()
+                            ->maxLength(255),
+                        // TODO: Display this based on system configurable data format
+                        DatePicker::make('birthdate')
+                            ->label('Birthdate')
+                            ->native(false)
+                            ->closeOnDateSelection()
+                            ->format('Y-m-d')
+                            ->displayFormat('Y-m-d')
+                            ->maxDate(now()),
+                        TextInput::make('hsgrad')
+                            ->label('High School Graduation Date')
+                            ->nullable()
+                            ->numeric()
+                            ->minValue(1920)
+                            ->maxValue(now()->addYears(25)->year),
+                    ])
+                    ->columns(2),
+                Section::make('Contact Information')
+                    ->schema([
+                        TextInput::make('email')
+                            ->label('Primary Email')
+                            ->email()
+                            ->maxLength(255),
+                        TextInput::make('email_2')
+                            ->label('Other Email')
+                            ->email()
+                            ->maxLength(255),
+                        TextInput::make('mobile')
+                            ->label('Mobile')
+                            ->string()
+                            ->maxLength(255),
+                        TextInput::make('phone')
+                            ->label('Other Phone')
+                            ->string()
+                            ->maxLength(255),
+                        TextInput::make('address')
+                            ->label('Address')
+                            ->string()
+                            ->maxLength(255),
+                        TextInput::make('address_2')
+                            ->label('Apartment/Unit Number')
+                            ->string()
+                            ->maxLength(255),
+                        TextInput::make('address_3')
+                            ->label('Additional Address')
+                            ->string()
+                            ->maxLength(255),
+                        TextInput::make('city')
+                            ->label('City')
+                            ->string()
+                            ->maxLength(255),
+                        TextInput::make('state')
+                            ->label('State')
+                            ->string()
+                            ->maxLength(255),
+                        TextInput::make('postal')
+                            ->label('Postal')
+                            ->string()
+                            ->maxLength(255),
+                    ])
+                    ->columns(2),
+                Section::make('Classification')
+                    ->schema([
+                        Select::make('status_id')
+                            ->label('Status')
+                            ->required()
+                            ->relationship('status', 'name', fn (Builder $query) => $query->orderBy('sort'))
+                            ->default(fn () => ProspectStatus::query()
+                                ->orderBy('sort')
+                                ->first()
+                                ?->getKey())
+                            ->exists(
+                                table: (new ProspectStatus())->getTable(),
+                                column: (new ProspectStatus())->getKeyName()
+                            ),
+                        Select::make('source_id')
+                            ->label('Source')
+                            ->required()
+                            ->relationship('source', 'name')
+                            ->default(fn () => ProspectSource::query()->orderBy('name')->first()?->getKey())
+                            ->exists(
+                                table: (new ProspectSource())->getTable(),
+                                column: (new ProspectSource())->getKeyName()
+                            ),
+                        Textarea::make('description')
+                            ->label('Description')
+                            ->string()
+                            ->columnSpanFull(),
+                    ])
+                    ->columns(2),
+                Section::make('Engagement Restrictions')
+                    ->schema([
+                        Radio::make('sms_opt_out')
+                            ->label('SMS Opt Out')
+                            ->default(false)
+                            ->boolean(),
+                        Radio::make('email_bounce')
+                            ->label('Email Bounce')
+                            ->default(false)
+                            ->boolean(),
+                    ])
+                    ->columns(2),
             ]);
     }
 }

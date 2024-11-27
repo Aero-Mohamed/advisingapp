@@ -3,7 +3,7 @@
 /*
 <COPYRIGHT>
 
-    Copyright © 2022-2023, Canyon GBS LLC. All rights reserved.
+    Copyright © 2016-2024, Canyon GBS LLC. All rights reserved.
 
     Advising App™ is licensed under the Elastic License 2.0. For more details,
     see https://github.com/canyongbs/advisingapp/blob/main/LICENSE.
@@ -36,10 +36,13 @@
 
 namespace AdvisingApp\Prospect\Filament\Resources\ProspectStatusResource\Pages;
 
-use Filament\Actions;
+use Filament\Actions\EditAction;
 use Filament\Infolists\Infolist;
+use Filament\View\PanelsRenderHook;
+use Illuminate\Contracts\View\View;
 use Filament\Resources\Pages\ViewRecord;
 use Filament\Infolists\Components\Section;
+use Filament\Support\Facades\FilamentView;
 use Filament\Infolists\Components\TextEntry;
 use AdvisingApp\Prospect\Models\ProspectStatus;
 use AdvisingApp\Prospect\Filament\Resources\ProspectStatusResource;
@@ -48,6 +51,21 @@ class ViewProspectStatus extends ViewRecord
 {
     protected static string $resource = ProspectStatusResource::class;
 
+    public function boot(): void
+    {
+        FilamentView::registerRenderHook(
+            PanelsRenderHook::PAGE_HEADER_ACTIONS_AFTER,
+            fn (): View => view('components.page-header-action-lock-icon', [
+                'condition' => function () {
+                    return $this->getRecord()?->is_system_protected;
+                },
+                'identifier' => 'prospect_status_system_protected',
+                'tooltip' => 'This record is protected as it is a system status.',
+            ]),
+            scopes: static::class,
+        );
+    }
+
     public function infolist(Infolist $infolist): Infolist
     {
         return $infolist
@@ -55,16 +73,15 @@ class ViewProspectStatus extends ViewRecord
                 Section::make()
                     ->schema([
                         TextEntry::make('name')
-                            ->label('Name')
-                            ->translateLabel(),
+                            ->label('Name'),
                         TextEntry::make('classification')
-                            ->label('Classification')
-                            ->translateLabel(),
+                            ->label('Classification'),
                         TextEntry::make('color')
                             ->label('Color')
-                            ->translateLabel()
                             ->badge()
                             ->color(fn (ProspectStatus $prospectStatus) => $prospectStatus->color->value),
+                        TextEntry::make('sort')
+                            ->numeric(),
                     ])
                     ->columns(),
             ]);
@@ -73,7 +90,7 @@ class ViewProspectStatus extends ViewRecord
     protected function getHeaderActions(): array
     {
         return [
-            Actions\EditAction::make(),
+            EditAction::make(),
         ];
     }
 }

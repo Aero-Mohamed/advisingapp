@@ -3,7 +3,7 @@
 /*
 <COPYRIGHT>
 
-    Copyright © 2022-2023, Canyon GBS LLC. All rights reserved.
+    Copyright © 2016-2024, Canyon GBS LLC. All rights reserved.
 
     Advising App™ is licensed under the Elastic License 2.0. For more details,
     see https://github.com/canyongbs/advisingapp/blob/main/LICENSE.
@@ -37,16 +37,22 @@
 namespace AdvisingApp\Form\Models;
 
 use App\Models\BaseModel;
+use Spatie\MediaLibrary\HasMedia;
 use AdvisingApp\Prospect\Models\Prospect;
+use Spatie\MediaLibrary\InteractsWithMedia;
+use Illuminate\Database\Eloquent\SoftDeletes;
 use AdvisingApp\StudentDataModel\Models\Student;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use AdvisingApp\Engagement\Actions\GenerateEmailMarkdownContent;
+use AdvisingApp\Engagement\Actions\GenerateEngagementBodyContent;
 
 /**
  * @mixin IdeHelperFormEmailAutoReply
  */
-class FormEmailAutoReply extends BaseModel
+class FormEmailAutoReply extends BaseModel implements HasMedia
 {
+    use SoftDeletes;
+    use InteractsWithMedia;
+
     protected $fillable = [
         'subject',
         'body',
@@ -65,17 +71,22 @@ class FormEmailAutoReply extends BaseModel
 
     public function getBody(Student|Prospect|null $author): string
     {
-        return app(GenerateEmailMarkdownContent::class)(
-            [$this->body],
+        return app(GenerateEngagementBodyContent::class)(
+            $this->body,
             $this->getMergeData($author),
+            $this,
+            'body',
         );
     }
 
     public function getMergeData(Student|Prospect|null $author): array
     {
         return [
+            'student first name' => $author->getAttribute($author->displayFirstNameKey()),
+            'student last name' => $author->getAttribute($author->displayLastNameKey()),
             'student full name' => $author->getAttribute($author->displayNameKey()),
             'student email' => $author->getAttribute($author->displayEmailKey()),
+            'student preferred name' => $author->getAttribute($author->displayPreferredNameKey()),
         ];
     }
 }

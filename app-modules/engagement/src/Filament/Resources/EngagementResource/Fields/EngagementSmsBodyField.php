@@ -3,7 +3,7 @@
 /*
 <COPYRIGHT>
 
-    Copyright © 2022-2023, Canyon GBS LLC. All rights reserved.
+    Copyright © 2016-2024, Canyon GBS LLC. All rights reserved.
 
     Advising App™ is licensed under the Elastic License 2.0. For more details,
     see https://github.com/canyongbs/advisingapp/blob/main/LICENSE.
@@ -45,7 +45,6 @@ use FilamentTiptapEditor\TiptapEditor;
 use Filament\Forms\Components\Checkbox;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Query\Expression;
-use FilamentTiptapEditor\Enums\TiptapOutput;
 use AdvisingApp\Engagement\Models\Engagement;
 use Filament\Forms\Components\Actions\Action;
 use AdvisingApp\Engagement\Models\SmsTemplate;
@@ -54,23 +53,27 @@ use AdvisingApp\Engagement\Enums\EngagementDeliveryMethod;
 
 class EngagementSmsBodyField
 {
-    public static function make(string $context, ?Form $form = null)
+    public static function make(string $context, ?Form $form = null, string $fieldPrefix = '')
     {
         // TODO Implement length validation (320 characters max)
         // https://www.twilio.com/docs/glossary/what-sms-character-limit#:~:text=Twilio's%20platform%20supports%20long%20messages,best%20deliverability%20and%20user%20experience.
-        return TiptapEditor::make('body')
+        return TiptapEditor::make("{$fieldPrefix}body")
             ->label('Body')
             ->mergeTags([
+                'student first name',
+                'student last name',
                 'student full name',
                 'student email',
+                'student preferred name',
             ])
             ->showMergeTagsInBlocksPanel(is_null($form) ? false : ! ($form->getLivewire() instanceof RelationManager))
             ->profile('sms')
-            ->output(TiptapOutput::Json)
             ->required()
             ->hintAction(fn (TiptapEditor $component) => Action::make('loadSmsTemplate')
+                ->label('Load SMS template')
                 ->form([
                     Select::make('smsTemplate')
+                        ->label('SMS template')
                         ->searchable()
                         ->options(function (Get $get): array {
                             return SmsTemplate::query()

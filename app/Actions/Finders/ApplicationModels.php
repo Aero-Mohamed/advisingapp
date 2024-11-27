@@ -3,7 +3,7 @@
 /*
 <COPYRIGHT>
 
-    Copyright © 2022-2023, Canyon GBS LLC. All rights reserved.
+    Copyright © 2016-2024, Canyon GBS LLC. All rights reserved.
 
     Advising App™ is licensed under the Elastic License 2.0. For more details,
     see https://github.com/canyongbs/advisingapp/blob/main/LICENSE.
@@ -42,7 +42,6 @@ use Illuminate\Support\Collection;
 use Illuminate\Container\Container;
 use Illuminate\Support\Facades\File;
 use Illuminate\Database\Eloquent\Model;
-use AdvisingApp\Authorization\Models\Concerns\DefinesPermissions;
 
 class ApplicationModels
 {
@@ -70,21 +69,5 @@ class ApplicationModels
 
                 return $isModel;
             });
-    }
-
-    public function implementingPermissions(): Collection
-    {
-        return $this->all()->filter(function ($class) {
-            $implementsPermissions = false;
-
-            $reflection = new ReflectionClass($class);
-            $parentClass = $reflection->getParentClass();
-
-            if (in_array(DefinesPermissions::class, $reflection->getTraitNames()) || in_array(DefinesPermissions::class, $parentClass->getTraitNames())) {
-                $implementsPermissions = true;
-            }
-
-            return $implementsPermissions;
-        });
     }
 }

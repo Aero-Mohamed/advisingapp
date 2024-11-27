@@ -3,7 +3,7 @@
 /*
 <COPYRIGHT>
 
-    Copyright © 2022-2023, Canyon GBS LLC. All rights reserved.
+    Copyright © 2016-2024, Canyon GBS LLC. All rights reserved.
 
     Advising App™ is licensed under the Elastic License 2.0. For more details,
     see https://github.com/canyongbs/advisingapp/blob/main/LICENSE.
@@ -59,7 +59,6 @@ class ViewEngagementResponse extends ViewRecord
                     ->schema([
                         TextEntry::make('sender')
                             ->label('Sent By')
-                            ->translateLabel()
                             ->color('primary')
                             ->state(function (EngagementResponse $record): string {
                                 /** @var Student|Prospect $sender */
@@ -79,8 +78,7 @@ class ViewEngagementResponse extends ViewRecord
                                     Prospect::class => ProspectResource::getUrl('view', ['record' => $sender->id]),
                                 };
                             }),
-                        TextEntry::make('content')
-                            ->translateLabel(),
+                        TextEntry::make('content'),
                     ])
                     ->columns(),
             ]);

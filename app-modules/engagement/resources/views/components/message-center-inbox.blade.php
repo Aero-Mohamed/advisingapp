@@ -1,7 +1,7 @@
 {{--
 <COPYRIGHT>
 
-    Copyright © 2022-2023, Canyon GBS LLC. All rights reserved.
+    Copyright © 2016-2024, Canyon GBS LLC. All rights reserved.
 
     Advising App™ is licensed under the Elastic License 2.0. For more details,
     see https://github.com/canyongbs/advisingapp/blob/main/LICENSE.
@@ -33,6 +33,7 @@
 --}}
 @php
     use Carbon\Carbon;
+    use App\Settings\DisplaySettings;
 @endphp
 
 <div
@@ -81,9 +82,10 @@
                                             {{ $educatable->display_name }}
                                         </div>
                                         <div class="w-full text-xs font-normal text-gray-700 dark:text-gray-400">
+                                            {{ ucfirst($educatable->type) . ' |' }}
                                             Last engaged at
-
-                                            {{ Carbon::parse($educatable->latest_activity)->format('g:ia - M j, Y') }}
+                                            @php $timezone =  app(DisplaySettings::class)->getTimezone() @endphp
+                                            {{ Carbon::parse($educatable->latest_activity)->setTimezone($timezone)->format('g:ia - M j, Y') }}
                                         </div>
                                     </div>
                                 </li>

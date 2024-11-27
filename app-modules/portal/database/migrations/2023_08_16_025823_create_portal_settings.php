@@ -3,7 +3,7 @@
 /*
 <COPYRIGHT>
 
-    Copyright © 2022-2023, Canyon GBS LLC. All rights reserved.
+    Copyright © 2016-2024, Canyon GBS LLC. All rights reserved.
 
     Advising App™ is licensed under the Elastic License 2.0. For more details,
     see https://github.com/canyongbs/advisingapp/blob/main/LICENSE.
@@ -59,5 +59,14 @@ return new class () extends SettingsMigration {
 
         $this->migrator->add('portal.footer_color');
         $this->migrator->add('portal.footer_copyright_statement');
+
+        /**
+         * Knowledge Base Portal
+        */
+        $this->migrator->add('portal.knowledge_management_portal_enabled', false);
+        $this->migrator->add('portal.knowledge_management_portal_service_management', false);
+        $this->migrator->add('portal.knowledge_management_portal_primary_color');
+        $this->migrator->add('portal.knowledge_management_portal_rounding');
+        $this->migrator->add('portal.knowledge_management_portal_authorized_domain');
     }
 };

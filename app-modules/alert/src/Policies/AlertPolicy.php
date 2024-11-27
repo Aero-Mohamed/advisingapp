@@ -3,7 +3,7 @@
 /*
 <COPYRIGHT>
 
-    Copyright © 2022-2023, Canyon GBS LLC. All rights reserved.
+    Copyright © 2016-2024, Canyon GBS LLC. All rights reserved.
 
     Advising App™ is licensed under the Elastic License 2.0. For more details,
     see https://github.com/canyongbs/advisingapp/blob/main/LICENSE.
@@ -68,13 +68,17 @@ class AlertPolicy
         }
 
         return $authenticatable->canOrElse(
-            abilities: ['alert.*.view', "alert.{$alert->id}.view"],
+            abilities: ["alert.{$alert->id}.view"],
             denyResponse: 'You do not have permission to view this alert.'
         );
     }
 
-    public function create(Authenticatable $authenticatable): Response
+    public function create(Authenticatable $authenticatable, ?Prospect $prospect = null): Response
     {
+        if ($prospect?->student()->exists()) {
+            return Response::deny('You cannot create alerts for a Prospect that has been converted to a Student.');
+        }
+
         return $authenticatable->canOrElse(
             abilities: 'alert.create',
             denyResponse: 'You do not have permission to create alerts.'
@@ -83,12 +87,16 @@ class AlertPolicy
 
     public function update(Authenticatable $authenticatable, Alert $alert): Response
     {
+        if ($alert->concern_type === (new Prospect())->getMorphClass() && filled($alert->concern->student_id)) {
+            return Response::deny('You cannot edit this alert as the related Prospect has been converted to a Student.');
+        }
+
         if (! $authenticatable->hasLicense($alert->concern?->getLicenseType())) {
             return Response::deny('You do not have permission to update this alert.');
         }
 
         return $authenticatable->canOrElse(
-            abilities: ['alert.*.update', "alert.{$alert->id}.update"],
+            abilities: ["alert.{$alert->id}.update"],
             denyResponse: 'You do not have permission to update this alert.'
         );
     }
@@ -100,7 +108,7 @@ class AlertPolicy
         }
 
         return $authenticatable->canOrElse(
-            abilities: ['alert.*.delete', "alert.{$alert->id}.delete"],
+            abilities: ["alert.{$alert->id}.delete"],
             denyResponse: 'You do not have permission to delete this alert.'
         );
     }
@@ -112,7 +120,7 @@ class AlertPolicy
         }
 
         return $authenticatable->canOrElse(
-            abilities: ['alert.*.restore', "alert.{$alert->id}.restore"],
+            abilities: ["alert.{$alert->id}.restore"],
             denyResponse: 'You do not have permission to restore this alert.'
         );
     }
@@ -124,7 +132,7 @@ class AlertPolicy
         }
 
         return $authenticatable->canOrElse(
-            abilities: ['alert.*.force-delete', "alert.{$alert->id}.force-delete"],
+            abilities: ["alert.{$alert->id}.force-delete"],
             denyResponse: 'You do not have permission to permanently delete this alert.'
         );
     }

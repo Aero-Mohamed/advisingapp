@@ -1,7 +1,7 @@
 {{--
 <COPYRIGHT>
 
-    Copyright © 2022-2023, Canyon GBS LLC. All rights reserved.
+    Copyright © 2016-2024, Canyon GBS LLC. All rights reserved.
 
     Advising App™ is licensed under the Elastic License 2.0. For more details,
     see https://github.com/canyongbs/advisingapp/blob/main/LICENSE.
@@ -32,7 +32,7 @@
 </COPYRIGHT>
 --}}
 @php
-    use AdvisingApp\ServiceManagement\Models\ChangeRequest;
+    use AdvisingApp\CaseManagement\Models\ChangeRequest;
 
     $classes = match (ChangeRequest::getColorBasedOnRisk($getState())) {
         'green' => 'border-green-500 bg-green-400/10 text-green-500 ring-green-500 dark:border-green-500 dark:bg-green-400/10 dark:text-green-500 dark:ring-green-500',

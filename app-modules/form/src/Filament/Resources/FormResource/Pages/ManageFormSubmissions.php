@@ -3,7 +3,7 @@
 /*
 <COPYRIGHT>
 
-    Copyright © 2022-2023, Canyon GBS LLC. All rights reserved.
+    Copyright © 2016-2024, Canyon GBS LLC. All rights reserved.
 
     Advising App™ is licensed under the Elastic License 2.0. For more details,
     see https://github.com/canyongbs/advisingapp/blob/main/LICENSE.
@@ -38,12 +38,14 @@ namespace AdvisingApp\Form\Filament\Resources\FormResource\Pages;
 
 use Filament\Tables\Table;
 use Carbon\CarbonInterface;
-use App\Filament\Columns\IdColumn;
+use AdvisingApp\Form\Models\Form;
 use Filament\Tables\Actions\Action;
 use Maatwebsite\Excel\Facades\Excel;
+use Illuminate\Support\Facades\Cache;
 use Filament\Tables\Actions\BulkAction;
 use Filament\Tables\Actions\ViewAction;
 use Filament\Tables\Columns\TextColumn;
+use App\Filament\Tables\Columns\IdColumn;
 use Filament\Tables\Actions\DeleteAction;
 use Filament\Infolists\Components\Section;
 use AdvisingApp\Form\Models\FormSubmission;
@@ -51,10 +53,10 @@ use Filament\Infolists\Components\TextEntry;
 use Filament\Tables\Actions\BulkActionGroup;
 use Filament\Tables\Actions\DeleteBulkAction;
 use AdvisingApp\Form\Enums\FormSubmissionStatus;
-use App\Filament\Filters\OpenSearch\SelectFilter;
 use AdvisingApp\Form\Exports\FormSubmissionExport;
 use Filament\Resources\Pages\ManageRelatedRecords;
 use AdvisingApp\Form\Filament\Resources\FormResource;
+use App\Filament\Tables\Filters\OpenSearch\SelectFilter;
 use AdvisingApp\Form\Filament\Tables\Filters\FormSubmissionStatusFilter;
 
 class ManageFormSubmissions extends ManageRelatedRecords
@@ -144,5 +146,24 @@ class ManageFormSubmissions extends ManageRelatedRecords
                     DeleteBulkAction::make(),
                 ]),
             ]);
+    }
+
+    public static function getNavigationItems(array $urlParameters = []): array
+    {
+        $item = parent::getNavigationItems($urlParameters)[0];
+
+        $ownerRecord = $urlParameters['record'];
+
+        /** @var Form $ownerRecord */
+        $formSubmissionsCount = Cache::tags('form-submission-count')
+            ->remember(
+                "form-submission-count-{$ownerRecord->getKey()}",
+                now()->addMinutes(5),
+                fn (): int => $ownerRecord->submissions()->count(),
+            );
+
+        $item->badge($formSubmissionsCount);
+
+        return [$item];
     }
 }

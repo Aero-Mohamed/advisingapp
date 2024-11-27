@@ -3,7 +3,7 @@
 /*
 <COPYRIGHT>
 
-    Copyright © 2022-2023, Canyon GBS LLC. All rights reserved.
+    Copyright © 2016-2024, Canyon GBS LLC. All rights reserved.
 
     Advising App™ is licensed under the Elastic License 2.0. For more details,
     see https://github.com/canyongbs/advisingapp/blob/main/LICENSE.
@@ -39,15 +39,24 @@ namespace AdvisingApp\Interaction\Models;
 use Exception;
 use App\Models\User;
 use App\Models\BaseModel;
+use App\Models\Authenticatable;
 use Illuminate\Support\Collection;
+use Illuminate\Database\Eloquent\Model;
 use OwenIt\Auditing\Contracts\Auditable;
 use AdvisingApp\Division\Models\Division;
+use AdvisingApp\Prospect\Models\Prospect;
+use AdvisingApp\Timeline\Models\Timeline;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\SoftDeletes;
 use AdvisingApp\Campaign\Models\CampaignAction;
+use AdvisingApp\CaseManagement\Models\CaseModel;
+use AdvisingApp\StudentDataModel\Models\Student;
 use Illuminate\Database\Eloquent\Relations\MorphTo;
+use Illuminate\Database\Eloquent\Relations\MorphOne;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use AdvisingApp\ServiceManagement\Models\ServiceRequest;
+use AdvisingApp\Timeline\Timelines\InteractionTimeline;
 use AdvisingApp\Notification\Models\Contracts\Subscribable;
+use AdvisingApp\Timeline\Models\Contracts\ProvidesATimeline;
 use AdvisingApp\StudentDataModel\Models\Contracts\Educatable;
 use AdvisingApp\Audit\Models\Concerns\Auditable as AuditableTrait;
 use AdvisingApp\StudentDataModel\Models\Scopes\LicensedToEducatable;
@@ -58,26 +67,27 @@ use AdvisingApp\Notification\Models\Contracts\CanTriggerAutoSubscription;
 /**
  * @mixin IdeHelperInteraction
  */
-class Interaction extends BaseModel implements Auditable, CanTriggerAutoSubscription, ExecutableFromACampaignAction
+class Interaction extends BaseModel implements Auditable, CanTriggerAutoSubscription, ExecutableFromACampaignAction, ProvidesATimeline
 {
     use AuditableTrait;
     use BelongsToEducatable;
+    use SoftDeletes;
 
     protected $fillable = [
-        'user_id',
+        'description',
+        'division_id',
+        'end_datetime',
         'interactable_id',
         'interactable_type',
-        'interaction_campaign_id',
         'interaction_driver_id',
-        'division_id',
+        'interaction_initiative_id',
         'interaction_outcome_id',
         'interaction_relation_id',
         'interaction_status_id',
         'interaction_type_id',
         'start_datetime',
-        'end_datetime',
         'subject',
-        'description',
+        'user_id',
     ];
 
     protected $casts = [
@@ -88,11 +98,6 @@ class Interaction extends BaseModel implements Auditable, CanTriggerAutoSubscrip
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class, 'user_id');
-    }
-
-    public function getWebPermissions(): Collection
-    {
-        return collect(['import', ...$this->webPermissions()]);
     }
 
     public function getSubscribable(): ?Subscribable
@@ -109,9 +114,24 @@ class Interaction extends BaseModel implements Auditable, CanTriggerAutoSubscrip
         );
     }
 
-    public function campaign(): BelongsTo
+    public function timelineRecord(): MorphOne
     {
-        return $this->belongsTo(InteractionCampaign::class, 'interaction_campaign_id');
+        return $this->morphOne(Timeline::class, 'timelineable');
+    }
+
+    public function timeline(): InteractionTimeline
+    {
+        return new InteractionTimeline($this);
+    }
+
+    public static function getTimelineData(Model $forModel): Collection
+    {
+        return $forModel->orderedInteractions()->get();
+    }
+
+    public function initiative(): BelongsTo
+    {
+        return $this->belongsTo(InteractionInitiative::class, 'interaction_initiative_id');
     }
 
     public function driver(): BelongsTo
@@ -147,20 +167,26 @@ class Interaction extends BaseModel implements Auditable, CanTriggerAutoSubscrip
     public static function executeFromCampaignAction(CampaignAction $action): bool|string
     {
         try {
-            $action->campaign->caseload->retrieveRecords()->each(function (Educatable $educatable) use ($action) {
-                Interaction::create([
-                    'user_id' => $action->campaign->user_id,
-                    'interactable_type' => $educatable->getMorphClass(),
-                    'interactable_id' => $educatable->getKey(),
-                    'interaction_type_id' => $action->data['interaction_type_id'],
-                    'interaction_relation_id' => $action->data['interaction_relation_id'],
-                    'interaction_campaign_id' => $action->data['interaction_campaign_id'],
-                    'interaction_driver_id' => $action->data['interaction_driver_id'],
-                    'interaction_status_id' => $action->data['interaction_status_id'],
-                    'interaction_outcome_id' => $action->data['interaction_outcome_id'],
-                    'division_id' => $action->data['division_id'],
-                ]);
-            });
+            $action
+                ->campaign
+                ->segment
+                ->retrieveRecords()
+                ->each(function (Educatable $educatable) use ($action) {
+                    $interactionData = [
+                        'user_id' => $action->campaign->user_id,
+                        'interactable_type' => $educatable->getMorphClass(),
+                        'interactable_id' => $educatable->getKey(),
+                        'interaction_type_id' => $action->data['interaction_type_id'],
+                        'interaction_initiative_id' => $action->data['interaction_initiative_id'],
+                        'interaction_relation_id' => $action->data['interaction_relation_id'],
+                        'interaction_driver_id' => $action->data['interaction_driver_id'],
+                        'interaction_status_id' => $action->data['interaction_status_id'],
+                        'interaction_outcome_id' => $action->data['interaction_outcome_id'],
+                        'division_id' => $action->data['division_id'],
+                    ];
+
+                    Interaction::create($interactionData);
+                });
 
             return true;
         } catch (Exception $e) {
@@ -173,13 +199,42 @@ class Interaction extends BaseModel implements Auditable, CanTriggerAutoSubscrip
     protected static function booted(): void
     {
         static::addGlobalScope('licensed', function (Builder $builder) {
+            if (! auth()->check()) {
+                return;
+            }
+
+            /** @var Authenticatable $user */
+            $user = auth()->user();
+
+            $caseRespondentTypeColumn = app(CaseModel::class)->respondent()->getMorphType();
+
             $builder
-                ->tap(new LicensedToEducatable('interactable'))
-                ->orWhereHasMorph(
-                    'interactable',
-                    ServiceRequest::class,
-                    fn (Builder $builder) => $builder->tap(new LicensedToEducatable('respondent')),
-                );
+                ->where(fn (Builder $query) => $query
+                    ->tap(new LicensedToEducatable('interactable'))
+                    ->when(
+                        ! $user->hasLicense(Student::getLicenseType()),
+                        fn (Builder $query) => $query->where(fn (Builder $query) => $query->whereHasMorph(
+                            'interactable',
+                            CaseModel::class,
+                            fn (Builder $query) => $query->where($caseRespondentTypeColumn, '!=', app(Student::class)->getMorphClass()),
+                        )->orWhere(
+                            'interactable_type',
+                            '!=',
+                            app(CaseModel::class)->getMorphClass(),
+                        )),
+                    )
+                    ->when(
+                        ! $user->hasLicense(Prospect::getLicenseType()),
+                        fn (Builder $query) => $query->where(fn (Builder $query) => $query->whereHasMorph(
+                            'interactable',
+                            CaseModel::class,
+                            fn (Builder $query) => $query->where($caseRespondentTypeColumn, '!=', app(Prospect::class)->getMorphClass()),
+                        )->orWhere(
+                            'interactable_type',
+                            '!=',
+                            app(CaseModel::class)->getMorphClass(),
+                        )),
+                    ));
         });
     }
 }

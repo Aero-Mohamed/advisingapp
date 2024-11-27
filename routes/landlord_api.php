@@ -3,7 +3,7 @@
 /*
 <COPYRIGHT>
 
-    Copyright © 2022-2023, Canyon GBS LLC. All rights reserved.
+    Copyright © 2016-2024, Canyon GBS LLC. All rights reserved.
 
     Advising App™ is licensed under the Elastic License 2.0. For more details,
     see https://github.com/canyongbs/advisingapp/blob/main/LICENSE.
@@ -34,9 +34,27 @@
 </COPYRIGHT>
 */
 
-use App\Multitenancy\Http\Middleware\CheckLandlordApiKey;
-use App\Multitenancy\Http\Controllers\CreateTenantController;
+use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\Tenants\SyncTenantController;
+use App\Http\Controllers\Tenants\CreateTenantController;
+use App\Http\Controllers\Tenants\DeleteTenantController;
+use AdvisingApp\Theme\Http\Controllers\UpdateThemeController;
+use AdvisingApp\Theme\Http\Controllers\BrandedWebsiteLinksController;
 
-Route::middleware([CheckLandlordApiKey::class])
-    ->post('tenants/create', CreateTenantController::class)
+Route::post('tenants', CreateTenantController::class)
     ->name('tenants.create');
+
+Route::delete('tenants/{tenant}', DeleteTenantController::class)
+    ->name('tenants.delete');
+
+Route::post('tenants/{tenant}/sync', SyncTenantController::class)
+    ->name('tenants.sync');
+
+Route::post('theme', UpdateThemeController::class)
+    ->name('theme.update');
+
+Route::post('branded-website-links', BrandedWebsiteLinksController::class)
+    ->name('brandedWebsiteLinks.update');
+
+Route::post('test', fn () => true)
+    ->name('test');

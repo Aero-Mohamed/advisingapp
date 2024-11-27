@@ -3,7 +3,7 @@
 /*
 <COPYRIGHT>
 
-    Copyright © 2022-2023, Canyon GBS LLC. All rights reserved.
+    Copyright © 2016-2024, Canyon GBS LLC. All rights reserved.
 
     Advising App™ is licensed under the Elastic License 2.0. For more details,
     see https://github.com/canyongbs/advisingapp/blob/main/LICENSE.
@@ -34,11 +34,17 @@
 </COPYRIGHT>
 */
 
-use App\Http\Controllers\SetAzureSsoSettingController;
-use App\Multitenancy\Http\Middleware\CheckLandlordApiKey;
+use Illuminate\Support\Facades\Route;
+use App\Http\Middleware\CheckOlympusKey;
+use App\Http\Controllers\UpdateAzureSsoSettingsController;
+use Spatie\Health\Http\Controllers\HealthCheckJsonResultsController;
 
-Route::group(['prefix' => 'v1', 'as' => 'api.', 'middleware' => ['auth:sanctum']], function () {});
+Route::middleware([
+    CheckOlympusKey::class,
+])->group(function () {
+    Route::post('/azure-sso/update', UpdateAzureSsoSettingsController::class)
+        ->name('azure-sso.update');
 
-Route::middleware([CheckLandlordApiKey::class])
-    ->post('azure-sso/update', SetAzureSsoSettingController::class)
-    ->name('azure-sso.update');
+    Route::get('/health', HealthCheckJsonResultsController::class)
+        ->name('health');
+});

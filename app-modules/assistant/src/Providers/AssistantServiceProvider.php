@@ -3,7 +3,7 @@
 /*
 <COPYRIGHT>
 
-    Copyright © 2022-2023, Canyon GBS LLC. All rights reserved.
+    Copyright © 2016-2024, Canyon GBS LLC. All rights reserved.
 
     Advising App™ is licensed under the Elastic License 2.0. For more details,
     see https://github.com/canyongbs/advisingapp/blob/main/LICENSE.
@@ -37,82 +37,15 @@
 namespace AdvisingApp\Assistant\Providers;
 
 use Filament\Panel;
-use Filament\Support\Assets\Js;
-use Illuminate\Support\Facades\Event;
 use Illuminate\Support\ServiceProvider;
-use AdvisingApp\Assistant\Models\Prompt;
 use AdvisingApp\Assistant\AssistantPlugin;
-use Filament\Support\Facades\FilamentAsset;
-use AdvisingApp\Assistant\Models\PromptType;
-use AdvisingApp\Assistant\Models\AssistantChat;
-use Illuminate\Database\Eloquent\Relations\Relation;
-use AdvisingApp\Assistant\Models\AssistantChatFolder;
-use AdvisingApp\Assistant\Models\AssistantChatMessage;
-use AdvisingApp\IntegrationAI\Events\AIPromptInitiated;
-use AdvisingApp\Authorization\AuthorizationRoleRegistry;
-use AdvisingApp\Assistant\Models\AssistantChatMessageLog;
-use AdvisingApp\Assistant\Listeners\LogAssistantChatMessage;
-use AdvisingApp\Authorization\AuthorizationPermissionRegistry;
 
 class AssistantServiceProvider extends ServiceProvider
 {
     public function register(): void
     {
-        Panel::configureUsing(fn (Panel $panel) => $panel->plugin(new AssistantPlugin()));
+        Panel::configureUsing(fn (Panel $panel) => ($panel->getId() !== 'admin') || $panel->plugin(new AssistantPlugin()));
     }
 
-    public function boot(): void
-    {
-        Relation::morphMap([
-            'assistant_chat' => AssistantChat::class,
-            'assistant_chat_message' => AssistantChatMessage::class,
-            'assistant_chat_message_log' => AssistantChatMessageLog::class,
-            'assistant_chat_folder' => AssistantChatFolder::class,
-            'prompt_type' => PromptType::class,
-            'prompt' => Prompt::class,
-        ]);
-
-        $this->registerEvents();
-        $this->registerRolesAndPermissions();
-        $this->registerAssets();
-    }
-
-    public function registerAssets(): void
-    {
-        FilamentAsset::register([
-            Js::make('assistantCurrentResponse', __DIR__ . '/../../resources/js/dist/assistantCurrentResponse.js')->loadedOnRequest(),
-        ], 'canyon-gbs/assistant');
-    }
-
-    protected function registerEvents(): void
-    {
-        Event::listen(AIPromptInitiated::class, LogAssistantChatMessage::class);
-    }
-
-    protected function registerRolesAndPermissions(): void
-    {
-        $permissionRegistry = app(AuthorizationPermissionRegistry::class);
-
-        $permissionRegistry->registerApiPermissions(
-            module: 'assistant',
-            path: 'permissions/api/custom'
-        );
-
-        $permissionRegistry->registerWebPermissions(
-            module: 'assistant',
-            path: 'permissions/web/custom'
-        );
-
-        $roleRegistry = app(AuthorizationRoleRegistry::class);
-
-        $roleRegistry->registerApiRoles(
-            module: 'assistant',
-            path: 'roles/api'
-        );
-
-        $roleRegistry->registerWebRoles(
-            module: 'assistant',
-            path: 'roles/web'
-        );
-    }
+    public function boot(): void {}
 }

@@ -3,7 +3,7 @@
 /*
 <COPYRIGHT>
 
-    Copyright © 2022-2023, Canyon GBS LLC. All rights reserved.
+    Copyright © 2016-2024, Canyon GBS LLC. All rights reserved.
 
     Advising App™ is licensed under the Elastic License 2.0. For more details,
     see https://github.com/canyongbs/advisingapp/blob/main/LICENSE.
@@ -35,13 +35,24 @@
 */
 
 use App\Models\User;
+use App\Models\Authenticatable;
 
 use function Tests\asSuperAdmin;
+
+use Illuminate\View\ViewException;
+
 use function Pest\Laravel\actingAs;
 use function Pest\Livewire\livewire;
 
+use Filament\Forms\Components\Select;
+use App\Filament\Resources\UserResource;
+use Filament\Tables\Actions\AttachAction;
+
+use function Pest\Laravel\assertDatabaseHas;
+
 use STS\FilamentImpersonate\Pages\Actions\Impersonate;
 use App\Filament\Resources\UserResource\Pages\EditUser;
+use App\Filament\Resources\UserResource\RelationManagers\RolesRelationManager;
 
 it('renders impersonate button for non super admin users when user is super admin', function () {
     asSuperAdmin();
@@ -57,24 +68,22 @@ it('renders impersonate button for non super admin users when user is super admi
         ->assertActionVisible(Impersonate::class);
 });
 
-it('does not render impersonate button for super admin users when user is not super admin', function () {
+it('does not render super admin profile for regular user', function () {
+    // Create a super admin user
     $superAdmin = User::factory()->create();
     asSuperAdmin($superAdmin);
 
-    $user = User::factory()
-        ->create()
-        ->givePermissionTo('user.view-any', 'user.*.view', 'user.*.update');
+    // Verify super admin user exists
+    assertDatabaseHas('users', ['id' => $superAdmin->id]);
 
+    // Create another user
+    $user = User::factory()->create();
     actingAs($user);
 
-    $component = livewire(EditUser::class, [
-        'record' => $superAdmin->getRouteKey(),
-    ]);
-
-    $component
-        ->assertSuccessful()
-        ->assertActionHidden(Impersonate::class);
-});
+    // Attempt to load the EditUser component with the super admin's route key
+    livewire(EditUser::class, ['record' => $superAdmin->getRouteKey()])
+        ->assertStatus(404);
+})->throws(ViewException::class);
 
 it('does not render impersonate button for super admin users at all', function () {
     $superAdmin = User::factory()->create();
@@ -82,25 +91,6 @@ it('does not render impersonate button for super admin users at all', function (
 
     $user = User::factory()->create();
     asSuperAdmin($user);
-
-    $component = livewire(EditUser::class, [
-        'record' => $superAdmin->getRouteKey(),
-    ]);
-
-    $component
-        ->assertSuccessful()
-        ->assertActionHidden(Impersonate::class);
-});
-
-it('does not render impersonate button for super admin users even if user has permission', function () {
-    $superAdmin = User::factory()->create();
-    asSuperAdmin($superAdmin);
-
-    $user = User::factory()
-        ->create()
-        ->givePermissionTo('user.view-any', 'user.*.view', 'user.*.update', 'authorization.impersonate');
-
-    actingAs($user);
 
     $component = livewire(EditUser::class, [
         'record' => $superAdmin->getRouteKey(),
@@ -146,4 +136,64 @@ it('allows user with permission to impersonate', function () {
 
     expect($second->isImpersonated())->toBeTrue();
     expect(auth()->id())->toBe($second->id);
+});
+it('allows user which has sass global admin role to assign sass global admin role to other user', function () {
+    $user = User::factory()->create();
+    $user->assignRole(Authenticatable::SUPER_ADMIN_ROLE);
+
+    $second = User::factory()->create();
+
+    actingAs($user)
+        ->get(
+            UserResource::getUrl('edit', [
+                'record' => $second,
+            ])
+        )->assertSuccessful();
+
+    livewire(RolesRelationManager::class, [
+        'ownerRecord' => $second,
+        'pageClass' => EditUser::class,
+    ])
+        ->mountTableAction(AttachAction::class)
+        ->assertFormFieldExists('recordId', 'mountedTableActionForm', function (Select $select) {
+            $options = $select->getSearchResults(Authenticatable::SUPER_ADMIN_ROLE);
+
+            return ! empty($options) ? true : false;
+        })->assertSuccessful();
+});
+it('Not allows user which has not sass global admin role to assign sass global admin role to other user', function () {
+    $user = User::factory()->create();
+    $user->givePermissionTo(
+        'permission.view-any',
+        'permission.*.view',
+        'role.view-any',
+        'role.*.view',
+        'user.view-any',
+        'user.*.view',
+        'user.create',
+        'user.*.update',
+        'user.*.delete',
+        'user.*.restore',
+        'user.*.force-delete',
+    );
+
+    $second = User::factory()->create();
+
+    actingAs($user)
+        ->get(
+            UserResource::getUrl('edit', [
+                'record' => $second,
+            ])
+        )->assertSuccessful();
+
+    livewire(RolesRelationManager::class, [
+        'ownerRecord' => $second,
+        'pageClass' => EditUser::class,
+    ])
+        ->mountTableAction(AttachAction::class)
+        ->assertFormFieldExists('recordId', 'mountedTableActionForm', function (Select $select) {
+            $options = $select->getSearchResults(Authenticatable::SUPER_ADMIN_ROLE);
+
+            return empty($options) ? true : false;
+        })->assertSuccessful();
 });

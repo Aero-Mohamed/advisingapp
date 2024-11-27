@@ -3,7 +3,7 @@
 /*
 <COPYRIGHT>
 
-    Copyright © 2022-2023, Canyon GBS LLC. All rights reserved.
+    Copyright © 2016-2024, Canyon GBS LLC. All rights reserved.
 
     Advising App™ is licensed under the Elastic License 2.0. For more details,
     see https://github.com/canyongbs/advisingapp/blob/main/LICENSE.
@@ -36,6 +36,10 @@
 
 namespace AdvisingApp\Notification\Observers;
 
+use App\Models\User;
+use Illuminate\Support\Facades\Cache;
+use AdvisingApp\Prospect\Models\Prospect;
+use AdvisingApp\StudentDataModel\Models\Student;
 use AdvisingApp\Notification\Models\Subscription;
 use AdvisingApp\Notification\Events\SubscriptionCreated;
 use AdvisingApp\Notification\Events\SubscriptionDeleted;
@@ -45,10 +49,30 @@ class SubscriptionObserver
     public function created(Subscription $subscription): void
     {
         SubscriptionCreated::dispatch($subscription);
+
+        /** @var ?User $user */
+        $user = auth()->user();
+
+        if ($user) {
+            Cache::tags([match ($subscription->subscribable_type) {
+                app(Prospect::class)->getMorphClass() => "user-{$user->getKey()}-prospect-subscriptions",
+                app(Student::class)->getMorphClass() => "user-{$user->getKey()}-student-subscriptions",
+            }])->flush();
+        }
     }
 
     public function deleted(Subscription $subscription): void
     {
         SubscriptionDeleted::dispatch($subscription);
+
+        /** @var ?User $user */
+        $user = auth()->user();
+
+        if ($user) {
+            Cache::tags([match ($subscription->subscribable_type) {
+                app(Prospect::class)->getMorphClass() => "user-{$user->getKey()}-prospect-subscriptions",
+                app(Student::class)->getMorphClass() => "user-{$user->getKey()}-student-subscriptions",
+            }])->flush();
+        }
     }
 }

@@ -3,7 +3,7 @@
 /*
 <COPYRIGHT>
 
-    Copyright © 2022-2023, Canyon GBS LLC. All rights reserved.
+    Copyright © 2016-2024, Canyon GBS LLC. All rights reserved.
 
     Advising App™ is licensed under the Elastic License 2.0. For more details,
     see https://github.com/canyongbs/advisingapp/blob/main/LICENSE.
@@ -36,28 +36,28 @@
 
 namespace AdvisingApp\Notification\Providers;
 
+use App\Concerns\ImplementsGraphQL;
 use Illuminate\Support\Facades\Event;
-use App\Concerns\GraphSchemaDiscovery;
 use Illuminate\Support\ServiceProvider;
 use AdvisingApp\Notification\Models\Subscription;
 use Illuminate\Database\Eloquent\Relations\Relation;
 use Illuminate\Notifications\Events\NotificationSent;
 use Illuminate\Notifications\Events\NotificationFailed;
-use AdvisingApp\Authorization\AuthorizationRoleRegistry;
 use AdvisingApp\Notification\Events\SubscriptionCreated;
 use AdvisingApp\Notification\Events\SubscriptionDeleted;
+use AdvisingApp\Notification\Models\OutboundDeliverable;
 use AdvisingApp\Notification\Observers\SubscriptionObserver;
-use AdvisingApp\Authorization\AuthorizationPermissionRegistry;
 use AdvisingApp\Notification\Events\TriggeredAutoSubscription;
 use AdvisingApp\Notification\Listeners\CreateAutoSubscription;
 use AdvisingApp\Notification\Listeners\HandleNotificationSent;
 use AdvisingApp\Notification\Listeners\HandleNotificationFailed;
+use AdvisingApp\Notification\Observers\OutboundDeliverableObserver;
 use AdvisingApp\Notification\Listeners\NotifyUserOfSubscriptionCreated;
 use AdvisingApp\Notification\Listeners\NotifyUserOfSubscriptionDeleted;
 
 class NotificationServiceProvider extends ServiceProvider
 {
-    use GraphSchemaDiscovery;
+    use ImplementsGraphQL;
 
     public function register(): void {}
 
@@ -65,9 +65,9 @@ class NotificationServiceProvider extends ServiceProvider
     {
         Relation::morphMap([
             'subscription' => Subscription::class,
+            'outbound_deliverable' => OutboundDeliverable::class,
         ]);
 
-        $this->registerRolesAndPermissions();
         $this->registerObservers();
         $this->registerEvents();
 
@@ -77,6 +77,7 @@ class NotificationServiceProvider extends ServiceProvider
     protected function registerObservers(): void
     {
         Subscription::observe(SubscriptionObserver::class);
+        OutboundDeliverable::observe(OutboundDeliverableObserver::class);
     }
 
     protected function registerEvents(): void
@@ -108,33 +109,6 @@ class NotificationServiceProvider extends ServiceProvider
         Event::listen(
             TriggeredAutoSubscription::class,
             CreateAutoSubscription::class,
-        );
-    }
-
-    protected function registerRolesAndPermissions(): void
-    {
-        $permissionRegistry = app(AuthorizationPermissionRegistry::class);
-
-        $permissionRegistry->registerApiPermissions(
-            module: 'notification',
-            path: 'permissions/api/custom'
-        );
-
-        $permissionRegistry->registerWebPermissions(
-            module: 'notification',
-            path: 'permissions/web/custom'
-        );
-
-        $roleRegistry = app(AuthorizationRoleRegistry::class);
-
-        $roleRegistry->registerApiRoles(
-            module: 'notification',
-            path: 'roles/api'
-        );
-
-        $roleRegistry->registerWebRoles(
-            module: 'notification',
-            path: 'roles/web'
         );
     }
 }

@@ -3,7 +3,7 @@
 /*
 <COPYRIGHT>
 
-    Copyright © 2022-2023, Canyon GBS LLC. All rights reserved.
+    Copyright © 2016-2024, Canyon GBS LLC. All rights reserved.
 
     Advising App™ is licensed under the Elastic License 2.0. For more details,
     see https://github.com/canyongbs/advisingapp/blob/main/LICENSE.
@@ -38,6 +38,10 @@ namespace AdvisingApp\InAppCommunication;
 
 use Filament\Panel;
 use Filament\Contracts\Plugin;
+use Filament\View\PanelsRenderHook;
+use Illuminate\Support\Facades\Blade;
+use AdvisingApp\InAppCommunication\Filament\Pages\UserChat;
+use AdvisingApp\InAppCommunication\Livewire\ChatNotifications;
 
 class InAppCommunicationPlugin implements Plugin
 {
@@ -56,6 +60,15 @@ class InAppCommunicationPlugin implements Plugin
         $panel->discoverPages(
             in: __DIR__ . '/Filament/Pages',
             for: 'AdvisingApp\\InAppCommunication\\Filament\\Pages'
+        );
+
+        $panel->livewireComponents([
+            ChatNotifications::class,
+        ]);
+
+        $panel->renderHook(
+            PanelsRenderHook::GLOBAL_SEARCH_AFTER,
+            fn () => (auth()->user() && UserChat::canAccess()) ? Blade::render('@livewire(\\AdvisingApp\\InAppCommunication\\Livewire\\ChatNotifications::class)') : null,
         );
     }
 

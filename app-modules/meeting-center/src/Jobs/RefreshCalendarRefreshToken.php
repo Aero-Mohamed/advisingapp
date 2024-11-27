@@ -3,7 +3,7 @@
 /*
 <COPYRIGHT>
 
-    Copyright © 2022-2023, Canyon GBS LLC. All rights reserved.
+    Copyright © 2016-2024, Canyon GBS LLC. All rights reserved.
 
     Advising App™ is licensed under the Elastic License 2.0. For more details,
     see https://github.com/canyongbs/advisingapp/blob/main/LICENSE.
@@ -52,7 +52,10 @@ class RefreshCalendarRefreshToken implements ShouldQueue
     use Queueable;
     use SerializesModels;
 
-    public function __construct(public Calendar $calendar) {}
+    public function __construct(public Calendar $calendar)
+    {
+        $this->onQueue(config('meeting-center.queue'));
+    }
 
     public function handle(): void
     {

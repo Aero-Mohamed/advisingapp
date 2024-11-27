@@ -3,7 +3,7 @@
 /*
 <COPYRIGHT>
 
-    Copyright © 2022-2023, Canyon GBS LLC. All rights reserved.
+    Copyright © 2016-2024, Canyon GBS LLC. All rights reserved.
 
     Advising App™ is licensed under the Elastic License 2.0. For more details,
     see https://github.com/canyongbs/advisingapp/blob/main/LICENSE.
@@ -45,11 +45,11 @@ use Spatie\LaravelData\Mappers\SnakeCaseMapper;
 class LicenseSubscriptionData extends Data
 {
     public function __construct(
-        public string $clientName,
-        public string $partnerName,
-        public string $clientPo,
-        public string $partnerPo,
-        public Carbon $startDate,
-        public Carbon $endDate,
+        public ?string $clientName,
+        public ?string $partnerName,
+        public ?string $clientPo,
+        public ?string $partnerPo,
+        public ?Carbon $startDate,
+        public ?Carbon $endDate,
     ) {}
 }

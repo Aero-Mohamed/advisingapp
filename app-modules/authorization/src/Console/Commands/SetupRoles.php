@@ -3,7 +3,7 @@
 /*
 <COPYRIGHT>
 
-    Copyright © 2022-2023, Canyon GBS LLC. All rights reserved.
+    Copyright © 2016-2024, Canyon GBS LLC. All rights reserved.
 
     Advising App™ is licensed under the Elastic License 2.0. For more details,
     see https://github.com/canyongbs/advisingapp/blob/main/LICENSE.
@@ -36,8 +36,9 @@
 
 namespace AdvisingApp\Authorization\Console\Commands;
 
+use App\Models\Authenticatable;
 use Illuminate\Console\Command;
-use AdvisingApp\Authorization\Actions\CreateRoles;
+use AdvisingApp\Authorization\Models\Role;
 use Spatie\Multitenancy\Commands\Concerns\TenantAware;
 
 class SetupRoles extends Command
@@ -46,16 +47,19 @@ class SetupRoles extends Command
 
     protected $signature = 'roles:setup {--tenant=*}';
 
-    protected $description = 'This command will create all of the roles defined in the roles config directory.';
+    protected $description = 'This command will create all of the roles defined in the roles config directories.';
 
     public function handle(): int
     {
         $this->line('Creating roles...');
 
-        resolve(CreateRoles::class)->handle();
+        Role::create([
+            'name' => Authenticatable::SUPER_ADMIN_ROLE,
+            'guard_name' => 'web',
+        ]);
 
         $this->info('Roles created successfully!');
 
-        return self::SUCCESS;
+        return static::SUCCESS;
     }
 }

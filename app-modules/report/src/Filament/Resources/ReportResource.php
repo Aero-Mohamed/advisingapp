@@ -3,7 +3,7 @@
 /*
 <COPYRIGHT>
 
-    Copyright © 2022-2023, Canyon GBS LLC. All rights reserved.
+    Copyright © 2016-2024, Canyon GBS LLC. All rights reserved.
 
     Advising App™ is licensed under the Elastic License 2.0. For more details,
     see https://github.com/canyongbs/advisingapp/blob/main/LICENSE.
@@ -46,15 +46,17 @@ class ReportResource extends Resource
 {
     protected static ?string $model = Report::class;
 
-    protected static ?string $navigationIcon = 'heroicon-o-document-text';
-
     protected static ?string $navigationGroup = 'Reporting';
 
-    protected static ?int $navigationSort = 10;
+    protected static ?int $navigationSort = 40;
 
-    protected static ?string $navigationLabel = 'Report Center';
+    protected static ?string $navigationLabel = 'Custom Reports';
 
-    protected static ?string $breadcrumb = 'Report Center';
+    protected static ?string $breadcrumb = 'Custom Reports';
+
+    protected static ?string $slug = 'custom-reports';
+
+    protected static ?string $modelLabel = 'Custom Report';
 
     public static function getPages(): array
     {

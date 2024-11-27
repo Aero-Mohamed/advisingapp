@@ -3,7 +3,7 @@
 /*
 <COPYRIGHT>
 
-    Copyright © 2022-2023, Canyon GBS LLC. All rights reserved.
+    Copyright © 2016-2024, Canyon GBS LLC. All rights reserved.
 
     Advising App™ is licensed under the Elastic License 2.0. For more details,
     see https://github.com/canyongbs/advisingapp/blob/main/LICENSE.
@@ -39,20 +39,18 @@ namespace App\Models;
 use App\Models\Concerns\CanOrElse;
 use AdvisingApp\Authorization\Enums\LicenseType;
 use Illuminate\Foundation\Auth\User as BaseAuthenticatable;
-use AdvisingApp\Authorization\Models\Concerns\HasRoleGroups;
 use Spatie\Multitenancy\Models\Concerns\UsesTenantConnection;
 use AdvisingApp\Authorization\Models\Concerns\HasRolesWithPivot;
-use AdvisingApp\Authorization\Models\Concerns\DefinesPermissions;
 
 abstract class Authenticatable extends BaseAuthenticatable
 {
-    use HasRoleGroups {
-        HasRoleGroups::roleGroups as traitRoleGroups;
-    }
     use HasRolesWithPivot;
-    use DefinesPermissions;
     use CanOrElse;
     use UsesTenantConnection;
+
+    public const SUPER_ADMIN_ROLE = 'SaaS Global Admin';
+
+    protected bool $isSuperAdmin;
 
     /**
      * @param LicenseType | string | array<LicenseType | string> | null $type
@@ -63,4 +61,9 @@ abstract class Authenticatable extends BaseAuthenticatable
      * @param LicenseType | string | array<LicenseType | string> | null $type
      */
     abstract public function hasAnyLicense(LicenseType | string | array | null $type): bool;
+
+    public function isSuperAdmin(): bool
+    {
+        return $this->isSuperAdmin ??= $this->hasRole(static::SUPER_ADMIN_ROLE);
+    }
 }

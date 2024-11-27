@@ -1,7 +1,7 @@
 <!--
 <COPYRIGHT>
 
-    Copyright © 2022-2023, Canyon GBS LLC. All rights reserved.
+    Copyright © 2016-2024, Canyon GBS LLC. All rights reserved.
 
     Advising App™ is licensed under the Elastic License 2.0. For more details,
     see https://github.com/canyongbs/advisingapp/blob/main/LICENSE.
@@ -32,12 +32,12 @@
 </COPYRIGHT>
 -->
 <script setup>
-import { defineProps, ref, reactive, onMounted } from 'vue';
+import { defineProps, onMounted, reactive, ref } from 'vue';
 import wizard from '../../form/src/FormKit/wizard';
 
 import attachRecaptchaScript from '../../../app-modules/integration-google-recaptcha/resources/js/Services/AttachRecaptchaScript.js';
 import getRecaptchaToken from '../../../app-modules/integration-google-recaptcha/resources/js/Services/GetRecaptchaToken.js';
-
+import asteriskPlugin from '../../form/src/FormKit/asterisk.js';
 onMounted(async () => {
     await getForm().then(function () {
         if (formRecaptchaEnabled.value === true) {
@@ -54,7 +54,7 @@ const data = reactive({
     steps,
     visitedSteps,
     activeStep,
-    plugins: [wizardPlugin],
+    plugins: [wizardPlugin, asteriskPlugin],
     setStep: (target) => () => {
         setStep(target);
     },

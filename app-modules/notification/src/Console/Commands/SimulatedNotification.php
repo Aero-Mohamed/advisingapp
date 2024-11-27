@@ -3,7 +3,7 @@
 /*
 <COPYRIGHT>
 
-    Copyright © 2022-2023, Canyon GBS LLC. All rights reserved.
+    Copyright © 2016-2024, Canyon GBS LLC. All rights reserved.
 
     Advising App™ is licensed under the Elastic License 2.0. For more details,
     see https://github.com/canyongbs/advisingapp/blob/main/LICENSE.
@@ -49,7 +49,7 @@ class SimulatedNotification extends Command
 
     protected $description = 'This is a temporary command to showcase the notification system.';
 
-    public function handle(): void
+    public function handle(): int
     {
         $recipient = User::first();
 
@@ -57,5 +57,7 @@ class SimulatedNotification extends Command
             ->status($this->option('type'))
             ->title('This is a simulated notification')
             ->sendToDatabase($recipient);
+
+        return static::SUCCESS;
     }
 }

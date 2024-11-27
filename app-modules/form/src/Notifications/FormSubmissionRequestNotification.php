@@ -3,7 +3,7 @@
 /*
 <COPYRIGHT>
 
-    Copyright © 2022-2023, Canyon GBS LLC. All rights reserved.
+    Copyright © 2016-2024, Canyon GBS LLC. All rights reserved.
 
     Advising App™ is licensed under the Elastic License 2.0. For more details,
     see https://github.com/canyongbs/advisingapp/blob/main/LICENSE.
@@ -60,7 +60,6 @@ class FormSubmissionRequestNotification extends BaseNotification implements Emai
             ->greeting('Hello ' . $this->submission->author->display_name . '!')
             ->line("Please complete the attached form: {$this->submission->submissible->name}")
             ->lineIf(filled($this->submission->request_note), $this->submission->request_note)
-            ->action('Complete Form', route('forms.show', ['form' => $this->submission->submissible]))
-            ->salutation("Regards, {$this->submission->requester->name}");
+            ->action('Complete Form', route('forms.show', ['form' => $this->submission->submissible]));
     }
 }

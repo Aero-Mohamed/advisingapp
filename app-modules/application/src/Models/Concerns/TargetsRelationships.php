@@ -3,7 +3,7 @@
 /*
 <COPYRIGHT>
 
-    Copyright © 2022-2023, Canyon GBS LLC. All rights reserved.
+    Copyright © 2016-2024, Canyon GBS LLC. All rights reserved.
 
     Advising App™ is licensed under the Elastic License 2.0. For more details,
     see https://github.com/canyongbs/advisingapp/blob/main/LICENSE.
@@ -56,7 +56,15 @@ trait TargetsRelationships
                 throw new Exception("Relation '{$relation}' does not exist on " . get_class($current));
             }
 
-            $current = $current->{$relation};
+            // This is a workaround for if the relation is a soft-deleted model
+            // This should be removed when we rework state machines to enforce minimum/maximum classification mappings
+            $relatedClass = $current->{$relation}()->getRelated();
+
+            if (method_exists($relatedClass, 'trashed')) {
+                $current = $current->{$relation}()->withTrashed()->first();
+            } else {
+                $current = $current->{$relation};
+            }
 
             if ($current === null) {
                 return null;

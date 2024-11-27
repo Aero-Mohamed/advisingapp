@@ -3,7 +3,7 @@
 /*
 <COPYRIGHT>
 
-    Copyright © 2022-2023, Canyon GBS LLC. All rights reserved.
+    Copyright © 2016-2024, Canyon GBS LLC. All rights reserved.
 
     Advising App™ is licensed under the Elastic License 2.0. For more details,
     see https://github.com/canyongbs/advisingapp/blob/main/LICENSE.
@@ -87,22 +87,20 @@ class EventRegistrationFormFactory extends Factory
                 $eventRegistrationForm->save();
             }
 
-            if (fake()->boolean()) {
-                EventRegistrationFormSubmission::factory()
-                    ->count(rand(1, 10))
-                    ->create([
-                        'form_id' => $eventRegistrationForm->getKey(),
-                    ])
-                    ->each(
-                        fn (EventRegistrationFormSubmission $eventRegistrationFormSubmission) => $eventRegistrationFormSubmission
-                            ->author()
-                            ->associate(EventAttendee::factory()->create([
-                                'status' => $eventRegistrationFormSubmission->attendee_status,
-                                'event_id' => $eventRegistrationForm->event->getKey(),
-                            ]))
-                            ->save()
-                    );
-            }
+            EventRegistrationFormSubmission::factory()
+                ->count(rand(1, 10))
+                ->create([
+                    'form_id' => $eventRegistrationForm->getKey(),
+                ])
+                ->each(
+                    fn (EventRegistrationFormSubmission $eventRegistrationFormSubmission) => $eventRegistrationFormSubmission
+                        ->author()
+                        ->associate(EventAttendee::factory()->create([
+                            'status' => $eventRegistrationFormSubmission->attendee_status,
+                            'event_id' => $eventRegistrationForm->event->getKey(),
+                        ]))
+                        ->save()
+                );
         });
     }
 

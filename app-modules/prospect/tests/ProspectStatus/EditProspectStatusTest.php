@@ -3,7 +3,7 @@
 /*
 <COPYRIGHT>
 
-    Copyright © 2022-2023, Canyon GBS LLC. All rights reserved.
+    Copyright © 2016-2024, Canyon GBS LLC. All rights reserved.
 
     Advising App™ is licensed under the Elastic License 2.0. For more details,
     see https://github.com/canyongbs/advisingapp/blob/main/LICENSE.
@@ -48,6 +48,7 @@ use function PHPUnit\Framework\assertEquals;
 
 use AdvisingApp\Prospect\Models\ProspectStatus;
 use AdvisingApp\Prospect\Filament\Resources\ProspectStatusResource;
+use AdvisingApp\Prospect\Filament\Resources\ProspectStatusResource\Pages\EditProspectStatus;
 use AdvisingApp\Prospect\Tests\ProspectStatus\RequestFactories\EditProspectStatusRequestFactory;
 
 test('A successful action on the EditProspectStatus page', function () {
@@ -63,7 +64,7 @@ test('A successful action on the EditProspectStatus page', function () {
 
     $editRequest = EditProspectStatusRequestFactory::new()->create();
 
-    livewire(ProspectStatusResource\Pages\EditProspectStatus::class, [
+    livewire(EditProspectStatus::class, [
         'record' => $prospectStatus->getRouteKey(),
     ])
         ->assertFormSet([
@@ -85,7 +86,7 @@ test('EditProspectStatus requires valid data', function ($data, $errors) {
 
     $prospectStatus = ProspectStatus::factory()->create();
 
-    livewire(ProspectStatusResource\Pages\EditProspectStatus::class, [
+    livewire(EditProspectStatus::class, [
         'record' => $prospectStatus->getRouteKey(),
     ])
         ->assertFormSet([
@@ -121,7 +122,7 @@ test('EditProspectStatus is gated with proper access control', function () {
             ])
         )->assertForbidden();
 
-    livewire(ProspectStatusResource\Pages\EditProspectStatus::class, [
+    livewire(EditProspectStatus::class, [
         'record' => $prospectStatus->getRouteKey(),
     ])
         ->assertForbidden();
@@ -138,7 +139,44 @@ test('EditProspectStatus is gated with proper access control', function () {
 
     $request = collect(EditProspectStatusRequestFactory::new()->create());
 
-    livewire(ProspectStatusResource\Pages\EditProspectStatus::class, [
+    livewire(EditProspectStatus::class, [
+        'record' => $prospectStatus->getRouteKey(),
+    ])
+        ->fillForm($request->toArray())
+        ->call('save')
+        ->assertHasNoFormErrors();
+
+    assertEquals($request['name'], $prospectStatus->fresh()->name);
+    assertEquals($request['color'], $prospectStatus->fresh()->color);
+});
+
+test('EditProspectStatus is gated with proper system protection access control', function () {
+    $prospectStatus = ProspectStatus::factory()->create(['is_system_protected' => true]);
+
+    asSuperAdmin()
+        ->get(
+            ProspectStatusResource::getUrl('edit', [
+                'record' => $prospectStatus,
+            ])
+        )->assertForbidden();
+
+    livewire(EditProspectStatus::class, [
+        'record' => $prospectStatus->getRouteKey(),
+    ])
+        ->assertForbidden();
+
+    $prospectStatus = ProspectStatus::factory()->create();
+
+    asSuperAdmin()
+        ->get(
+            ProspectStatusResource::getUrl('edit', [
+                'record' => $prospectStatus,
+            ])
+        )->assertSuccessful();
+
+    $request = collect(EditProspectStatusRequestFactory::new()->create());
+
+    livewire(EditProspectStatus::class, [
         'record' => $prospectStatus->getRouteKey(),
     ])
         ->fillForm($request->toArray())

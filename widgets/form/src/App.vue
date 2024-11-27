@@ -1,7 +1,7 @@
 <!--
 <COPYRIGHT>
 
-    Copyright © 2022-2023, Canyon GBS LLC. All rights reserved.
+    Copyright © 2016-2024, Canyon GBS LLC. All rights reserved.
 
     Advising App™ is licensed under the Elastic License 2.0. For more details,
     see https://github.com/canyongbs/advisingapp/blob/main/LICENSE.
@@ -32,12 +32,13 @@
 </COPYRIGHT>
 -->
 <script setup>
+import DOMPurify from 'dompurify';
+import { marked } from 'marked';
 import { defineProps, onMounted, reactive, ref } from 'vue';
-import wizard from './FormKit/wizard';
 import attachRecaptchaScript from '../../../app-modules/integration-google-recaptcha/resources/js/Services/AttachRecaptchaScript.js';
 import getRecaptchaToken from '../../../app-modules/integration-google-recaptcha/resources/js/Services/GetRecaptchaToken.js';
-import { marked } from 'marked';
-import DOMPurify from 'dompurify';
+import asteriskPlugin from './FormKit/asterisk.js';
+import wizard from './FormKit/wizard';
 
 onMounted(async () => {
     await getForm().then(function () {
@@ -55,7 +56,7 @@ const data = reactive({
     steps,
     visitedSteps,
     activeStep,
-    plugins: [wizardPlugin],
+    plugins: [wizardPlugin, asteriskPlugin],
     setStep: (target) => () => {
         setStep(target);
     },
@@ -138,6 +139,7 @@ const authentication = ref({
     requestedMessage: null,
     requestUrl: null,
     url: null,
+    registrationAllowed: false,
 });
 
 async function getForm() {
@@ -233,6 +235,7 @@ async function authenticate(formData, node) {
 
                     authentication.value.isRequested = false;
                     authentication.value.requestedMessage = null;
+                    authentication.value.registrationAllowed = false;
 
                     return;
                 }
@@ -244,6 +247,46 @@ async function authenticate(formData, node) {
                 }
 
                 formSubmissionUrl.value = json.submission_url;
+            })
+            .catch((error) => {
+                node.setErrors([error]);
+            });
+
+        return;
+    }
+
+    if (authentication.value.registrationAllowed) {
+        fetch(authentication.value.url, {
+            method: 'POST',
+            headers: {
+                Accept: 'application/json',
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                email: formData.email,
+                first_name: formData.first_name,
+                last_name: formData.last_name,
+                preferred: formData.preferred,
+                mobile: formData.mobile,
+                birthdate: formData.birthdate,
+                address: formData.address,
+                address_2: formData.address_2,
+                city: formData.city,
+                state: formData.state,
+                postal: formData.postal,
+            }),
+        })
+            .then((response) => response.json())
+            .then((json) => {
+                if (json.errors) {
+                    node.setErrors([], json.errors);
+
+                    return;
+                }
+
+                authentication.value.isRequested = true;
+                authentication.value.requestedMessage = json.message;
+                authentication.value.url = json.authentication_url;
             })
             .catch((error) => {
                 node.setErrors([error]);
@@ -272,6 +315,14 @@ async function authenticate(formData, node) {
 
             if (!json.authentication_url) {
                 node.setErrors([json.message]);
+
+                return;
+            }
+            if (json.registrationAllowed) {
+                authentication.value.registrationAllowed = true;
+                authentication.value.isRequested = false;
+                authentication.value.requestedMessage = json.message;
+                authentication.value.url = json.authentication_url;
 
                 return;
             }
@@ -328,6 +379,113 @@ async function authenticate(formData, node) {
                         validation-visibility="submit"
                         :disabled="authentication.isRequested"
                     />
+
+                    <div v-if="authentication.registrationAllowed">
+                        <p class="text-gray-700 font-medium text-xs my-3">
+                            You are not registered yet. Please fill in the form below to register.
+                        </p>
+                        <div class="flex flex-wrap -mx-3 mb-6">
+                            <div class="w-full md:w-1/2 px-3 mb-6 md:mb-0">
+                                <FormKit
+                                    type="text"
+                                    label="First Name"
+                                    name="first_name"
+                                    validation="required|alpha|length:0,255"
+                                    validation-visibility="submit"
+                                />
+                            </div>
+                            <div class="w-full md:w-1/2 px-3">
+                                <FormKit
+                                    type="text"
+                                    label="Last Name"
+                                    name="last_name"
+                                    validation="required|alpha|length:0,255"
+                                    validation-visibility="submit"
+                                />
+                            </div>
+                        </div>
+                        <div class="flex flex-wrap -mx-3 mb-6">
+                            <div class="w-full md:w-1/2 px-3 mb-6 md:mb-0">
+                                <FormKit
+                                    type="text"
+                                    label="Preferred Name"
+                                    name="preferred"
+                                    validation="required|alpha|length:0,255"
+                                    validation-visibility="submit"
+                                />
+                            </div>
+                            <div class="w-full md:w-1/2 px-3">
+                                <FormKit
+                                    type="date"
+                                    label="Birth Date"
+                                    name="birthdate"
+                                    validation="required"
+                                    validation-visibility="submit"
+                                />
+                            </div>
+                        </div>
+                        <div class="flex flex-wrap -mx-3 mb-6">
+                            <div class="w-full md:w-1/2 px-3 mb-6 md:mb-0">
+                                <FormKit
+                                    type="tel"
+                                    label="Mobile"
+                                    name="mobile"
+                                    placeholder="xxx-xxx-xxxx"
+                                    validation="required|length:0,255"
+                                    validation-visibility="submit"
+                                />
+                            </div>
+                            <div class="w-full md:w-1/2 px-3">
+                                <FormKit
+                                    type="text"
+                                    label="Address"
+                                    name="address"
+                                    validation="required|length:0,255"
+                                    validation-visibility="submit"
+                                />
+                            </div>
+                        </div>
+                        <div class="flex flex-wrap -mx-3 mb-6">
+                            <div class="w-full md:w-1/2 px-3 mb-6 md:mb-0">
+                                <FormKit
+                                    type="text"
+                                    label="Apartment/Unit Number"
+                                    name="address_2"
+                                    validation="required|length:0,255"
+                                    validation-visibility="submit"
+                                />
+                            </div>
+                            <div class="w-full md:w-1/2 px-3">
+                                <FormKit
+                                    type="text"
+                                    label="City"
+                                    name="city"
+                                    validation="required|length:0,255"
+                                    validation-visibility="submit"
+                                />
+                            </div>
+                        </div>
+                        <div class="flex flex-wrap -mx-3 mb-6">
+                            <div class="w-full md:w-1/2 px-3 mb-6 md:mb-0">
+                                <FormKit
+                                    type="text"
+                                    label="State"
+                                    name="state"
+                                    validation="required|length:0,255"
+                                    validation-visibility="submit"
+                                />
+                            </div>
+                            <div class="w-full md:w-1/2 px-3">
+                                <FormKit
+                                    type="text"
+                                    label="Postal"
+                                    name="postal"
+                                    validation="required|length:0,255"
+                                    validation-visibility="submit"
+                                />
+                            </div>
+                        </div>
+                    </div>
 
                     <p v-if="authentication.requestedMessage" class="text-sm">
                         {{ authentication.requestedMessage }}

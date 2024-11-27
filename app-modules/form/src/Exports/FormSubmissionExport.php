@@ -3,7 +3,7 @@
 /*
 <COPYRIGHT>
 
-    Copyright © 2022-2023, Canyon GBS LLC. All rights reserved.
+    Copyright © 2016-2024, Canyon GBS LLC. All rights reserved.
 
     Advising App™ is licensed under the Elastic License 2.0. For more details,
     see https://github.com/canyongbs/advisingapp/blob/main/LICENSE.
@@ -36,8 +36,9 @@
 
 namespace AdvisingApp\Form\Exports;
 
-use Illuminate\Support\Collection;
+use AdvisingApp\Form\Models\FormField;
 use Maatwebsite\Excel\Concerns\WithMapping;
+use Illuminate\Database\Eloquent\Collection;
 use Maatwebsite\Excel\Concerns\WithHeadings;
 use Maatwebsite\Excel\Concerns\FromCollection;
 
@@ -47,15 +48,17 @@ class FormSubmissionExport implements FromCollection, WithHeadings, WithMapping
 
     public function collection(): Collection
     {
-        return $this->submissions;
+        return $this->submissions->load(['fields', 'submissible.fields']);
     }
 
     public function headings(): array
     {
+        $submissible = $this->submissions->first()?->submissible;
+
         return [
             'id',
             'form_id',
-            'content',
+            ...$submissible?->fields()->pluck('label')->all() ?? [],
             'created_at',
             'updated_at',
         ];
@@ -66,7 +69,9 @@ class FormSubmissionExport implements FromCollection, WithHeadings, WithMapping
         return [
             $row->id,
             $row->form_id,
-            $row->content,
+            ...$row->submissible->fields
+                ->map(fn (FormField $field) => $row->fields->where('id', $field->id)->first()?->pivot->response)
+                ->all(),
             $row->created_at,
             $row->updated_at,
         ];

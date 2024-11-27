@@ -3,7 +3,7 @@
 /*
 <COPYRIGHT>
 
-    Copyright © 2022-2023, Canyon GBS LLC. All rights reserved.
+    Copyright © 2016-2024, Canyon GBS LLC. All rights reserved.
 
     Advising App™ is licensed under the Elastic License 2.0. For more details,
     see https://github.com/canyongbs/advisingapp/blob/main/LICENSE.
@@ -36,27 +36,35 @@
 
 namespace AdvisingApp\Interaction\Filament\Resources\InteractionResource\Pages;
 
+use Filament\Forms\Get;
+use Filament\Forms\Set;
 use Filament\Forms\Form;
+use Illuminate\Support\Carbon;
 use Filament\Forms\Components\Select;
+use Filament\Forms\Components\Actions;
 use Filament\Forms\Components\Fieldset;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
 use AdvisingApp\Division\Models\Division;
 use AdvisingApp\Prospect\Models\Prospect;
+use Illuminate\Database\Eloquent\Builder;
 use Filament\Resources\Pages\CreateRecord;
 use Filament\Forms\Components\MorphToSelect;
 use Filament\Forms\Components\DateTimePicker;
+use AdvisingApp\Authorization\Enums\LicenseType;
+use AdvisingApp\CaseManagement\Models\CaseModel;
 use AdvisingApp\StudentDataModel\Models\Student;
+use App\Models\Scopes\ExcludeConvertedProspects;
 use Filament\Resources\Pages\ManageRelatedRecords;
 use AdvisingApp\Interaction\Models\InteractionType;
 use AdvisingApp\Interaction\Models\InteractionDriver;
 use AdvisingApp\Interaction\Models\InteractionStatus;
 use AdvisingApp\Interaction\Models\InteractionOutcome;
-use AdvisingApp\Interaction\Models\InteractionCampaign;
 use AdvisingApp\Interaction\Models\InteractionRelation;
-use AdvisingApp\ServiceManagement\Models\ServiceRequest;
-use App\Filament\Resources\RelationManagers\RelationManager;
+use Filament\Resources\RelationManagers\RelationManager;
+use AdvisingApp\Interaction\Models\InteractionInitiative;
 use AdvisingApp\Interaction\Filament\Resources\InteractionResource;
+use AdvisingApp\Interaction\Filament\Actions\DraftInteractionWithAiAction;
 
 class CreateInteraction extends CreateRecord
 {
@@ -64,57 +72,105 @@ class CreateInteraction extends CreateRecord
 
     public function form(Form $form): Form
     {
+        $calculateEndDateTime = function (Get $get, Set $set) {
+            $startDateTime = $get('start_datetime');
+
+            if (blank($startDateTime)) {
+                $set('end_datetime', null);
+
+                return;
+            }
+
+            $duration = $get('duration');
+
+            if (blank($duration)) {
+                $set('end_datetime', null);
+
+                return;
+            }
+
+            $set('end_datetime', Carbon::parse($startDateTime)
+                ->addMinutes($duration)
+                ->toDateTimeString());
+        };
+
         return $form
             ->schema([
                 MorphToSelect::make('interactable')
                     ->label('Related To')
-                    ->translateLabel()
                     ->searchable()
                     ->required()
                     ->types([
                         ...(auth()->user()->hasLicense(Student::getLicenseType()) ? [MorphToSelect\Type::make(Student::class)
                             ->titleAttribute(Student::displayNameKey())] : []),
                         ...(auth()->user()->hasLicense(Prospect::getLicenseType()) ? [MorphToSelect\Type::make(Prospect::class)
-                            ->titleAttribute(Prospect::displayNameKey())] : []),
-                        MorphToSelect\Type::make(ServiceRequest::class)
-                            ->label('Service Request')
-                            ->titleAttribute('service_request_number'),
+                            ->titleAttribute(Prospect::displayNameKey())
+                            ->modifyOptionsQueryUsing(fn (Builder $query) => $query->tap(new ExcludeConvertedProspects())),
+                        ] : []),
+                        MorphToSelect\Type::make(CaseModel::class)
+                            ->label('Case')
+                            ->titleAttribute('case_number'),
                     ])
                     ->hiddenOn([RelationManager::class, ManageRelatedRecords::class]),
                 Fieldset::make('Details')
                     ->schema([
-                        Select::make('interaction_campaign_id')
-                            ->relationship('campaign', 'name')
+                        Select::make('interaction_initiative_id')
+                            ->relationship('initiative', 'name')
                             ->preload()
-                            ->label('Campaign')
+                            ->label('Initiative')
                             ->required()
-                            ->exists((new InteractionCampaign())->getTable(), 'id'),
+                            ->default(
+                                fn () => InteractionInitiative::query()
+                                    ->where('is_default', true)
+                                    ->first()
+                                    ?->getKey()
+                            )
+                            ->exists((new InteractionInitiative())->getTable(), 'id'),
                         Select::make('interaction_driver_id')
                             ->relationship('driver', 'name')
                             ->preload()
                             ->label('Driver')
+                            ->default(
+                                fn () => InteractionDriver::query()
+                                    ->where('is_default', true)
+                                    ->first()
+                                    ?->getKey()
+                            )
                             ->required()
                             ->exists((new InteractionDriver())->getTable(), 'id'),
                         Select::make('division_id')
                             ->relationship('division', 'name')
+                            ->default(fn () => auth()->user()->teams()->first()?->division?->getKey())
                             ->preload()
                             ->label('Division')
                             ->required()
                             ->exists((new Division())->getTable(), 'id'),
                         Select::make('interaction_outcome_id')
                             ->relationship('outcome', 'name')
+                            ->default(fn () => InteractionOutcome::query()
+                                ->where('is_default', true)
+                                ->first()
+                                ?->getKey())
                             ->preload()
                             ->label('Outcome')
                             ->required()
                             ->exists((new InteractionOutcome())->getTable(), 'id'),
                         Select::make('interaction_relation_id')
                             ->relationship('relation', 'name')
+                            ->default(fn () => InteractionRelation::query()
+                                ->where('is_default', true)
+                                ->first()
+                                ?->getKey())
                             ->preload()
                             ->label('Relation')
                             ->required()
                             ->exists((new InteractionRelation())->getTable(), 'id'),
                         Select::make('interaction_status_id')
                             ->relationship('status', 'name')
+                            ->default(fn () => InteractionStatus::query()
+                                ->where('is_default', true)
+                                ->first()
+                                ?->getKey())
                             ->preload()
                             ->label('Status')
                             ->required()
@@ -122,6 +178,12 @@ class CreateInteraction extends CreateRecord
                         Select::make('interaction_type_id')
                             ->relationship('type', 'name')
                             ->preload()
+                            ->default(
+                                fn () => InteractionType::query()
+                                    ->where('is_default', true)
+                                    ->first()
+                                    ?->getKey()
+                            )
                             ->label('Type')
                             ->required()
                             ->exists((new InteractionType())->getTable(), 'id'),
@@ -129,8 +191,25 @@ class CreateInteraction extends CreateRecord
                 Fieldset::make('Time')
                     ->schema([
                         DateTimePicker::make('start_datetime')
-                            ->required(),
+                            ->label('Start Date and Time')
+                            ->seconds(false)
+                            ->default(fn () => now()->toDateTimeString())
+                            ->required()
+                            ->live(onBlur: true)
+                            ->afterStateUpdated($calculateEndDateTime),
+                        TextInput::make('duration')
+                            ->label('Duration (Minutes)')
+                            ->integer()
+                            ->minValue(0)
+                            ->required()
+                            ->dehydrated(false)
+                            ->live(onBlur: true)
+                            ->afterStateUpdated($calculateEndDateTime),
                         DateTimePicker::make('end_datetime')
+                            ->label('End Date and Time')
+                            ->seconds(false)
+                            ->disabled()
+                            ->dehydrated()
                             ->required(),
                     ]),
                 Fieldset::make('Notes')
@@ -139,7 +218,14 @@ class CreateInteraction extends CreateRecord
                             ->required(),
                         Textarea::make('description')
                             ->required(),
-                    ]),
+                    ])
+                    ->columns(1),
+                Actions::make([
+                    DraftInteractionWithAiAction::make(),
+                ])
+                    ->visible(
+                        auth()->user()->hasLicense(LicenseType::ConversationalAi)
+                    ),
             ]);
     }
 }

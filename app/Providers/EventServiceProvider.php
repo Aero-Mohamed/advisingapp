@@ -3,7 +3,7 @@
 /*
 <COPYRIGHT>
 
-    Copyright © 2022-2023, Canyon GBS LLC. All rights reserved.
+    Copyright © 2016-2024, Canyon GBS LLC. All rights reserved.
 
     Advising App™ is licensed under the Elastic License 2.0. For more details,
     see https://github.com/canyongbs/advisingapp/blob/main/LICENSE.
@@ -36,20 +36,22 @@
 
 namespace App\Providers;
 
+use App\Listeners\SetSentryUser;
+use Illuminate\Auth\Events\Login;
+use App\Listeners\ClearSentryUser;
+use Illuminate\Auth\Events\Logout;
 use OwenIt\Auditing\Events\Auditing;
 use Illuminate\Auth\Events\Registered;
+use App\Listeners\LoadSettingsDefaults;
+use Illuminate\Auth\Events\Authenticated;
 use AdvisingApp\Audit\Listeners\AuditingListener;
-use AdvisingApp\Authorization\Events\RoleRemovedFromUser;
-use AdvisingApp\Authorization\Events\RoleAttachedToRoleGroup;
-use AdvisingApp\Authorization\Events\UserAttachedToRoleGroup;
-use AdvisingApp\Authorization\Events\RoleRemovedFromRoleGroup;
-use AdvisingApp\Authorization\Events\UserRemovedFromRoleGroup;
+use App\Multitenancy\Listeners\SetSentryTenantTag;
+use Spatie\LaravelSettings\Events\LoadingSettings;
+use Illuminate\Console\Events\ScheduledTaskStarting;
+use App\Multitenancy\Listeners\RemoveSentryTenantTag;
+use Spatie\Multitenancy\Events\ForgotCurrentTenantEvent;
+use Spatie\Multitenancy\Events\MakingTenantCurrentEvent;
 use Illuminate\Auth\Listeners\SendEmailVerificationNotification;
-use AdvisingApp\Authorization\Listeners\HandleRoleRemovedFromUser;
-use AdvisingApp\Authorization\Listeners\HandleRoleAttachedToRoleGroup;
-use AdvisingApp\Authorization\Listeners\HandleUserAttachedToRoleGroup;
-use AdvisingApp\Authorization\Listeners\HandleRoleRemovedFromRoleGroup;
-use AdvisingApp\Authorization\Listeners\HandleUserRemovedFromRoleGroup;
 use Illuminate\Foundation\Support\Providers\EventServiceProvider as ServiceProvider;
 
 class EventServiceProvider extends ServiceProvider
@@ -63,25 +65,29 @@ class EventServiceProvider extends ServiceProvider
         Registered::class => [
             SendEmailVerificationNotification::class,
         ],
-        // TODO Extract these into the authorization module
-        UserAttachedToRoleGroup::class => [
-            HandleUserAttachedToRoleGroup::class,
-        ],
-        RoleAttachedToRoleGroup::class => [
-            HandleRoleAttachedToRoleGroup::class,
-        ],
-        UserRemovedFromRoleGroup::class => [
-            HandleUserRemovedFromRoleGroup::class,
-        ],
-        RoleRemovedFromRoleGroup::class => [
-            HandleRoleRemovedFromRoleGroup::class,
-        ],
-        RoleRemovedFromUser::class => [
-            HandleRoleRemovedFromUser::class,
-        ],
-        // TODO: Move this to the auditing Module somehow
         Auditing::class => [
             AuditingListener::class,
+        ],
+        MakingTenantCurrentEvent::class => [
+            SetSentryTenantTag::class,
+        ],
+        ForgotCurrentTenantEvent::class => [
+            RemoveSentryTenantTag::class,
+        ],
+        Login::class => [
+            SetSentryUser::class,
+        ],
+        Authenticated::class => [
+            SetSentryUser::class,
+        ],
+        ScheduledTaskStarting::class => [
+            ClearSentryUser::class,
+        ],
+        Logout::class => [
+            ClearSentryUser::class,
+        ],
+        LoadingSettings::class => [
+            LoadSettingsDefaults::class,
         ],
     ];
 

@@ -3,7 +3,7 @@
 /*
 <COPYRIGHT>
 
-    Copyright © 2022-2023, Canyon GBS LLC. All rights reserved.
+    Copyright © 2016-2024, Canyon GBS LLC. All rights reserved.
 
     Advising App™ is licensed under the Elastic License 2.0. For more details,
     see https://github.com/canyongbs/advisingapp/blob/main/LICENSE.
@@ -38,18 +38,26 @@ namespace AdvisingApp\Audit\Filament\Resources\AuditResource\Pages;
 
 use App\Models\User;
 use Filament\Tables\Table;
-use App\Filament\Columns\IdColumn;
+use Filament\Actions\ExportAction;
+use Filament\Tables\Filters\Filter;
+use Filament\Forms\Components\Checkbox;
 use Filament\Tables\Actions\ViewAction;
 use Filament\Tables\Columns\TextColumn;
+use App\Filament\Tables\Columns\IdColumn;
 use Filament\Resources\Pages\ListRecords;
 use Filament\Tables\Filters\SelectFilter;
 use Illuminate\Database\Eloquent\Builder;
+use Filament\Tables\Actions\BulkActionGroup;
+use Filament\Tables\Actions\ExportBulkAction;
+use AdvisingApp\Audit\Filament\Exports\AuditExporter;
 use AdvisingApp\Audit\Actions\Finders\AuditableModels;
 use AdvisingApp\Audit\Filament\Resources\AuditResource;
 
 class ListAudits extends ListRecords
 {
     protected static string $resource = AuditResource::class;
+
+    protected static ?string $title = 'System Administration';
 
     public function table(Table $table): Table
     {
@@ -59,14 +67,26 @@ class ListAudits extends ListRecords
                 TextColumn::make('auditable_type')
                     ->label('Auditable')
                     ->sortable(),
-                TextColumn::make('user.name')
+                TextColumn::make('change_agent_name')
                     ->label('Change Agent (User)')
-                    ->sortable(),
+                    ->sortable()
+                    ->default('System'),
                 TextColumn::make('event')
                     ->label('Event')
                     ->sortable(),
             ])
+            ->defaultSort('id', 'desc')
             ->filters([
+                Filter::make('exclude_system_user')
+                    ->label('Exclude System User')
+                    ->query(
+                        fn (Builder $query, array $data): Builder => $query->when($data['isActive'], fn (Builder $query) => $query->whereHas('user'))
+                    )
+                    ->form([
+                        Checkbox::make('isActive')
+                            ->label('Exclude System User')
+                            ->default(true),
+                    ]),
                 SelectFilter::make('change_agent_user')
                     ->label('Change Agent (User)')
                     ->options(fn (): array => User::query()->pluck('name', 'id')->all())
@@ -80,11 +100,21 @@ class ListAudits extends ListRecords
             ->actions([
                 ViewAction::make(),
             ])
-            ->bulkActions([]);
+            ->bulkActions([
+                BulkActionGroup::make([
+                    ExportBulkAction::make()
+                        ->exporter(AuditExporter::class)
+                        ->label('Export Records'),
+                ]),
+            ]);
     }
 
     protected function getHeaderActions(): array
     {
-        return [];
+        return [
+            ExportAction::make()
+                ->exporter(AuditExporter::class)
+                ->label('Export Records'),
+        ];
     }
 }

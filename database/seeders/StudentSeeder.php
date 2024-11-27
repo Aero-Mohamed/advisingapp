@@ -3,7 +3,7 @@
 /*
 <COPYRIGHT>
 
-    Copyright © 2022-2023, Canyon GBS LLC. All rights reserved.
+    Copyright © 2016-2024, Canyon GBS LLC. All rights reserved.
 
     Advising App™ is licensed under the Elastic License 2.0. For more details,
     see https://github.com/canyongbs/advisingapp/blob/main/LICENSE.
@@ -37,16 +37,37 @@
 namespace Database\Seeders;
 
 use Illuminate\Database\Seeder;
+use Illuminate\Database\Eloquent\Collection;
+use AdvisingApp\StudentDataModel\Models\Program;
 use AdvisingApp\StudentDataModel\Models\Student;
+use AdvisingApp\StudentDataModel\Models\Enrollment;
 
 class StudentSeeder extends Seeder
 {
     public function run(): void
     {
-        Student::factory()
-            ->create([
-                'full_name' => 'Twilio Tester',
-                'mobile' => config('services.twilio.test_from_number'),
-            ]);
+        /** @var Collection $students */
+        $students = Student::factory(500)
+            ->make();
+
+        $enrollments = [];
+        $programs = [];
+
+        $students->each(function ($student) use (&$enrollments, &$programs) {
+            foreach (Enrollment::factory(5)->make(['sisid' => $student->sisid])->toArray() as $enrollment) {
+                $enrollments[] = $enrollment;
+            }
+
+            $programs[] = Program::factory()->make(
+                [
+                    'sisid' => $student->sisid,
+                    'otherid' => $student->otherid,
+                ]
+            )->toArray();
+        });
+
+        Student::insert($students->toArray());
+        Enrollment::insert($enrollments);
+        Program::insert($programs);
     }
 }

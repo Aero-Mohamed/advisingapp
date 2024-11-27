@@ -3,7 +3,7 @@
 /*
 <COPYRIGHT>
 
-    Copyright © 2022-2023, Canyon GBS LLC. All rights reserved.
+    Copyright © 2016-2024, Canyon GBS LLC. All rights reserved.
 
     Advising App™ is licensed under the Elastic License 2.0. For more details,
     see https://github.com/canyongbs/advisingapp/blob/main/LICENSE.
@@ -38,17 +38,17 @@ namespace AdvisingApp\Engagement\Filament\Resources\EngagementResource\RelationM
 
 use Filament\Forms\Form;
 use Filament\Tables\Table;
-use App\Filament\Columns\IdColumn;
 use Filament\Forms\Components\Select;
 use Filament\Tables\Columns\IconColumn;
 use Filament\Tables\Columns\TextColumn;
+use App\Filament\Tables\Columns\IdColumn;
 use Filament\Tables\Actions\CreateAction;
 use Filament\Tables\Actions\DeleteAction;
 use Filament\Tables\Actions\BulkActionGroup;
 use Filament\Tables\Actions\DeleteBulkAction;
+use Filament\Resources\RelationManagers\RelationManager;
 use AdvisingApp\Engagement\Enums\EngagementDeliveryMethod;
 use AdvisingApp\Engagement\Enums\EngagementDeliveryStatus;
-use App\Filament\Resources\RelationManagers\RelationManager;
 
 class EngagementDeliverablesRelationManager extends RelationManager
 {
@@ -62,7 +62,6 @@ class EngagementDeliverablesRelationManager extends RelationManager
             ->schema([
                 Select::make('channel')
                     ->label('How would you like to send this engagement?')
-                    ->translateLabel()
                     ->options(EngagementDeliveryMethod::class)
                     ->disableOptionWhen(fn (string $value) => $this->ownerRecord->deliverable->channel === EngagementDeliveryMethod::from($value))
                     ->validationAttribute('Delivery Method')
@@ -78,16 +77,8 @@ class EngagementDeliverablesRelationManager extends RelationManager
                 IdColumn::make(),
                 TextColumn::make('channel'),
                 IconColumn::make('delivery_status')
-                    ->icon(fn (EngagementDeliveryStatus $state): string => match ($state) {
-                        EngagementDeliveryStatus::Successful => 'heroicon-o-check-circle',
-                        EngagementDeliveryStatus::Awaiting => 'heroicon-o-clock',
-                        EngagementDeliveryStatus::Failed => 'heroicon-o-x-circle',
-                    })
-                    ->color(fn (EngagementDeliveryStatus $state): string => match ($state) {
-                        EngagementDeliveryStatus::Successful => 'success',
-                        EngagementDeliveryStatus::Awaiting => 'info',
-                        EngagementDeliveryStatus::Failed => 'danger',
-                    }),
+                    ->icon(fn (EngagementDeliveryStatus $state): string => $state->getIconClass())
+                    ->color(fn (EngagementDeliveryStatus $state): string => $state->getColor()),
             ])
             ->headerActions([
                 CreateAction::make(),

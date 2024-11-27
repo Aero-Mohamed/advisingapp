@@ -3,7 +3,7 @@
 /*
 <COPYRIGHT>
 
-    Copyright © 2022-2023, Canyon GBS LLC. All rights reserved.
+    Copyright © 2016-2024, Canyon GBS LLC. All rights reserved.
 
     Advising App™ is licensed under the Elastic License 2.0. For more details,
     see https://github.com/canyongbs/advisingapp/blob/main/LICENSE.
@@ -45,17 +45,17 @@ use Illuminate\Database\Eloquent\Relations\MorphTo;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\MorphPivot;
+use AdvisingApp\Notification\Models\Contracts\Subscribable;
 use AdvisingApp\StudentDataModel\Models\Contracts\Educatable;
-use AdvisingApp\Authorization\Models\Concerns\DefinesPermissions;
 use AdvisingApp\Campaign\Models\Contracts\ExecutableFromACampaignAction;
+use AdvisingApp\Notification\Models\Contracts\CanTriggerAutoSubscription;
 
 /**
  * @mixin IdeHelperCareTeam
  */
-class CareTeam extends MorphPivot implements ExecutableFromACampaignAction
+class CareTeam extends MorphPivot implements ExecutableFromACampaignAction, CanTriggerAutoSubscription
 {
     use HasFactory;
-    use DefinesPermissions;
     use HasUuids;
 
     public $timestamps = true;
@@ -78,9 +78,13 @@ class CareTeam extends MorphPivot implements ExecutableFromACampaignAction
         try {
             DB::beginTransaction();
 
-            $action->campaign->caseload->retrieveRecords()->each(function (Educatable $educatable) use ($action) {
-                $educatable->careTeam()->sync(ids: $action->data['user_ids'], detaching: $action->data['remove_prior']);
-            });
+            $action
+                ->campaign
+                ->segment
+                ->retrieveRecords()
+                ->each(function (Educatable $educatable) use ($action) {
+                    $educatable->careTeam()->sync(ids: $action->data['user_ids'], detaching: $action->data['remove_prior']);
+                });
 
             DB::commit();
 
@@ -92,5 +96,10 @@ class CareTeam extends MorphPivot implements ExecutableFromACampaignAction
         }
 
         // Do we need to be able to relate campaigns/actions to the RESULT of their actions?
+    }
+
+    public function getSubscribable(): ?Subscribable
+    {
+        return $this->educatable instanceof Subscribable ? $this->educatable : null;
     }
 }

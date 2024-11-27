@@ -3,7 +3,7 @@
 /*
 <COPYRIGHT>
 
-    Copyright © 2022-2023, Canyon GBS LLC. All rights reserved.
+    Copyright © 2016-2024, Canyon GBS LLC. All rights reserved.
 
     Advising App™ is licensed under the Elastic License 2.0. For more details,
     see https://github.com/canyongbs/advisingapp/blob/main/LICENSE.
@@ -52,11 +52,18 @@ class EngagementBatchFinishedNotification extends BaseNotification implements Da
     use DatabaseChannelTrait;
     use EmailChannelTrait;
 
+    private string $title;
+
     public function __construct(
         public EngagementBatch $engagementBatch,
         public int $processedJobs,
         public int $failedJobs,
-    ) {}
+        public string $deliveryMethod,
+    ) {
+        $this->title = $this->deliveryMethod === 'email'
+                    ? 'Bulk email request has been processed and emails have been sent successfully.'
+                    : 'Bulk text message request has been processed and text messages have been sent successfully.';
+    }
 
     public function toEmail(object $notifiable): MailMessage
     {
@@ -70,7 +77,7 @@ class EngagementBatchFinishedNotification extends BaseNotification implements Da
         }
 
         return $message
-            ->subject('Bulk Engagements Finished Processing Successfully.')
+            ->subject($this->title)
             ->line("{$this->processedJobs} jobs processed successfully.");
     }
 
@@ -86,7 +93,7 @@ class EngagementBatchFinishedNotification extends BaseNotification implements Da
 
         return FilamentNotification::make()
             ->success()
-            ->title('Bulk Engagement processing finished')
+            ->title($this->title)
             ->body("{$this->processedJobs} jobs processed successfully.")
             ->getDatabaseMessage();
     }

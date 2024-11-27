@@ -3,7 +3,7 @@
 /*
 <COPYRIGHT>
 
-    Copyright © 2022-2023, Canyon GBS LLC. All rights reserved.
+    Copyright © 2016-2024, Canyon GBS LLC. All rights reserved.
 
     Advising App™ is licensed under the Elastic License 2.0. For more details,
     see https://github.com/canyongbs/advisingapp/blob/main/LICENSE.
@@ -38,15 +38,19 @@ namespace AdvisingApp\Engagement\Filament\Resources\EngagementFileResource\Relat
 
 use Filament\Forms\Form;
 use Filament\Tables\Table;
-use App\Filament\Columns\IdColumn;
+use Filament\Tables\Actions\Action;
 use Filament\Tables\Actions\EditAction;
+use Filament\Tables\Columns\IconColumn;
 use Filament\Tables\Columns\TextColumn;
+use Illuminate\Support\Facades\Storage;
+use AdvisingApp\Prospect\Models\Prospect;
+use App\Filament\Tables\Columns\IdColumn;
 use Filament\Tables\Actions\CreateAction;
 use Filament\Tables\Actions\DeleteAction;
 use Filament\Tables\Actions\BulkActionGroup;
 use Filament\Tables\Actions\DeleteBulkAction;
-use Filament\Tables\Columns\SpatieMediaLibraryImageColumn;
-use App\Filament\Resources\RelationManagers\RelationManager;
+use AdvisingApp\Engagement\Models\EngagementFile;
+use Filament\Resources\RelationManagers\RelationManager;
 use AdvisingApp\Engagement\Filament\Resources\EngagementFileResource;
 
 class EngagementFilesRelationManager extends RelationManager
@@ -71,14 +75,66 @@ class EngagementFilesRelationManager extends RelationManager
             ->columns([
                 IdColumn::make(),
                 TextColumn::make('description'),
-                SpatieMediaLibraryImageColumn::make('file')
-                    ->collection('file')
-                    ->visibility('private'),
+                IconColumn::make('media')
+                    ->tooltip(fn ($record) => match ($record->getMedia('file')?->first()?->mime_type) {
+                        default => 'File',
+                        'image/png' => 'Image (.png)',
+                        'image/jpeg' => 'Image (.jpeg)',
+                        'image/gif' => 'Image (.gif)',
+                        'application/pdf' => 'PDF',
+                        'application/msword' => 'Document',
+                        'text/csv' => 'CSV',
+                        'application/vnd.ms-excel' => 'Spreadsheet',
+                        'application/msexcel' => 'Spreadsheet',
+                        'application/ms-excel' => 'Spreadsheet',
+                        'application/vnd.openxmlformats-officedocument.wordprocessingml.document' => 'Document',
+                        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' => 'Spreadsheet',
+                        'application/vnd.openxmlformats-officedocument.presentationml.presentation' => 'Presentation',
+                        'text/plain' => 'Text File',
+                        'audio/mpeg' => 'MP3',
+                        'video/mp4' => 'MP4',
+                        'application/zip' => 'Zip File'
+                    })
+                    ->icon(fn ($state) => match ($state->mime_type) {
+                        default => 'heroicon-o-paper-clip',
+                        'image/png' => 'heroicon-o-photo',
+                        'image/jpeg' => 'heroicon-o-camera',
+                        'image/gif' => 'heroicon-o-gif',
+                        'application/pdf' => 'heroicon-o-document-text',
+                        'application/msword' => 'heroicon-o-document-text',
+                        'text/csv' => 'heroicon-o-table-cells',
+                        'application/vnd.ms-excel' => 'heroicon-o-table-cells',
+                        'application/msexcel' => 'heroicon-o-table-cells',
+                        'application/ms-excel' => 'heroicon-o-table-cells',
+                        'application/vnd.openxmlformats-officedocument.wordprocessingml.document' => 'heroicon-o-document-text',
+                        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' => 'heroicon-o-table-cells',
+                        'application/vnd.openxmlformats-officedocument.presentationml.presentation' => 'heroicon-o-presentation-chart-bar',
+                        'text/plain' => 'heroicon-o-document-text',
+                        'audio/mpeg' => 'heroicon-o-musical-note',
+                        'video/mp4' => 'heroicon-o-video-camera',
+                        'application/zip' => 'heroicon-o-archive-box'
+                    }),
             ])
             ->headerActions([
-                CreateAction::make(),
+                CreateAction::make()
+                    ->authorize(function () {
+                        $ownerRecord = $this->getOwnerRecord();
+
+                        return auth()->user()->can('create', [EngagementFile::class, $ownerRecord instanceof Prospect ? $ownerRecord : null]);
+                    }),
             ])
             ->actions([
+                Action::make('download')
+                    ->icon('heroicon-o-arrow-down-on-square')
+                    ->action(
+                        fn (EngagementFile $record) => Storage::disk('s3')
+                            ->download(
+                                $record
+                                    ->getMedia('file')
+                                    ->first()
+                                    ->getPathRelativeToRoot()
+                            )
+                    ),
                 EditAction::make(),
                 DeleteAction::make(),
             ])

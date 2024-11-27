@@ -3,7 +3,7 @@
 /*
 <COPYRIGHT>
 
-    Copyright © 2022-2023, Canyon GBS LLC. All rights reserved.
+    Copyright © 2016-2024, Canyon GBS LLC. All rights reserved.
 
     Advising App™ is licensed under the Elastic License 2.0. For more details,
     see https://github.com/canyongbs/advisingapp/blob/main/LICENSE.
@@ -40,7 +40,6 @@ use Filament\Forms\Form;
 use Filament\Tables\Table;
 use AdvisingApp\Task\Models\Task;
 use App\Models\Scopes\HasLicense;
-use App\Filament\Columns\IdColumn;
 use Filament\Tables\Filters\Filter;
 use Filament\Forms\Components\Select;
 use AdvisingApp\Task\Enums\TaskStatus;
@@ -50,14 +49,16 @@ use Illuminate\Database\Eloquent\Model;
 use App\Filament\Resources\UserResource;
 use Filament\Forms\Components\TextInput;
 use AdvisingApp\Prospect\Models\Prospect;
+use App\Filament\Tables\Columns\IdColumn;
 use Filament\Tables\Actions\CreateAction;
-use Filament\Tables\Actions\DetachAction;
 use Filament\Tables\Filters\SelectFilter;
 use Illuminate\Database\Eloquent\Builder;
 use Filament\Tables\Actions\BulkActionGroup;
+use Illuminate\Database\Eloquent\Collection;
 use Filament\Forms\Components\DateTimePicker;
-use Filament\Tables\Actions\DetachBulkAction;
+use Filament\Tables\Actions\DissociateAction;
 use AdvisingApp\StudentDataModel\Models\Student;
+use Filament\Tables\Actions\DissociateBulkAction;
 use Filament\Resources\Pages\ManageRelatedRecords;
 use AdvisingApp\Prospect\Filament\Resources\ProspectResource;
 use AdvisingApp\StudentDataModel\Filament\Resources\StudentResource;
@@ -112,7 +113,7 @@ abstract class BaseTaskRelationManager extends ManageRelatedRecords
                 TextColumn::make('assignedTo.name')
                     ->label('Assigned To')
                     ->url(fn (Task $record) => $record->assignedTo ? UserResource::getUrl('view', ['record' => $record->assignedTo]) : null),
-                TextColumn::make('concern.full')
+                TextColumn::make('concern.full_name')
                     ->label('Related To')
                     ->url(fn (Task $record) => match ($record->concern ? $record->concern::class : null) {
                         Student::class => StudentResource::getUrl('view', ['record' => $record->concern]),
@@ -148,6 +149,11 @@ abstract class BaseTaskRelationManager extends ManageRelatedRecords
             ])
             ->headerActions([
                 CreateAction::make()
+                    ->authorize(function () {
+                        $ownerRecord = $this->getOwnerRecord();
+
+                        return auth()->user()->can('create', [Task::class, $ownerRecord instanceof Prospect ? $ownerRecord : null]);
+                    })
                     ->using(function (array $data, string $model): Model {
                         $data = collect($data);
 
@@ -166,12 +172,18 @@ abstract class BaseTaskRelationManager extends ManageRelatedRecords
             ->actions([
                 TaskViewAction::make(),
                 EditAction::make(),
-                DetachAction::make(),
+                DissociateAction::make()
+                    ->using(fn (Task $task) => $task->concern()->dissociate()->save()),
             ])
             ->recordUrl(null)
             ->bulkActions([
                 BulkActionGroup::make([
-                    DetachBulkAction::make(),
+                    DissociateBulkAction::make()
+                        ->using(function (Collection $selectedRecords) {
+                            $selectedRecords->each(
+                                fn (Task $selectedRecord) => $selectedRecord->concern()->dissociate()->save()
+                            );
+                        }),
                 ]),
             ]);
     }

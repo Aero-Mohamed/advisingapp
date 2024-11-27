@@ -3,7 +3,7 @@
 /*
 <COPYRIGHT>
 
-    Copyright © 2022-2023, Canyon GBS LLC. All rights reserved.
+    Copyright © 2016-2024, Canyon GBS LLC. All rights reserved.
 
     Advising App™ is licensed under the Elastic License 2.0. For more details,
     see https://github.com/canyongbs/advisingapp/blob/main/LICENSE.
@@ -41,6 +41,7 @@ use App\Models\User;
 use App\Enums\Feature;
 use Twilio\Rest\Client;
 use Filament\Pages\Page;
+use App\Enums\Integration;
 use Twilio\Jwt\AccessToken;
 use Filament\Actions\Action;
 use Livewire\Attributes\Url;
@@ -48,6 +49,7 @@ use Twilio\Jwt\Grants\ChatGrant;
 use Livewire\Attributes\Computed;
 use Illuminate\Support\HtmlString;
 use Livewire\Attributes\Renderless;
+use Filament\Forms\Components\Radio;
 use Illuminate\Support\Facades\Gate;
 use Filament\Forms\Components\Select;
 use Illuminate\Support\Facades\Cache;
@@ -69,11 +71,14 @@ use AdvisingApp\IntegrationTwilio\Settings\TwilioSettings;
 use AdvisingApp\InAppCommunication\Models\TwilioConversation;
 use AdvisingApp\InAppCommunication\Actions\AddUserToConversation;
 use AdvisingApp\InAppCommunication\Actions\TogglePinConversation;
+use AdvisingApp\InAppCommunication\Events\ConversationMessageSent;
 use AdvisingApp\InAppCommunication\Actions\CreateTwilioConversation;
 use AdvisingApp\InAppCommunication\Actions\DeleteTwilioConversation;
 use AdvisingApp\InAppCommunication\Actions\RemoveUserFromConversation;
 use AdvisingApp\InAppCommunication\Actions\PromoteUserToChannelManager;
+use AdvisingApp\InAppCommunication\Jobs\NotifyConversationParticipants;
 use AdvisingApp\InAppCommunication\Actions\DemoteUserFromChannelManager;
+use AdvisingApp\InAppCommunication\Enums\ConversationNotificationPreference;
 
 /**
  * @property Collection $conversations
@@ -88,15 +93,24 @@ class UserChat extends Page implements HasForms, HasActions
 
     public ?TwilioConversation $conversation = null;
 
+    public array $conversationActiveUsers = [];
+
     protected static ?string $navigationGroup = 'Premium Features';
 
     protected static ?int $navigationSort = 10;
 
-    protected static ?string $navigationIcon = 'heroicon-o-chat-bubble-oval-left-ellipsis';
-
     protected static string $view = 'in-app-communication::filament.pages.user-chat';
 
     protected static ?string $title = 'Realtime Chat';
+
+    public function getView(): string
+    {
+        if (Integration::Twilio->isOff()) {
+            return 'filament.pages.integration-problem';
+        }
+
+        return parent::getView();
+    }
 
     public static function canAccess(): bool
     {
@@ -389,6 +403,24 @@ class UserChat extends Page implements HasForms, HasActions
             });
     }
 
+    public function onMessageSent(User $author, string $messageSid, array $messageContent): void
+    {
+        if ($author->is(auth()->user())) {
+            dispatch(new NotifyConversationParticipants(
+                new ConversationMessageSent(
+                    $this->conversation,
+                    auth()->user(),
+                    $messageSid,
+                    $messageContent,
+                ),
+            ));
+
+            return;
+        }
+
+        $this->clearNotifications();
+    }
+
     public function joinChannelsAction()
     {
         $channels = TwilioConversation::query()
@@ -495,6 +527,39 @@ class UserChat extends Page implements HasForms, HasActions
         return $action;
     }
 
+    public function updateNotificationPreferenceAction(): Action
+    {
+        $participation = $this->conversation->participants()->find(auth()->id())?->participant;
+
+        return Action::make('updateNotificationPreference')
+            ->label('Notifications')
+            ->link()
+            ->color($participation?->notification_preference->getColor() ?? 'warning')
+            ->icon($participation?->notification_preference->getIcon() ?? 'heroicon-m-bell')
+            ->modalHeading('Notifications preference')
+            ->modalWidth('sm')
+            ->modalSubmitActionLabel('Update')
+            ->fillForm(fn (): array => [
+                'preference' => $participation?->notification_preference,
+            ])
+            ->form([
+                Radio::make('preference')
+                    ->hiddenLabel()
+                    ->options(ConversationNotificationPreference::class)
+                    ->required(),
+            ])
+            ->action(function (array $data) {
+                $this->conversation->participants()->updateExistingPivot(auth()->id(), [
+                    'notification_preference' => $data['preference'],
+                ]);
+
+                Notification::make()
+                    ->title('Notification preferences updated')
+                    ->success()
+                    ->send();
+            });
+    }
+
     public function addUserToChannelAction(): Action
     {
         $usersQuery = User::query()
@@ -558,6 +623,29 @@ class UserChat extends Page implements HasForms, HasActions
     {
         $this->conversationId = $conversation?->getKey();
         $this->conversation = $conversation;
+        $this->loadConversationActiveUsers();
+
+        $this->clearNotifications();
+    }
+
+    #[Renderless]
+    public function loadConversationActiveUsers(): void
+    {
+        auth()->user()->update([
+            'last_chat_ping_at' => now(),
+        ]);
+
+        if (! $this->conversation) {
+            $this->conversationActiveUsers = [];
+
+            return;
+        }
+
+        $this->conversationActiveUsers = $this->conversation
+            ->participants()
+            ->where('last_chat_ping_at', '>', now()->subMinutes(3))
+            ->pluck('id')
+            ->all();
     }
 
     #[Renderless]
@@ -625,8 +713,30 @@ class UserChat extends Page implements HasForms, HasActions
             ->send();
     }
 
+    protected function clearNotifications(): void
+    {
+        $participation = $this->conversation?->participants()->find(auth()->user())?->participant;
+
+        if (! $participation) {
+            return;
+        }
+
+        $participation->first_unread_message_sid = null;
+        $participation->first_unread_message_at = null;
+        $participation->last_unread_message_content = null;
+        $participation->last_read_at = now();
+        $participation->unread_messages_count = 0;
+        $participation->save();
+    }
+
     protected function getViewData(): array
     {
+        if (Integration::Twilio->isOff()) {
+            return [
+                'integration' => Integration::Twilio,
+            ];
+        }
+
         return [
             'users' => $this->conversation?->participants()->pluck('name', 'id')->all() ?? [],
         ];

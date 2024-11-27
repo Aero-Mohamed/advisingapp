@@ -3,7 +3,7 @@
 /*
 <COPYRIGHT>
 
-    Copyright © 2022-2023, Canyon GBS LLC. All rights reserved.
+    Copyright © 2016-2024, Canyon GBS LLC. All rights reserved.
 
     Advising App™ is licensed under the Elastic License 2.0. For more details,
     see https://github.com/canyongbs/advisingapp/blob/main/LICENSE.
@@ -52,16 +52,23 @@ class EngagementBatchStartedNotification extends BaseNotification implements Dat
     use DatabaseChannelTrait;
     use EmailChannelTrait;
 
+    private string $title;
+
     public function __construct(
         public EngagementBatch $engagementBatch,
         public int $jobsToProcess,
-    ) {}
+        public string $deliveryMethod,
+    ) {
+        $this->title = $this->deliveryMethod === 'email'
+                  ? 'Bulk email request is being processed and will be sent shortly.'
+                  : 'Bulk text request is being processed and will be sent shortly.';
+    }
 
     public function toEmail(object $notifiable): MailMessage
     {
         return MailMessage::make()
             ->settings($this->resolveNotificationSetting($notifiable))
-            ->subject('Bulk Engagement processing started')
+            ->subject($this->title)
             ->line("We've started processing your bulk engagement of {$this->jobsToProcess} jobs, and we'll keep you updated on the progress.");
     }
 
@@ -69,7 +76,7 @@ class EngagementBatchStartedNotification extends BaseNotification implements Dat
     {
         return FilamentNotification::make()
             ->status('success')
-            ->title('Bulk Engagement processing started')
+            ->title($this->title)
             ->body("{$this->jobsToProcess} jobs due for processing.")
             ->getDatabaseMessage();
     }

@@ -3,7 +3,7 @@
 /*
 <COPYRIGHT>
 
-    Copyright © 2022-2023, Canyon GBS LLC. All rights reserved.
+    Copyright © 2016-2024, Canyon GBS LLC. All rights reserved.
 
     Advising App™ is licensed under the Elastic License 2.0. For more details,
     see https://github.com/canyongbs/advisingapp/blob/main/LICENSE.
@@ -37,13 +37,17 @@
 namespace AdvisingApp\Survey\Models;
 
 use AdvisingApp\Form\Models\SubmissibleField;
+use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 
 /**
  * @mixin IdeHelperSurveyField
  */
 class SurveyField extends SubmissibleField
 {
+    use SoftDeletes;
+
     protected $fillable = [
         'config',
         'label',
@@ -67,5 +71,17 @@ class SurveyField extends SubmissibleField
     {
         return $this
             ->belongsTo(SurveyStep::class, 'step_id');
+    }
+
+    public function submissions(): BelongsToMany
+    {
+        return $this->belongsToMany(
+            SurveySubmission::class,
+            'survey_field_submission',
+            'field_id',
+            'submission_id',
+        )
+            ->withPivot(['id', 'response'])
+            ->using(SurveyFieldSubmission::class);
     }
 }

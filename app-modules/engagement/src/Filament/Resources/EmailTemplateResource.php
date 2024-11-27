@@ -3,7 +3,7 @@
 /*
 <COPYRIGHT>
 
-    Copyright © 2022-2023, Canyon GBS LLC. All rights reserved.
+    Copyright © 2016-2024, Canyon GBS LLC. All rights reserved.
 
     Advising App™ is licensed under the Elastic License 2.0. For more details,
     see https://github.com/canyongbs/advisingapp/blob/main/LICENSE.
@@ -37,7 +37,7 @@
 namespace AdvisingApp\Engagement\Filament\Resources;
 
 use Filament\Resources\Resource;
-use App\Filament\Clusters\GlobalSettings;
+use App\Filament\Clusters\Communication;
 use AdvisingApp\Engagement\Models\EmailTemplate;
 use AdvisingApp\Engagement\Filament\Resources\EmailTemplateResource\Pages\EditEmailTemplate;
 use AdvisingApp\Engagement\Filament\Resources\EmailTemplateResource\Pages\ListEmailTemplates;
@@ -49,11 +49,9 @@ class EmailTemplateResource extends Resource
 
     protected static ?string $navigationIcon = 'heroicon-o-envelope';
 
-    protected static ?string $navigationGroup = 'Communication';
-
     protected static ?int $navigationSort = 120;
 
-    protected static ?string $cluster = GlobalSettings::class;
+    protected static ?string $cluster = Communication::class;
 
     public static function getPages(): array
     {

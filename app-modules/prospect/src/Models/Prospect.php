@@ -3,7 +3,7 @@
 /*
 <COPYRIGHT>
 
-    Copyright © 2022-2023, Canyon GBS LLC. All rights reserved.
+    Copyright © 2016-2024, Canyon GBS LLC. All rights reserved.
 
     Advising App™ is licensed under the Elastic License 2.0. For more details,
     see https://github.com/canyongbs/advisingapp/blob/main/LICENSE.
@@ -38,36 +38,42 @@ namespace AdvisingApp\Prospect\Models;
 
 use App\Models\User;
 use DateTimeInterface;
-use App\Models\BaseModel;
 use App\Models\Authenticatable;
 use AdvisingApp\Task\Models\Task;
 use App\Models\Scopes\HasLicense;
-use Illuminate\Support\Collection;
+use Laravel\Sanctum\HasApiTokens;
 use AdvisingApp\Alert\Models\Alert;
 use Illuminate\Notifications\Notifiable;
 use OwenIt\Auditing\Contracts\Auditable;
 use AdvisingApp\CareTeam\Models\CareTeam;
+use AdvisingApp\Timeline\Models\Timeline;
 use Illuminate\Database\Eloquent\Builder;
 use AdvisingApp\Form\Models\FormSubmission;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use AdvisingApp\Authorization\Enums\LicenseType;
+use AdvisingApp\CaseManagement\Models\CaseModel;
+use AdvisingApp\StudentDataModel\Models\Student;
+use Staudenmeir\EloquentHasManyDeep\HasManyDeep;
 use AdvisingApp\Engagement\Models\EngagementFile;
 use AdvisingApp\Notification\Models\Subscription;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use AdvisingApp\MeetingCenter\Models\EventAttendee;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use AdvisingApp\BasicNeeds\Models\BasicNeedsProgram;
+use Illuminate\Database\Eloquent\Relations\MorphOne;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\MorphMany;
+use Staudenmeir\EloquentHasManyDeep\HasRelationships;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\MorphToMany;
-use AdvisingApp\InventoryManagement\Models\AssetCheckIn;
-use AdvisingApp\ServiceManagement\Models\ServiceRequest;
 use AdvisingApp\Application\Models\ApplicationSubmission;
 use AdvisingApp\Engagement\Models\EngagementFileEntities;
-use AdvisingApp\InventoryManagement\Models\AssetCheckOut;
 use AdvisingApp\Notification\Models\Contracts\Subscribable;
+use Illuminate\Foundation\Auth\User as BaseAuthenticatable;
 use AdvisingApp\Prospect\Filament\Resources\ProspectResource;
 use AdvisingApp\StudentDataModel\Models\Contracts\Educatable;
+use Spatie\Multitenancy\Models\Concerns\UsesTenantConnection;
 use AdvisingApp\Notification\Models\Concerns\HasSubscriptions;
 use AdvisingApp\Notification\Models\Concerns\NotifiableViaSms;
 use AdvisingApp\Timeline\Models\Contracts\HasFilamentResource;
@@ -82,17 +88,21 @@ use AdvisingApp\Engagement\Models\Concerns\HasManyMorphedEngagementResponses;
  *
  * @mixin IdeHelperProspect
  */
-class Prospect extends BaseModel implements Auditable, Subscribable, Educatable, HasFilamentResource, NotifiableInterface
+class Prospect extends BaseAuthenticatable implements Auditable, Subscribable, Educatable, HasFilamentResource, NotifiableInterface
 {
-    use HasUuids;
-    use SoftDeletes;
+    use HasApiTokens;
     use AuditableTrait;
-    use Notifiable;
-    use HasManyMorphedEngagements;
+    use HasFactory;
     use HasManyMorphedEngagementResponses;
+    use HasManyMorphedEngagements;
     use HasManyMorphedInteractions;
     use HasSubscriptions;
+    use HasUuids;
+    use Notifiable;
     use NotifiableViaSms;
+    use SoftDeletes;
+    use UsesTenantConnection;
+    use HasRelationships;
 
     protected $fillable = [
         'first_name',
@@ -110,6 +120,10 @@ class Prospect extends BaseModel implements Auditable, Subscribable, Educatable,
         'phone',
         'address',
         'address_2',
+        'address_3',
+        'city',
+        'state',
+        'postal',
         'birthdate',
         'hsgrad',
         'assigned_to_id',
@@ -127,15 +141,10 @@ class Prospect extends BaseModel implements Auditable, Subscribable, Educatable,
         return $this->id;
     }
 
-    public function assignedTo(): BelongsTo
-    {
-        return $this->belongsTo(User::class);
-    }
-
-    public function serviceRequests(): MorphMany
+    public function cases(): MorphMany
     {
         return $this->morphMany(
-            related: ServiceRequest::class,
+            related: CaseModel::class,
             name: 'respondent',
             type: 'respondent_type',
             id: 'respondent_id',
@@ -156,6 +165,11 @@ class Prospect extends BaseModel implements Auditable, Subscribable, Educatable,
     public function source(): BelongsTo
     {
         return $this->belongsTo(ProspectSource::class);
+    }
+
+    public function student(): BelongsTo
+    {
+        return $this->belongsTo(Student::class, 'student_id', 'sisid');
     }
 
     public function engagementFiles(): MorphToMany
@@ -215,14 +229,34 @@ class Prospect extends BaseModel implements Auditable, Subscribable, Educatable,
         return 'email';
     }
 
-    public function getWebPermissions(): Collection
+    public static function displayFirstNameKey(): string
     {
-        return collect(['import', ...$this->webPermissions()]);
+        return 'first_name';
+    }
+
+    public static function displayLastNameKey(): string
+    {
+        return 'last_name';
+    }
+
+    public static function displayPreferredNameKey(): string
+    {
+        return 'preferred';
     }
 
     public static function filamentResource(): string
     {
         return ProspectResource::class;
+    }
+
+    public function alertHistories(): HasManyDeep
+    {
+        return $this->hasManyDeepFromRelations($this->alerts(), (new Alert())->histories());
+    }
+
+    public function taskHistories(): HasManyDeep
+    {
+        return $this->hasManyDeepFromRelations($this->tasks(), (new Task())->histories());
     }
 
     public function subscribedUsers(): MorphToMany
@@ -247,31 +281,52 @@ class Prospect extends BaseModel implements Auditable, Subscribable, Educatable,
         );
     }
 
-    public function assetCheckIns(): MorphMany
-    {
-        return $this->morphMany(
-            related: AssetCheckIn::class,
-            name: 'checked_in_from',
-            type: 'checked_in_from_type',
-            id: 'checked_in_from_id',
-            localKey: 'id'
-        );
-    }
-
-    public function assetCheckOuts(): MorphMany
-    {
-        return $this->morphMany(
-            related: AssetCheckOut::class,
-            name: 'checked_out_to',
-            type: 'checked_out_to_type',
-            id: 'checked_out_to_id',
-            localKey: 'id'
-        );
-    }
-
     public static function getLicenseType(): LicenseType
     {
         return LicenseType::RecruitmentCrm;
+    }
+
+    public function timeline(): MorphOne
+    {
+        return $this->morphOne(Timeline::class, 'entity');
+    }
+
+    public function basicNeedsPrograms(): MorphToMany
+    {
+        return $this->morphToMany(
+            related: BasicNeedsProgram::class,
+            name: 'program_participants',
+            table: 'program_participants',
+            foreignPivotKey: 'program_participants_id',
+            relatedPivotKey: 'basic_needs_program_id'
+        )->withTimestamps();
+    }
+
+    public static function getLabel(): string
+    {
+        return 'prospect';
+    }
+
+    /**
+     * @return MorphToMany<Pipeline>
+     */
+    public function educatablePipelineStages(): MorphToMany
+    {
+        return $this->morphToMany(
+            related: Pipeline::class,
+            name: 'educatable',
+            table: 'educatable_pipeline_stages',
+            foreignPivotKey: 'educatable_id',
+            relatedPivotKey: 'pipeline_id',
+        )
+            ->using(EducatablePipelineStage::class)
+            ->withPivot(['pipeline_stage_id'])
+            ->withTimestamps();
+    }
+
+    public function canRecieveSms(): bool
+    {
+        return filled($this->mobile);
     }
 
     protected static function booted(): void

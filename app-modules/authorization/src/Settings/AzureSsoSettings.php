@@ -3,7 +3,7 @@
 /*
 <COPYRIGHT>
 
-    Copyright © 2022-2023, Canyon GBS LLC. All rights reserved.
+    Copyright © 2016-2024, Canyon GBS LLC. All rights reserved.
 
     Advising App™ is licensed under the Elastic License 2.0. For more details,
     see https://github.com/canyongbs/advisingapp/blob/main/LICENSE.
@@ -40,13 +40,13 @@ use Spatie\LaravelSettings\Settings;
 
 class AzureSsoSettings extends Settings
 {
-    public bool $is_enabled;
+    public bool $is_enabled = false;
 
-    public ?string $client_id;
+    public ?string $client_id = null;
 
-    public ?string $client_secret;
+    public ?string $client_secret = null;
 
-    public ?string $tenant_id;
+    public ?string $tenant_id = null;
 
     public static function group(): string
     {

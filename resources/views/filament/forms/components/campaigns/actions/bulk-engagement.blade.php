@@ -1,7 +1,7 @@
 {{--
 <COPYRIGHT>
 
-    Copyright © 2022-2023, Canyon GBS LLC. All rights reserved.
+    Copyright © 2016-2024, Canyon GBS LLC. All rights reserved.
 
     Advising App™ is licensed under the Elastic License 2.0. For more details,
     see https://github.com/canyongbs/advisingapp/blob/main/LICENSE.
@@ -32,13 +32,19 @@
 </COPYRIGHT>
 --}}
 @php
-    use Carbon\Carbon;
     use AdvisingApp\Campaign\Settings\CampaignSettings;
+    use AdvisingApp\Engagement\Enums\EngagementDeliveryMethod;
+    use AdvisingApp\Engagement\Models\EngagementBatch;
+    use Carbon\Carbon;
 @endphp
 
 <x-filament::fieldset>
     <x-slot name="label">
-        Email or Text
+        @if ($action['delivery_method'] === EngagementDeliveryMethod::Email->value)
+            Email
+        @else
+            Text Message
+        @endif
     </x-slot>
 
     <dl class="max-w-md divide-y divide-gray-200 text-gray-900 dark:divide-gray-700 dark:text-white">
@@ -50,14 +56,25 @@
                 </x-filament::badge>
             </dd>
         </div>
-        <div class="flex flex-col pt-3">
-            <dt class="mb-1 text-sm text-gray-500 dark:text-gray-400">Subject</dt>
-            <dd class="text-sm font-semibold">{{ $action['subject'] }}</dd>
-        </div>
-        <div class="flex flex-col pt-3">
-            <dt class="mb-1 text-sm text-gray-500 dark:text-gray-400">Body</dt>
-            <dd class="text-sm font-semibold">{{ $action['body'] }}</dd>
-        </div>
+        @if (isset($action['subject']))
+            <div class="flex flex-col pt-3">
+                <dt class="mb-1 text-sm text-gray-500 dark:text-gray-400">Subject</dt>
+                <dd class="text-sm font-semibold">{{ $action['subject'] }}</dd>
+            </div>
+        @endif
+        @if ($action['body'])
+            <div class="flex flex-col pt-3">
+                <dt class="mb-1 text-sm text-gray-500 dark:text-gray-400">Body</dt>
+                <dd class="prose text-sm font-semibold dark:prose-invert">
+                    {!! EngagementBatch::renderWithMergeTags(
+                        tiptap_converter()->asHTML(
+                            $action['body'],
+                            newImages: $this->componentFileAttachments['data']['actions'][$actionIndex]['data']['body'] ?? [],
+                        ),
+                    ) !!}
+                </dd>
+            </div>
+        @endif
         <div class="flex flex-col pt-3">
             <dt class="mb-1 text-sm text-gray-500 dark:text-gray-400">Execute At</dt>
             <dd class="text-sm font-semibold">{{ Carbon::parse($action['execute_at'])->format('M j, Y H:i:s') }}

@@ -3,7 +3,7 @@
 /*
 <COPYRIGHT>
 
-    Copyright © 2022-2023, Canyon GBS LLC. All rights reserved.
+    Copyright © 2016-2024, Canyon GBS LLC. All rights reserved.
 
     Advising App™ is licensed under the Elastic License 2.0. For more details,
     see https://github.com/canyongbs/advisingapp/blob/main/LICENSE.
@@ -45,13 +45,13 @@
 |
 */
 
+use Tests\TestCase;
 use App\Models\User;
 use Illuminate\Support\Collection;
 use AdvisingApp\Authorization\Models\Role;
-use AdvisingApp\Authorization\Models\RoleGroup;
 use AdvisingApp\Authorization\Enums\LicenseType;
 
-uses(Tests\TestCase::class)->in('../tests', '../app-modules/*/tests');
+uses(TestCase::class)->in('../tests', '../app-modules/*/tests');
 
 /*
 |--------------------------------------------------------------------------
@@ -83,23 +83,22 @@ uses(Tests\TestCase::class)->in('../tests', '../app-modules/*/tests');
  * @var array<string> | string | null $permissions
  * @var array<LicenseType> | LicenseType | null $licenses
  */
-function user(LicenseType | array | null $licenses = null, array | null | string $roles = null, string $guard = 'web'): User
+function user(LicenseType | array | null $licenses = null, array | null | string $roles = null, array | null | string $permissions = null, string $guard = 'web'): User
 {
     $user = User::factory()->create();
 
     collect($roles)
         ->whenNotEmpty(function (Collection $collection) use ($guard, $user) {
-            $roleGroup = RoleGroup::factory()->create();
-
-            $roleGroup->users()->attach($user);
-
             $roles = Role::query()
                 ->whereIn('name', $collection)
                 ->where('guard_name', $guard)
                 ->get();
 
-            $roleGroup->roles()->sync($roles);
+            $user->roles()->sync($roles);
         });
+
+    collect($permissions)
+        ->each(fn ($permission) => $user->givePermissionTo($permission));
 
     collect($licenses)
         ->each(fn (LicenseType $licenseType) => $user->grantLicense($licenseType))

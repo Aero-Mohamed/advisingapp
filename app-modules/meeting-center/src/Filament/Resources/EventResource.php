@@ -3,7 +3,7 @@
 /*
 <COPYRIGHT>
 
-    Copyright © 2022-2023, Canyon GBS LLC. All rights reserved.
+    Copyright © 2016-2024, Canyon GBS LLC. All rights reserved.
 
     Advising App™ is licensed under the Elastic License 2.0. For more details,
     see https://github.com/canyongbs/advisingapp/blob/main/LICENSE.
@@ -39,7 +39,6 @@ namespace AdvisingApp\MeetingCenter\Filament\Resources;
 use Filament\Resources\Resource;
 use Filament\Resources\Pages\Page;
 use AdvisingApp\MeetingCenter\Models\Event;
-use AdvisingApp\Authorization\Enums\LicenseType;
 use AdvisingApp\MeetingCenter\Filament\Resources\EventResource\Pages\EditEvent;
 use AdvisingApp\MeetingCenter\Filament\Resources\EventResource\Pages\ViewEvent;
 use AdvisingApp\MeetingCenter\Filament\Resources\EventResource\Pages\ListEvents;
@@ -49,8 +48,6 @@ use AdvisingApp\MeetingCenter\Filament\Resources\EventResource\Pages\ManageEvent
 class EventResource extends Resource
 {
     protected static ?string $model = Event::class;
-
-    protected static ?string $navigationIcon = 'heroicon-o-rectangle-stack';
 
     protected static ?string $navigationGroup = 'Premium Features';
 
@@ -63,15 +60,6 @@ class EventResource extends Resource
     protected static ?string $modelLabel = 'Event';
 
     protected static ?string $recordTitleAttribute = 'title';
-
-    // TODO Move into policy once created...
-    public static function canAccess(): bool
-    {
-        /** @var User $user */
-        $user = auth()->user();
-
-        return $user->hasAnyLicense([LicenseType::RetentionCrm, LicenseType::RecruitmentCrm]);
-    }
 
     public static function getRecordSubNavigation(Page $page): array
     {

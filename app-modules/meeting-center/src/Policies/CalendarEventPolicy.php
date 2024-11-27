@@ -3,7 +3,7 @@
 /*
 <COPYRIGHT>
 
-    Copyright © 2022-2023, Canyon GBS LLC. All rights reserved.
+    Copyright © 2016-2024, Canyon GBS LLC. All rights reserved.
 
     Advising App™ is licensed under the Elastic License 2.0. For more details,
     see https://github.com/canyongbs/advisingapp/blob/main/LICENSE.
@@ -36,8 +36,12 @@
 
 namespace AdvisingApp\MeetingCenter\Policies;
 
+use App\Enums\Feature;
 use App\Models\Authenticatable;
 use Illuminate\Auth\Access\Response;
+use Illuminate\Support\Facades\Gate;
+use App\Support\FeatureAccessResponse;
+use App\Concerns\PerformsFeatureChecks;
 use App\Concerns\PerformsLicenseChecks;
 use AdvisingApp\Authorization\Enums\LicenseType;
 use AdvisingApp\MeetingCenter\Models\CalendarEvent;
@@ -46,11 +50,18 @@ use App\Policies\Contracts\PerformsChecksBeforeAuthorization;
 class CalendarEventPolicy implements PerformsChecksBeforeAuthorization
 {
     use PerformsLicenseChecks;
+    use PerformsFeatureChecks;
 
     public function before(Authenticatable $authenticatable): ?Response
     {
         if (! is_null($response = $this->hasAnyLicense($authenticatable, [LicenseType::RetentionCrm, LicenseType::RecruitmentCrm]))) {
             return $response;
+        }
+
+        if (! Gate::check(
+            collect($this->requiredFeatures())->map(fn (Feature $feature) => $feature->getGateName())
+        )) {
+            return FeatureAccessResponse::deny();
         }
 
         return null;
@@ -67,7 +78,7 @@ class CalendarEventPolicy implements PerformsChecksBeforeAuthorization
     public function view(Authenticatable $authenticatable, CalendarEvent $calendarEvent): Response
     {
         return $authenticatable->canOrElse(
-            abilities: ['calendar_event.*.view', "calendar_event.{$calendarEvent->id}.view"],
+            abilities: ["calendar_event.{$calendarEvent->id}.view"],
             denyResponse: 'You do not have permission to view this engagement response.'
         );
     }
@@ -83,7 +94,7 @@ class CalendarEventPolicy implements PerformsChecksBeforeAuthorization
     public function update(Authenticatable $authenticatable, CalendarEvent $calendarEvent): Response
     {
         return $authenticatable->canOrElse(
-            abilities: ['calendar_event.*.update', "calendar_event.{$calendarEvent->id}.update"],
+            abilities: ["calendar_event.{$calendarEvent->id}.update"],
             denyResponse: 'You do not have permission to update this engagement response.'
         );
     }
@@ -91,7 +102,7 @@ class CalendarEventPolicy implements PerformsChecksBeforeAuthorization
     public function delete(Authenticatable $authenticatable, CalendarEvent $calendarEvent): Response
     {
         return $authenticatable->canOrElse(
-            abilities: ['calendar_event.*.delete', "calendar_event.{$calendarEvent->id}.delete"],
+            abilities: ["calendar_event.{$calendarEvent->id}.delete"],
             denyResponse: 'You do not have permission to delete this engagement response.'
         );
     }
@@ -99,7 +110,7 @@ class CalendarEventPolicy implements PerformsChecksBeforeAuthorization
     public function restore(Authenticatable $authenticatable, CalendarEvent $calendarEvent): Response
     {
         return $authenticatable->canOrElse(
-            abilities: ['calendar_event.*.restore', "calendar_event.{$calendarEvent->id}.restore"],
+            abilities: ["calendar_event.{$calendarEvent->id}.restore"],
             denyResponse: 'You do not have permission to restore this engagement response.'
         );
     }
@@ -107,8 +118,13 @@ class CalendarEventPolicy implements PerformsChecksBeforeAuthorization
     public function forceDelete(Authenticatable $authenticatable, CalendarEvent $calendarEvent): Response
     {
         return $authenticatable->canOrElse(
-            abilities: ['calendar_event.*.force-delete', "calendar_event.{$calendarEvent->id}.force-delete"],
+            abilities: ["calendar_event.{$calendarEvent->id}.force-delete"],
             denyResponse: 'You do not have permission to permanently delete this engagement response.'
         );
+    }
+
+    protected function requiredFeatures(): array
+    {
+        return [Feature::ScheduleAndAppointments];
     }
 }

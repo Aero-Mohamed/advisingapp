@@ -3,7 +3,7 @@
 /*
 <COPYRIGHT>
 
-    Copyright © 2022-2023, Canyon GBS LLC. All rights reserved.
+    Copyright © 2016-2024, Canyon GBS LLC. All rights reserved.
 
     Advising App™ is licensed under the Elastic License 2.0. For more details,
     see https://github.com/canyongbs/advisingapp/blob/main/LICENSE.
@@ -37,24 +37,28 @@
 namespace AdvisingApp\IntegrationTwilio\Providers;
 
 use Filament\Panel;
+use App\Models\Tenant;
 use Twilio\Rest\Client;
+use App\Enums\Integration;
+use App\Models\Scopes\SetupIsComplete;
 use Illuminate\Support\ServiceProvider;
-use AdvisingApp\Authorization\AuthorizationRoleRegistry;
+use App\Exceptions\IntegrationException;
+use Illuminate\Console\Scheduling\Schedule;
 use AdvisingApp\IntegrationTwilio\IntegrationTwilioPlugin;
 use AdvisingApp\IntegrationTwilio\Settings\TwilioSettings;
-use AdvisingApp\Authorization\AuthorizationPermissionRegistry;
 use AdvisingApp\Engagement\Actions\FindEngagementResponseSender;
 use AdvisingApp\Engagement\Actions\Contracts\EngagementResponseSenderFinder;
+use AdvisingApp\IntegrationTwilio\Jobs\CheckStatusOfOutboundDeliverablesWithoutATerminalStatus;
 use AdvisingApp\IntegrationTwilio\Actions\Playground\FindEngagementResponseSender as PlaygroundFindEngagementResponseSender;
 
 class IntegrationTwilioServiceProvider extends ServiceProvider
 {
     public function register(): void
     {
-        Panel::configureUsing(fn (Panel $panel) => $panel->plugin(new IntegrationTwilioPlugin()));
+        Panel::configureUsing(fn (Panel $panel) => ($panel->getId() !== 'admin') || $panel->plugin(new IntegrationTwilioPlugin()));
 
-        $this->app->bind(EngagementResponseSenderFinder::class, function () {
-            if (config('services.twilio.enable_test_sender') === true) {
+        $this->app->scoped(EngagementResponseSenderFinder::class, function () {
+            if (config('local_development.twilio.enable_test_sender') === true) {
                 return new PlaygroundFindEngagementResponseSender();
             }
 
@@ -63,41 +67,30 @@ class IntegrationTwilioServiceProvider extends ServiceProvider
 
         $settings = $this->app->make(TwilioSettings::class);
 
-        $this->app->bind(Client::class, fn () => new Client(
-            $settings->account_sid,
-            $settings->auth_token
-        ));
+        $this->app->scoped(
+            Client::class,
+            fn () => Integration::Twilio->isOn()
+                ? new Client($settings->account_sid, $settings->auth_token)
+                : throw IntegrationException::make(Integration::Twilio)
+        );
+
+        $this->callAfterResolving(Schedule::class, function (Schedule $schedule) {
+            $schedule->call(function () {
+                Tenant::query()
+                    ->tap(new SetupIsComplete())
+                    ->cursor()
+                    ->each(function (Tenant $tenant) {
+                        $tenant->execute(function () {
+                            dispatch(new CheckStatusOfOutboundDeliverablesWithoutATerminalStatus());
+                        });
+                    });
+            })
+                ->daily()
+                ->name('CheckStatusOfOutboundDeliverablesWithoutATerminalStatus')
+                ->onOneServer()
+                ->withoutOverlapping();
+        });
     }
 
-    public function boot(): void
-    {
-        $this->registerRolesAndPermissions();
-    }
-
-    protected function registerRolesAndPermissions(): void
-    {
-        $permissionRegistry = app(AuthorizationPermissionRegistry::class);
-
-        $permissionRegistry->registerApiPermissions(
-            module: 'integration-twilio',
-            path: 'permissions/api/custom'
-        );
-
-        $permissionRegistry->registerWebPermissions(
-            module: 'integration-twilio',
-            path: 'permissions/web/custom'
-        );
-
-        $roleRegistry = app(AuthorizationRoleRegistry::class);
-
-        $roleRegistry->registerApiRoles(
-            module: 'integration-twilio',
-            path: 'roles/api'
-        );
-
-        $roleRegistry->registerWebRoles(
-            module: 'integration-twilio',
-            path: 'roles/web'
-        );
-    }
+    public function boot(): void {}
 }

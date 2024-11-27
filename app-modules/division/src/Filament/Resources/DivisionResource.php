@@ -3,7 +3,7 @@
 /*
 <COPYRIGHT>
 
-    Copyright © 2022-2023, Canyon GBS LLC. All rights reserved.
+    Copyright © 2016-2024, Canyon GBS LLC. All rights reserved.
 
     Advising App™ is licensed under the Elastic License 2.0. For more details,
     see https://github.com/canyongbs/advisingapp/blob/main/LICENSE.
@@ -38,6 +38,7 @@ namespace AdvisingApp\Division\Filament\Resources;
 
 use Filament\Resources\Resource;
 use AdvisingApp\Division\Models\Division;
+use App\Filament\Clusters\UserManagement;
 use AdvisingApp\Division\Filament\Resources\DivisionResource\Pages\EditDivision;
 use AdvisingApp\Division\Filament\Resources\DivisionResource\Pages\ViewDivision;
 use AdvisingApp\Division\Filament\Resources\DivisionResource\Pages\ListDivisions;
@@ -48,11 +49,11 @@ class DivisionResource extends Resource
 {
     protected static ?string $model = Division::class;
 
-    protected static ?string $navigationIcon = 'heroicon-o-rectangle-stack';
+    protected static ?string $navigationIcon = 'heroicon-o-bars-2';
 
-    protected static ?string $navigationGroup = 'Users and Permissions';
+    protected static ?string $cluster = UserManagement::class;
 
-    protected static ?int $navigationSort = 10;
+    protected static ?int $navigationSort = 70;
 
     public static function getRelations(): array
     {

@@ -3,7 +3,7 @@
 /*
 <COPYRIGHT>
 
-    Copyright © 2022-2023, Canyon GBS LLC. All rights reserved.
+    Copyright © 2016-2024, Canyon GBS LLC. All rights reserved.
 
     Advising App™ is licensed under the Elastic License 2.0. For more details,
     see https://github.com/canyongbs/advisingapp/blob/main/LICENSE.
@@ -36,23 +36,29 @@
 
 namespace AdvisingApp\StudentDataModel\Models;
 
-use Illuminate\Support\Collection;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Spatie\Multitenancy\Models\Concerns\UsesTenantConnection;
-use AdvisingApp\Authorization\Models\Concerns\DefinesPermissions;
 
 /**
  * @mixin IdeHelperProgram
  */
 class Program extends Model
 {
+    use SoftDeletes;
     use HasFactory;
-    use DefinesPermissions;
     use UsesTenantConnection;
 
-    // TODO: Need to revisit whether or not this should be the primary key, just using it for now since there is nothing else
-    protected $primaryKey = 'sisid';
+    protected $table = 'programs';
+
+    /**
+     * This Model has a primary key that is auto generated as a v4 UUID by Postgres.
+     * We do so so that we can do things like view, edit, and delete a specific record in the UI / API.
+     * This ID should NEVER be used for relationships as these records do not belong to our system, our reset during syncs, and are not truly unique.
+     */
+    protected $primaryKey = 'id';
 
     public $incrementing = false;
 
@@ -60,24 +66,33 @@ class Program extends Model
 
     public $timestamps = false;
 
-    public function getWebPermissions(): Collection
-    {
-        return collect(['view-any', '*.view']);
-    }
+    protected $fillable = [
+        'sisid',
+        'otherid',
+        'acad_career',
+        'division',
+        'acad_plan',
+        'prog_status',
+        'cum_gpa',
+        'semester',
+        'descr',
+        'foi',
+        'change_dt',
+        'declare_dt',
+        'graduation_dt',
+        'conferred_dt',
+    ];
 
-    public function getApiPermissions(): Collection
-    {
-        return collect([]);
-    }
+    protected $casts = [
+        'acad_plan' => 'array',
+        'change_dt' => 'datetime',
+        'declare_dt' => 'datetime',
+        'graduation_dt' => 'datetime',
+        'conferred_dt' => 'datetime',
+    ];
 
-    public function getTable()
+    public function student(): BelongsTo
     {
-        if ($this->table) {
-            return $this->table;
-        }
-
-        return config('database.adm_materialized_views_enabled')
-            ? 'programs_local'
-            : 'programs';
+        return $this->belongsTo(Student::class, 'sisid', 'sisid');
     }
 }

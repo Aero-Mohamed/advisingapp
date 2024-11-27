@@ -3,7 +3,7 @@
 /*
 <COPYRIGHT>
 
-    Copyright © 2022-2023, Canyon GBS LLC. All rights reserved.
+    Copyright © 2016-2024, Canyon GBS LLC. All rights reserved.
 
     Advising App™ is licensed under the Elastic License 2.0. For more details,
     see https://github.com/canyongbs/advisingapp/blob/main/LICENSE.
@@ -54,14 +54,14 @@ class EducatableSort
         $prospectNameColumn = Prospect::displayNameKey();
 
         $query->leftJoin('students', function ($join) {
-            $join->on('service_requests.respondent_type', '=', DB::raw("'student'"))
-                ->on(DB::raw('service_requests.respondent_id::VARCHAR'), '=', 'students.sisid');
+            $join->on('cases.respondent_type', '=', DB::raw("'student'"))
+                ->on(DB::raw('cases.respondent_id::VARCHAR'), '=', 'students.sisid');
         })
             ->leftJoin('prospects', function ($join) {
-                $join->on('service_requests.respondent_type', '=', DB::raw("'prospect'"))
-                    ->on(DB::raw('CAST(service_requests.respondent_id AS VARCHAR)'), '=', DB::raw('CAST(prospects.id AS VARCHAR)'));
+                $join->on('cases.respondent_type', '=', DB::raw("'prospect'"))
+                    ->on(DB::raw('CAST(cases.respondent_id AS VARCHAR)'), '=', DB::raw('CAST(prospects.id AS VARCHAR)'));
             })
-            ->select('service_requests.*', DB::raw("COALESCE(students.{$studentNameColumn}, prospects.{$prospectNameColumn}) as respondent_name"))
+            ->select('cases.*', DB::raw("COALESCE(students.{$studentNameColumn}, prospects.{$prospectNameColumn}) as respondent_name"))
             ->orderBy('respondent_name', $this->direction);
     }
 }

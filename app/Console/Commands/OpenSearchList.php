@@ -3,7 +3,7 @@
 /*
 <COPYRIGHT>
 
-    Copyright © 2022-2023, Canyon GBS LLC. All rights reserved.
+    Copyright © 2016-2024, Canyon GBS LLC. All rights reserved.
 
     Advising App™ is licensed under the Elastic License 2.0. For more details,
     see https://github.com/canyongbs/advisingapp/blob/main/LICENSE.
@@ -50,19 +50,17 @@ class OpenSearchList extends Command
         if (config('scout.driver') !== 'opensearch') {
             $this->error('Scout driver must be set to opensearch.');
 
-            return self::FAILURE;
+            return static::FAILURE;
         }
 
         $client = $clientBuilder->default();
 
-        $indices = $client->indices()->get(
-            [
-                'index' => '*',
-            ]
-        );
+        $indices = $client->indices()->get([
+            'index' => '*',
+        ]);
 
         $this->info(json_encode($indices, JSON_PRETTY_PRINT));
 
-        return self::SUCCESS;
+        return static::SUCCESS;
     }
 }

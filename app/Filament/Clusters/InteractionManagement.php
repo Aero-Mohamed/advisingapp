@@ -3,7 +3,7 @@
 /*
 <COPYRIGHT>
 
-    Copyright © 2022-2023, Canyon GBS LLC. All rights reserved.
+    Copyright © 2016-2024, Canyon GBS LLC. All rights reserved.
 
     Advising App™ is licensed under the Elastic License 2.0. For more details,
     see https://github.com/canyongbs/advisingapp/blob/main/LICENSE.
@@ -41,20 +41,18 @@ use AdvisingApp\Interaction\Filament\Resources\InteractionTypeResource;
 use AdvisingApp\Interaction\Filament\Resources\InteractionDriverResource;
 use AdvisingApp\Interaction\Filament\Resources\InteractionStatusResource;
 use AdvisingApp\Interaction\Filament\Resources\InteractionOutcomeResource;
-use AdvisingApp\Interaction\Filament\Resources\InteractionCampaignResource;
 use AdvisingApp\Interaction\Filament\Resources\InteractionRelationResource;
+use AdvisingApp\Interaction\Filament\Resources\InteractionInitiativeResource;
 
 class InteractionManagement extends Cluster
 {
-    protected static ?string $navigationIcon = 'heroicon-o-document-text';
-
     protected static ?string $navigationGroup = 'Product Administration';
 
-    protected static ?int $navigationSort = 8;
+    protected static ?int $navigationSort = 90;
 
     protected array $children = [
-        InteractionCampaignResource::class,
         InteractionDriverResource::class,
+        InteractionInitiativeResource::class,
         InteractionOutcomeResource::class,
         InteractionRelationResource::class,
         InteractionStatusResource::class,

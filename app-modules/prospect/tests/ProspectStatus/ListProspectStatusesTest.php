@@ -3,7 +3,7 @@
 /*
 <COPYRIGHT>
 
-    Copyright © 2022-2023, Canyon GBS LLC. All rights reserved.
+    Copyright © 2016-2024, Canyon GBS LLC. All rights reserved.
 
     Advising App™ is licensed under the Elastic License 2.0. For more details,
     see https://github.com/canyongbs/advisingapp/blob/main/LICENSE.
@@ -48,7 +48,7 @@ use AdvisingApp\Prospect\Filament\Resources\ProspectStatusResource\Pages\ListPro
 test('The correct details are displayed on the ListProspectStatuses page', function () {
     $prospectStatuses = ProspectStatus::factory()
         // TODO: Fix this once Prospect factory is created
-        //->has(ServiceRequest::factory()->count(fake()->randomNumber(1)), 'serviceRequests')
+        //->has(CaseModel::factory()->count(fake()->randomNumber(1)), 'cases')
         ->count(10)
         ->create();
 
@@ -84,7 +84,7 @@ test('The correct details are displayed on the ListProspectStatuses page', funct
                 $prospectStatus->color->getLabel(),
                 $prospectStatus
             )
-        // Currently setting not test for service_requests_count as there is no easy way to check now, relying on underlying package tests
+        // Currently setting not test for cases_count as there is no easy way to check now, relying on underlying package tests
     );
 });
 

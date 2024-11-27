@@ -3,7 +3,7 @@
 /*
 <COPYRIGHT>
 
-    Copyright © 2022-2023, Canyon GBS LLC. All rights reserved.
+    Copyright © 2016-2024, Canyon GBS LLC. All rights reserved.
 
     Advising App™ is licensed under the Elastic License 2.0. For more details,
     see https://github.com/canyongbs/advisingapp/blob/main/LICENSE.
@@ -36,12 +36,14 @@
 
 namespace AdvisingApp\Engagement\Filament\Actions;
 
-use Illuminate\Database\Eloquent\Model;
+use Closure;
+use AdvisingApp\Engagement\Models\Engagement;
+use AdvisingApp\StudentDataModel\Models\Contracts\Educatable;
 use AdvisingApp\Engagement\Actions\CreateEngagementDeliverable;
 
 class CreateOnDemandEngagement
 {
-    public function __invoke(Model $educatable, array $data): void
+    public function __invoke(Educatable $educatable, array $data, ?Closure $afterCreation = null): Engagement
     {
         $engagement = $educatable->engagements()->create([
             'subject' => $data['subject'] ?? null,
@@ -49,10 +51,16 @@ class CreateOnDemandEngagement
             'scheduled' => false,
         ]);
 
+        if ($afterCreation) {
+            $afterCreation($engagement);
+        }
+
         $createEngagementDeliverable = resolve(CreateEngagementDeliverable::class);
 
         $createEngagementDeliverable($engagement, $data['delivery_method']);
 
         $engagement->deliverable->driver()->deliver();
+
+        return $engagement;
     }
 }

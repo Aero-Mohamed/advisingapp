@@ -3,7 +3,7 @@
 /*
 <COPYRIGHT>
 
-    Copyright © 2022-2023, Canyon GBS LLC. All rights reserved.
+    Copyright © 2016-2024, Canyon GBS LLC. All rights reserved.
 
     Advising App™ is licensed under the Elastic License 2.0. For more details,
     see https://github.com/canyongbs/advisingapp/blob/main/LICENSE.
@@ -37,12 +37,19 @@
 use App\Models\User;
 
 use function Tests\asSuperAdmin;
+
+use AdvisingApp\Team\Models\Team;
+
 use function Pest\Laravel\actingAs;
 use function Pest\Livewire\livewire;
+use function PHPUnit\Framework\assertTrue;
+use function PHPUnit\Framework\assertFalse;
 
+use AdvisingApp\Authorization\Enums\LicenseType;
 use Lab404\Impersonate\Services\ImpersonateManager;
 use STS\FilamentImpersonate\Tables\Actions\Impersonate;
 use App\Filament\Resources\UserResource\Pages\ListUsers;
+use App\Filament\Resources\UserResource\Actions\AssignLicensesBulkAction;
 
 it('renders impersonate button for non super admin users when user is super admin', function () {
     asSuperAdmin();
@@ -70,7 +77,7 @@ it('does not render impersonate button for super admin users when user is not su
 
     $component
         ->assertSuccessful()
-        ->assertCountTableRecords(2)
+        ->assertCountTableRecords(1)
         ->assertTableActionHidden(Impersonate::class, $superAdmin);
 });
 
@@ -103,7 +110,7 @@ it('does not render impersonate button for super admin users even if user has pe
 
     $component
         ->assertSuccessful()
-        ->assertCountTableRecords(2)
+        ->assertCountTableRecords(1)
         ->assertTableActionHidden(Impersonate::class, $superAdmin);
 });
 
@@ -120,8 +127,8 @@ it('allows super admin user to impersonate', function () {
         ->assertCountTableRecords(2)
         ->callTableAction(Impersonate::class, $user);
 
-    expect($user->isImpersonated())->toBeTrue();
-    expect(auth()->id())->toBe($user->id);
+    expect($user->isImpersonated())->toBeTrue()
+        ->and(auth()->id())->toBe($user->id);
 });
 
 it('allows user with permission to impersonate', function () {
@@ -138,8 +145,8 @@ it('allows user with permission to impersonate', function () {
         ->assertCountTableRecords(2)
         ->callTableAction(Impersonate::class, $second);
 
-    expect($second->isImpersonated())->toBeTrue();
-    expect(auth()->id())->toBe($second->id);
+    expect($second->isImpersonated())->toBeTrue()
+        ->and(auth()->id())->toBe($second->id);
 });
 
 it('allows a user to leave impersonate', function () {
@@ -151,11 +158,152 @@ it('allows a user to leave impersonate', function () {
 
     app(ImpersonateManager::class)->take($first, $second);
 
-    expect($second->isImpersonated())->toBeTrue();
-    expect(auth()->id())->toBe($second->id);
+    expect($second->isImpersonated())->toBeTrue()
+        ->and(auth()->id())->toBe($second->id);
 
     $second->leaveImpersonation();
 
-    expect($second->isImpersonated())->toBeFalse();
-    expect(auth()->id())->toBe($first->id);
+    expect($second->isImpersonated())->toBeFalse()
+        ->and(auth()->id())->toBe($first->id);
+});
+
+it('does not allow a user without permission to assign licenses in bulk', function () {
+    $user = User::factory()->create();
+    $user->givePermissionTo([
+        'user.view-any',
+        'user.create',
+        'user.*.update',
+        'user.*.view',
+        'user.*.delete',
+        'user.*.restore',
+        'user.*.force-delete',
+    ]);
+    actingAs($user);
+
+    $records = User::factory(2)->create()->prepend($user);
+
+    livewire(ListUsers::class)
+        ->assertSuccessful()
+        ->assertCountTableRecords($records->count())
+        ->assertTableBulkActionHidden(AssignLicensesBulkAction::class);
+});
+
+it('allows a user with permission to assign licenses in bulk', function () {
+    $user = User::factory()->create();
+    $user->givePermissionTo([
+        'user.view-any',
+        'user.create',
+        'user.*.update',
+        'user.*.view',
+        'user.*.delete',
+        'user.*.restore',
+        'user.*.force-delete',
+        'license.view-any',
+        'license.create',
+        'license.*.update',
+        'license.*.view',
+        'license.*.delete',
+        'license.*.restore',
+        'license.*.force-delete',
+    ]);
+    actingAs($user);
+
+    $records = User::factory(2)->create()->prepend($user);
+
+    $licenseTypes = collect(LicenseType::cases());
+
+    $records->each(function (User $record) use ($licenseTypes) {
+        $licenseTypes->each(fn ($license) => assertFalse($record->hasLicense($license)));
+    });
+
+    livewire(ListUsers::class)
+        ->assertSuccessful()
+        ->assertCountTableRecords($records->count())
+        ->callTableBulkAction(AssignLicensesBulkAction::class, $records, [
+            'replace' => true,
+            ...$licenseTypes->mapWithKeys(fn (LicenseType $licenseType) => [$licenseType->value => true]),
+        ])
+        ->assertHasNoTableBulkActionErrors()
+        ->assertNotified('Assigned Licenses');
+
+    $records->each(function (User $record) use ($licenseTypes) {
+        $record->refresh();
+        $licenseTypes->each(fn (LicenseType $licenseType) => assertTrue($record->hasLicense($licenseType)));
+    });
+});
+
+it('can filter users by multiple teams', function () {
+    asSuperAdmin();
+
+    $adminTeam = Team::factory()->create();
+
+    $adminTeamGroup = User::factory()
+        ->count(3)
+        ->hasAttached($adminTeam, [], 'teams')
+        ->create();
+
+    $modTeam = Team::factory()->create();
+
+    $modsTeamGroup = User::factory()
+        ->count(3)
+        ->hasAttached($modTeam, [], 'teams')
+        ->create();
+
+    $supportTeam = Team::factory()->create();
+
+    $supportTeamGroup = User::factory()
+        ->count(3)
+        ->hasAttached($supportTeam, [], 'teams')
+        ->create();
+
+    livewire(ListUsers::class)
+        ->assertCanSeeTableRecords($adminTeamGroup->merge($modsTeamGroup)->merge($supportTeamGroup))
+        ->filterTable('teams', [$adminTeam->id, $modTeam->id])
+        ->assertCanSeeTableRecords(
+            $adminTeamGroup
+        )
+        ->assertCanNotSeeTableRecords($supportTeamGroup);
+});
+
+it('it filters users based on team', function () {
+    asSuperAdmin();
+
+    $teamA = Team::factory()->create(['name' => 'Team A']);
+    $teamB = Team::factory()->create(['name' => 'Team B']);
+
+    $userInTeamA = User::factory()
+        ->count(3)
+        ->hasAttached($teamA, [], 'teams')
+        ->create();
+
+    $userInTeamB = User::factory()
+        ->count(3)
+        ->hasAttached($teamB, [], 'teams')
+        ->create();
+
+    $unassignedUser = User::factory()->count(2)->create();
+
+    livewire(ListUsers::class)
+        ->assertCanSeeTableRecords($unassignedUser->merge($userInTeamA)->merge($userInTeamB))
+        ->filterTable('teams', [$teamA->getKey()])
+        ->assertCanSeeTableRecords(
+            $userInTeamA
+        )
+        ->assertCanNotSeeTableRecords(
+            $unassignedUser->merge($userInTeamB)
+        )
+        ->filterTable('teams', [$teamB->getKey()])
+        ->assertCanSeeTableRecords(
+            $userInTeamB
+        )
+        ->assertCanNotSeeTableRecords(
+            $unassignedUser->merge($userInTeamA)
+        )
+        ->filterTable('teams', ['unassigned'])
+        ->assertCanSeeTableRecords(
+            $unassignedUser
+        )
+        ->assertCanNotSeeTableRecords(
+            $userInTeamA->merge($userInTeamB)
+        );
 });

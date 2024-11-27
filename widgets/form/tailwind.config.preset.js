@@ -1,7 +1,7 @@
 /*
 <COPYRIGHT>
 
-    Copyright © 2022-2023, Canyon GBS LLC. All rights reserved.
+    Copyright © 2016-2024, Canyon GBS LLC. All rights reserved.
 
     Advising App™ is licensed under the Elastic License 2.0. For more details,
     see https://github.com/canyongbs/advisingapp/blob/main/LICENSE.
@@ -31,9 +31,9 @@
 
 </COPYRIGHT>
 */
+import FormKitVariants from '@formkit/themes/tailwindcss';
 import forms from '@tailwindcss/forms';
 import typography from '@tailwindcss/typography';
-import FormKitVariants from '@formkit/themes/tailwindcss';
 
 export default {
     theme: {
@@ -66,4 +66,4 @@ export default {
         },
     },
     plugins: [forms, typography, FormKitVariants],
-}
+};

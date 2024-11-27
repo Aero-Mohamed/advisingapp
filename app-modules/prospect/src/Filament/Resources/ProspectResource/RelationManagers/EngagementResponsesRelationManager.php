@@ -3,7 +3,7 @@
 /*
 <COPYRIGHT>
 
-    Copyright © 2022-2023, Canyon GBS LLC. All rights reserved.
+    Copyright © 2016-2024, Canyon GBS LLC. All rights reserved.
 
     Advising App™ is licensed under the Elastic License 2.0. For more details,
     see https://github.com/canyongbs/advisingapp/blob/main/LICENSE.
@@ -38,12 +38,12 @@ namespace AdvisingApp\Prospect\Filament\Resources\ProspectResource\RelationManag
 
 use Filament\Tables\Table;
 use Filament\Infolists\Infolist;
-use App\Filament\Columns\IdColumn;
 use Filament\Tables\Actions\ViewAction;
 use Filament\Tables\Columns\TextColumn;
 use Illuminate\Database\Eloquent\Model;
+use App\Filament\Tables\Columns\IdColumn;
 use Filament\Infolists\Components\TextEntry;
-use App\Filament\Resources\RelationManagers\RelationManager;
+use Filament\Resources\RelationManagers\RelationManager;
 
 class EngagementResponsesRelationManager extends RelationManager
 {
@@ -58,8 +58,7 @@ class EngagementResponsesRelationManager extends RelationManager
     {
         return $infolist
             ->schema([
-                TextEntry::make('content')
-                    ->translateLabel(),
+                TextEntry::make('content'),
                 TextEntry::make('sent_at')
                     ->dateTime('Y-m-d H:i:s'),
             ]);

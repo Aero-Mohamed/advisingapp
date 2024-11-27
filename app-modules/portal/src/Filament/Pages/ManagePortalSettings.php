@@ -3,7 +3,7 @@
 /*
 <COPYRIGHT>
 
-    Copyright © 2022-2023, Canyon GBS LLC. All rights reserved.
+    Copyright © 2016-2024, Canyon GBS LLC. All rights reserved.
 
     Advising App™ is licensed under the Elastic License 2.0. For more details,
     see https://github.com/canyongbs/advisingapp/blob/main/LICENSE.
@@ -38,39 +38,46 @@ namespace AdvisingApp\Portal\Filament\Pages;
 
 use App\Models\User;
 use App\Enums\Feature;
+use Filament\Forms\Get;
 use Filament\Forms\Form;
-use App\Models\SettingsProperty;
+use App\Models\Authenticatable;
 use Filament\Pages\SettingsPage;
+use AdvisingApp\Form\Enums\Rounding;
 use Illuminate\Support\Facades\Gate;
-use App\Filament\Fields\TiptapEditor;
+use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Toggle;
+use Filament\Forms\Components\Actions;
 use Filament\Forms\Components\Section;
-use App\Filament\Clusters\GlobalSettings;
+use FilamentTiptapEditor\TiptapEditor;
+use AdvisingApp\Portal\Enums\PortalType;
+use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\ColorPicker;
-use FilamentTiptapEditor\Enums\TiptapOutput;
+use Filament\Infolists\Components\TextEntry;
+use Filament\Forms\Components\Actions\Action;
+use App\Filament\Forms\Components\ColorSelect;
 use AdvisingApp\Portal\Settings\PortalSettings;
+use AdvisingApp\Portal\Enums\GdprBannerButtonLabel;
+use AdvisingApp\Portal\Actions\GeneratePortalEmbedCode;
 use Filament\Forms\Components\SpatieMediaLibraryFileUpload;
 
 class ManagePortalSettings extends SettingsPage
 {
-    protected static ?string $navigationIcon = 'heroicon-o-cog-6-tooth';
-
     protected static ?string $navigationLabel = 'Portals';
 
-    protected static ?int $navigationSort = 60;
+    protected static ?int $navigationSort = 40;
 
     protected static string $settings = PortalSettings::class;
 
     protected static ?string $title = 'Portals';
 
-    protected static ?string $cluster = GlobalSettings::class;
+    protected static ?string $navigationGroup = 'Global Administration';
 
     public static function canAccess(): bool
     {
         /** @var User $user */
         $user = auth()->user();
 
-        return $user->can('portal.view_portal_settings');
+        return $user->hasRole(Authenticatable::SUPER_ADMIN_ROLE) && parent::canAccess();
     }
 
     public function form(Form $form): Form
@@ -85,7 +92,7 @@ class ManagePortalSettings extends SettingsPage
                             ->visibility('private')
                             ->image()
                             ->model(
-                                SettingsProperty::getInstance('portal.logo'),
+                                PortalSettings::getSettingsPropertyModel('portal.logo'),
                             )
                             ->columnSpanFull(),
                         ColorPicker::make('primary_color')
@@ -94,7 +101,7 @@ class ManagePortalSettings extends SettingsPage
                             ->hexColor(),
                     ])
                     ->columns(2),
-                Section::make('Features')
+                Section::make('CRM Portal')
                     ->schema([
                         Toggle::make('has_applications')
                             ->label('Applications'),
@@ -111,18 +118,13 @@ class ManagePortalSettings extends SettingsPage
                             ->label('Performance Alerts'),
                         Toggle::make('has_emergency_alerts')
                             ->label('Emergency Alerts'),
-                        Toggle::make('has_service_management')
-                            ->label('Service Management')
-                            ->disabled(! Gate::check(Feature::ServiceManagement->getGateName()))
-                            ->hintIcon(fn (Toggle $component) => $component->isDisabled() ? 'heroicon-m-lock-closed' : null)
-                            ->hintIconTooltip('Service Management is not a part of your current subscription.'),
                         Toggle::make('has_notifications')
                             ->label('Portal Notifications'),
                         Toggle::make('has_knowledge_base')
-                            ->label('Knowledge Management')
+                            ->label('Resource Hub')
                             ->disabled(! Gate::check(Feature::KnowledgeManagement->getGateName()))
                             ->hintIcon(fn (Toggle $component) => $component->isDisabled() ? 'heroicon-m-lock-closed' : null)
-                            ->hintIconTooltip('Knowledge Management is not a part of your current subscription.'),
+                            ->hintIconTooltip('Resource Hub is not a part of your current subscription.'),
                         Toggle::make('has_tasks')
                             ->label('Tasks'),
                         Toggle::make('has_files_and_documents')
@@ -139,6 +141,92 @@ class ManagePortalSettings extends SettingsPage
                             ->hintIconTooltip('Surveys are not a part of your current subscription.'),
                     ])
                     ->columns(3),
+                Section::make('Resource Portal')
+                    ->schema([
+                        Toggle::make('knowledge_management_portal_enabled')
+                            ->label('Resource Hub')
+                            ->disabled(! Gate::check(Feature::KnowledgeManagement->getGateName()))
+                            ->hintIcon(fn (Toggle $component) => $component->isDisabled() ? 'heroicon-m-lock-closed' : null)
+                            ->hintIconTooltip('Resource Hub is not a part of your current subscription.')
+                            ->live()
+                            ->columnSpanFull(),
+                        ColorSelect::make('knowledge_management_portal_primary_color')
+                            ->label('Primary Color')
+                            ->visible(fn (Get $get) => $get('knowledge_management_portal_enabled'))
+                            ->disabled(! Gate::check(Feature::KnowledgeManagement->getGateName()))
+                            ->hintIcon(fn (ColorSelect $component) => $component->isDisabled() ? 'heroicon-m-lock-closed' : null)
+                            ->hintIconTooltip('Resource Hub is not a part of your current subscription.')
+                            ->columnSpan(1),
+                        Select::make('knowledge_management_portal_rounding')
+                            ->label('Rounding')
+                            ->options(Rounding::class)
+                            ->visible(fn (Get $get) => $get('knowledge_management_portal_enabled'))
+                            ->disabled(! Gate::check(Feature::KnowledgeManagement->getGateName()))
+                            ->hintIcon(fn (Select $component) => $component->isDisabled() ? 'heroicon-m-lock-closed' : null)
+                            ->hintIconTooltip('Resource Hub is not a part of your current subscription.')
+                            ->columnSpan(1),
+                        TextInput::make('knowledge_management_portal_authorized_domain')
+                            ->label('Authorized Domain')
+                            ->url()
+                            ->visible(fn (Get $get) => $get('knowledge_management_portal_enabled'))
+                            ->disabled(! Gate::check(Feature::KnowledgeManagement->getGateName()))
+                            ->hintIcon(fn (TextInput $component) => $component->isDisabled() ? 'heroicon-m-lock-closed' : null)
+                            ->hintIconTooltip('Resource Hub is not a part of your current subscription.')
+                            ->columnSpanFull(),
+                        Toggle::make('knowledge_management_portal_requires_authentication')
+                            ->label('Require Authentication')
+                            ->visible(fn (Get $get) => $get('knowledge_management_portal_enabled'))
+                            ->disabled(! Gate::check(Feature::ServiceManagement->getGateName()))
+                            ->hintIcon(fn (Toggle $component) => $component->isDisabled() ? 'heroicon-m-lock-closed' : null)
+                            ->columnSpanFull(),
+                        Toggle::make('knowledge_management_portal_service_management')
+                            ->label('Case Management')
+                            ->visible(fn (Get $get) => $get('knowledge_management_portal_enabled'))
+                            ->disabled(! Gate::check(Feature::ServiceManagement->getGateName()))
+                            ->hintIcon(fn (Toggle $component) => $component->isDisabled() ? 'heroicon-m-lock-closed' : null)
+                            ->columnSpanFull(),
+                        Actions::make([
+                            Action::make('view')
+                                ->url(fn () => route('portal.resource-hub.show'))
+                                ->icon('heroicon-m-arrow-top-right-on-square')
+                                ->disabled(! Gate::check(Feature::KnowledgeManagement->getGateName()))
+                                ->openUrlInNewTab(),
+                            Action::make('embed_snippet')
+                                ->label('Embed Snippet')
+                                ->disabled(! Gate::check(Feature::KnowledgeManagement->getGateName()))
+                                ->infolist(
+                                    [
+                                        TextEntry::make('snippet')
+                                            ->label('Click to Copy')
+                                            ->state(function () {
+                                                $code = resolve(GeneratePortalEmbedCode::class)->handle(PortalType::ResourceHub);
+
+                                                $state = <<<EOD
+                                                ```
+                                                {$code}
+                                                ```
+                                                EOD;
+
+                                                return str($state)->markdown()->toHtmlString();
+                                            })
+                                            ->copyable()
+                                            ->copyableState(fn () => resolve(GeneratePortalEmbedCode::class)->handle(PortalType::ResourceHub))
+                                            ->copyMessage('Copied!')
+                                            ->copyMessageDuration(1500)
+                                            ->extraAttributes(['class' => 'embed-code-snippet']),
+                                    ]
+                                )
+                                ->modalSubmitAction(false)
+                                ->modalCancelActionLabel('Close'),
+                        ])
+                            ->visible(
+                                fn (Get $get) => $get('knowledge_management_portal_enabled') &&
+                            ! is_null($get('knowledge_management_portal_primary_color')) &&
+                            ! is_null($get('knowledge_management_portal_rounding'))
+                            )
+                            ->columnSpanFull(),
+                    ])->columns(2),
+
                 Section::make('Footer')
                     ->schema([
                         ColorPicker::make('footer_color')
@@ -147,10 +235,24 @@ class ManagePortalSettings extends SettingsPage
                         TiptapEditor::make('footer_copyright_statement')
                             ->label('Copyright statement')
                             ->tools(['bold', 'underline', 'italic', 'link'])
-                            ->columnSpanFull()
-                            ->output(TiptapOutput::Json),
+                            ->columnSpanFull(),
                     ])
                     ->columns(2),
+
+                Section::make('GDPR Banner Notice')
+                    ->schema([
+                        TiptapEditor::make('gdpr_banner_text')
+                            ->label('GDPR Banner Text')
+                            ->required()
+                            ->tools(['link'])
+                            ->columnSpanFull(),
+                        Select::make('gdpr_banner_button_label')
+                            ->options(GdprBannerButtonLabel::class)
+                            ->enum(GdprBannerButtonLabel::class)
+                            ->required()
+                            ->label('GDPR Button Label'),
+                    ])
+                    ->visible(fn (Get $get) => $get('knowledge_management_portal_enabled')),
             ]);
     }
 }

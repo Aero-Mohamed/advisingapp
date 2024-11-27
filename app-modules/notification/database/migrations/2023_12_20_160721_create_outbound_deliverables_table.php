@@ -3,7 +3,7 @@
 /*
 <COPYRIGHT>
 
-    Copyright © 2022-2023, Canyon GBS LLC. All rights reserved.
+    Copyright © 2016-2024, Canyon GBS LLC. All rights reserved.
 
     Advising App™ is licensed under the Elastic License 2.0. For more details,
     see https://github.com/canyongbs/advisingapp/blob/main/LICENSE.
@@ -44,21 +44,26 @@ return new class () extends Migration {
     {
         Schema::create('outbound_deliverables', function (Blueprint $table) {
             $table->uuid('id')->primary();
-            $table->string('related_id')->nullable();
-            $table->string('related_type')->nullable();
-            $table->string('recipient_id')->nullable();
-            $table->string('recipient_type')->nullable();
+
             $table->string('channel');
             $table->string('notification_class');
             $table->string('external_reference_id')->nullable()->unique();
             $table->string('external_status')->nullable();
             $table->json('content')->nullable();
             $table->string('delivery_status')->default(NotificationDeliveryStatus::Awaiting);
-            $table->timestamp('delivered_at')->nullable();
-            $table->timestamp('last_delivery_attempt')->nullable();
             $table->longText('delivery_response')->nullable();
             $table->integer('quota_usage')->default(0);
+
+            $table->string('related_id')->nullable();
+            $table->string('related_type')->nullable();
+            $table->string('recipient_id')->nullable();
+            $table->string('recipient_type')->nullable();
+
+            $table->timestamp('delivered_at')->nullable();
+            $table->timestamp('last_delivery_attempt')->nullable();
+
             $table->timestamps();
+            $table->softDeletes();
         });
     }
 };

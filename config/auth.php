@@ -1,9 +1,14 @@
 <?php
 
+use App\Models\User;
+use App\Models\SystemUser;
+use AdvisingApp\Prospect\Models\Prospect;
+use AdvisingApp\StudentDataModel\Models\Student;
+
 /*
 <COPYRIGHT>
 
-    Copyright © 2022-2023, Canyon GBS LLC. All rights reserved.
+    Copyright © 2016-2024, Canyon GBS LLC. All rights reserved.
 
     Advising App™ is licensed under the Elastic License 2.0. For more details,
     see https://github.com/canyongbs/advisingapp/blob/main/LICENSE.
@@ -75,9 +80,19 @@ return [
         ],
 
         'api' => [
-            'driver' => 'token',
+            'driver' => 'session',
             'provider' => 'system-users',
             'hash' => false,
+        ],
+
+        'student' => [
+            'driver' => 'session',
+            'provider' => 'students',
+        ],
+
+        'prospect' => [
+            'driver' => 'session',
+            'provider' => 'prospects',
         ],
     ],
 
@@ -101,12 +116,22 @@ return [
     'providers' => [
         'users' => [
             'driver' => 'eloquent',
-            'model' => App\Models\User::class,
+            'model' => User::class,
         ],
 
         'system-users' => [
             'driver' => 'eloquent',
-            'model' => App\Models\SystemUser::class,
+            'model' => SystemUser::class,
+        ],
+
+        'students' => [
+            'driver' => 'eloquent',
+            'model' => Student::class,
+        ],
+
+        'prospects' => [
+            'driver' => 'eloquent',
+            'model' => Prospect::class,
         ],
 
         // 'users' => [

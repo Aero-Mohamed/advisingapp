@@ -3,7 +3,7 @@
 /*
 <COPYRIGHT>
 
-    Copyright © 2022-2023, Canyon GBS LLC. All rights reserved.
+    Copyright © 2016-2024, Canyon GBS LLC. All rights reserved.
 
     Advising App™ is licensed under the Elastic License 2.0. For more details,
     see https://github.com/canyongbs/advisingapp/blob/main/LICENSE.
@@ -43,10 +43,10 @@ use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Illuminate\Database\Eloquent\Model;
 use Filament\Forms\Components\TextInput;
-use App\Filament\Fields\EducatableSelect;
 use Filament\Resources\Pages\CreateRecord;
 use Filament\Forms\Components\DateTimePicker;
 use AdvisingApp\Task\Filament\Concerns\TaskForm;
+use App\Filament\Forms\Components\EducatableSelect;
 use AdvisingApp\Task\Filament\Resources\TaskResource;
 
 class CreateTask extends CreateRecord

@@ -3,7 +3,7 @@
 /*
 <COPYRIGHT>
 
-    Copyright © 2022-2023, Canyon GBS LLC. All rights reserved.
+    Copyright © 2016-2024, Canyon GBS LLC. All rights reserved.
 
     Advising App™ is licensed under the Elastic License 2.0. For more details,
     see https://github.com/canyongbs/advisingapp/blob/main/LICENSE.
@@ -53,42 +53,67 @@ class StudentPolicy
 
     public function viewAny(Authenticatable $authenticatable): Response
     {
-        return $authenticatable->canOrElse(
-            abilities: 'student.view-any',
-            denyResponse: 'You do not have permission to view students.'
-        );
+        if ($authenticatable->canAny(['student.view-any', 'student_record_manager.view-any'])) {
+            return Response::allow();
+        }
+
+        return Response::deny('You do not have permission to view students.');
     }
 
     public function view(Authenticatable $authenticatable, Student $student): Response
     {
-        return $authenticatable->canOrElse(
-            abilities: ['student.*.view', "student.{$student->id}.view"],
-            denyResponse: 'You do not have permission to view this student.'
-        );
+        if ($authenticatable->canAny(["student.{$student->getKey()}.view", 'student_record_manager.*.view'])) {
+            return Response::allow();
+        }
+
+        return Response::deny('You do not have permission to view this student.');
     }
 
     public function create(Authenticatable $authenticatable): Response
     {
-        return Response::deny('Students cannot be created.');
+        return $authenticatable->canOrElse(
+            abilities: 'student_record_manager.create',
+            denyResponse: 'You do not have permission to create student.'
+        );
     }
 
     public function update(Authenticatable $authenticatable, Student $student): Response
     {
-        return Response::deny('Students cannot be updated.');
+        return $authenticatable->canOrElse(
+            abilities: 'student_record_manager.*.update',
+            denyResponse: 'Students cannot be updated.'
+        );
     }
 
     public function delete(Authenticatable $authenticatable, Student $student): Response
     {
-        return Response::deny('Students cannot be deleted.');
+        return $authenticatable->canOrElse(
+            abilities: 'student_record_manager.*.delete',
+            denyResponse: 'Students cannot be deleted.'
+        );
     }
 
     public function restore(Authenticatable $authenticatable, Student $student): Response
     {
-        return Response::deny('Students cannot be restored.');
+        return $authenticatable->canOrElse(
+            abilities: 'student_record_manager.*.restore',
+            denyResponse: 'Students cannot be restored.'
+        );
     }
 
     public function forceDelete(Authenticatable $authenticatable, Student $student): Response
     {
-        return Response::deny('Students cannot be force deleted.');
+        return $authenticatable->canOrElse(
+            abilities: 'student_record_manager.*.force-delete',
+            denyResponse: 'Students cannot be force deleted.'
+        );
+    }
+
+    public function import(Authenticatable $authenticatable): Response
+    {
+        return $authenticatable->canOrElse(
+            abilities: 'student_record_manager.create',
+            denyResponse: 'You do not have permission to import students.',
+        );
     }
 }

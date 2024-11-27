@@ -3,7 +3,7 @@
 /*
 <COPYRIGHT>
 
-    Copyright © 2022-2023, Canyon GBS LLC. All rights reserved.
+    Copyright © 2016-2024, Canyon GBS LLC. All rights reserved.
 
     Advising App™ is licensed under the Elastic License 2.0. For more details,
     see https://github.com/canyongbs/advisingapp/blob/main/LICENSE.
@@ -35,13 +35,17 @@
 */
 
 use App\Models\User;
+use App\Models\Authenticatable;
 use AdvisingApp\Team\Models\Team;
 
 use function Pest\Laravel\actingAs;
 use function Pest\Livewire\livewire;
 
+use Filament\Forms\Components\Select;
+use Filament\Tables\Actions\AttachAction;
 use AdvisingApp\Team\Filament\Resources\TeamResource;
 use AdvisingApp\Team\Filament\Resources\TeamResource\Pages\EditTeam;
+use AdvisingApp\Team\Filament\Resources\TeamResource\RelationManagers\UsersRelationManager;
 
 // Permission Tests
 
@@ -87,4 +91,91 @@ test('EditTeam is gated with proper access control', function () {
 
     expect($team->name)->toEqual($request->name)
         ->and($team->description)->toEqual($request->description);
+});
+
+// Non Super Admin Users can be added to a team test
+
+test('Non Super Admin Users can be added to a team', function () {
+    $user = User::factory()->create();
+    $team = Team::factory()->has(User::factory()->count(1))->create();
+
+    $user->givePermissionTo('team.view-any');
+    $user->givePermissionTo('team.*.update');
+
+    actingAs($user)
+        ->get(
+            TeamResource::getUrl('edit', [
+                'record' => $team,
+            ])
+        )->assertSuccessful();
+
+    livewire(UsersRelationManager::class, [
+        'ownerRecord' => $team,
+        'pageClass' => EditTeam::class,
+    ])
+        ->callTableAction(
+            AttachAction::class,
+            data: ['recordId' => $user->getKey()]
+        )->assertSuccessful();
+});
+
+// Super Admin Users cannot be added to a team
+
+test('Super Admin Users cannot be added to a team', function () {
+    $user = User::factory()->create();
+    $superAdmin = User::factory()->create();
+    $team = Team::factory()->create();
+
+    $user->givePermissionTo('team.view-any');
+    $user->givePermissionTo('team.*.update');
+
+    $superAdmin->assignRole(Authenticatable::SUPER_ADMIN_ROLE);
+
+    actingAs($user)
+        ->get(
+            TeamResource::getUrl('edit', [
+                'record' => $team,
+            ])
+        )->assertSuccessful();
+
+    livewire(UsersRelationManager::class, [
+        'ownerRecord' => $team,
+        'pageClass' => EditTeam::class,
+    ])
+        ->callTableAction(
+            AttachAction::class,
+            data: ['recordId' => $superAdmin->getKey()]
+        )->assertHasTableActionErrors(['recordId'])
+        ->assertSeeText('Super admin users cannot be added to a team.');
+});
+
+//Super Admin Users do not show up in UsersRelationManager for Teams search results
+
+test('Super Admin Users do not show up in UsersRelationManager for Teams search results', function () {
+    $user = User::factory()->create();
+    $superAdmin = User::factory()->create();
+    $team = Team::factory()->create();
+
+    $user->givePermissionTo('team.view-any');
+    $user->givePermissionTo('team.*.update');
+
+    $superAdmin->assignRole(Authenticatable::SUPER_ADMIN_ROLE);
+
+    actingAs($user)
+        ->get(
+            TeamResource::getUrl('edit', [
+                'record' => $team,
+            ])
+        )->assertSuccessful();
+
+    livewire(UsersRelationManager::class, [
+        'ownerRecord' => $team,
+        'pageClass' => EditTeam::class,
+    ])
+        ->mountTableAction(AttachAction::class)
+        ->assertFormFieldExists('recordId', 'mountedTableActionForm', function (Select $select) use ($superAdmin) {
+            $options = $select->getSearchResults($superAdmin->name);
+
+            return empty($options) ? true : false;
+        })->assertSuccessful();
 });

@@ -3,7 +3,7 @@
 /*
 <COPYRIGHT>
 
-    Copyright © 2022-2023, Canyon GBS LLC. All rights reserved.
+    Copyright © 2016-2024, Canyon GBS LLC. All rights reserved.
 
     Advising App™ is licensed under the Elastic License 2.0. For more details,
     see https://github.com/canyongbs/advisingapp/blob/main/LICENSE.
@@ -66,12 +66,12 @@ class CampaignPolicy implements PerformsChecksBeforeAuthorization
 
     public function view(Authenticatable $authenticatable, Campaign $campaign): Response
     {
-        if ($authenticatable->cannot('view', $campaign->caseload)) {
+        if ($authenticatable->cannot('view', $campaign->segment)) {
             return Response::deny('You do not have permission to view this campaign.');
         }
 
         return $authenticatable->canOrElse(
-            abilities: ['campaign.*.view', "campaign.{$campaign->id}.view"],
+            abilities: ["campaign.{$campaign->id}.view"],
             denyResponse: 'You do not have permission to view this campaign.'
         );
     }
@@ -86,48 +86,48 @@ class CampaignPolicy implements PerformsChecksBeforeAuthorization
 
     public function update(Authenticatable $authenticatable, Campaign $campaign): Response
     {
-        if ($authenticatable->cannot('view', $campaign->caseload)) {
+        if ($authenticatable->cannot('view', $campaign->segment)) {
             return Response::deny('You do not have permission to update this campaign.');
         }
 
         return $authenticatable->canOrElse(
-            abilities: ['campaign.*.update', "campaign.{$campaign->id}.update"],
+            abilities: ["campaign.{$campaign->id}.update"],
             denyResponse: 'You do not have permission to update this campaign.'
         );
     }
 
     public function delete(Authenticatable $authenticatable, Campaign $campaign): Response
     {
-        if ($authenticatable->cannot('view', $campaign->caseload)) {
+        if ($authenticatable->cannot('view', $campaign->segment)) {
             return Response::deny('You do not have permission to delete this campaign.');
         }
 
         return $authenticatable->canOrElse(
-            abilities: ['campaign.*.delete', "campaign.{$campaign->id}.delete"],
+            abilities: ["campaign.{$campaign->id}.delete"],
             denyResponse: 'You do not have permission to delete this campaign.'
         );
     }
 
     public function restore(Authenticatable $authenticatable, Campaign $campaign): Response
     {
-        if ($authenticatable->cannot('view', $campaign->caseload)) {
+        if ($authenticatable->cannot('view', $campaign->segment)) {
             return Response::deny('You do not have permission to restore this campaign.');
         }
 
         return $authenticatable->canOrElse(
-            abilities: ['campaign.*.restore', "campaign.{$campaign->id}.restore"],
+            abilities: ["campaign.{$campaign->id}.restore"],
             denyResponse: 'You do not have permission to restore this campaign.'
         );
     }
 
     public function forceDelete(Authenticatable $authenticatable, Campaign $campaign): Response
     {
-        if ($authenticatable->cannot('view', $campaign->caseload)) {
+        if ($authenticatable->cannot('view', $campaign->segment)) {
             return Response::deny('You do not have permission to permanently delete this campaign.');
         }
 
         return $authenticatable->canOrElse(
-            abilities: ['campaign.*.force-delete', "campaign.{$campaign->id}.force-delete"],
+            abilities: ["campaign.{$campaign->id}.force-delete"],
             denyResponse: 'You do not have permission to permanently delete this campaign.'
         );
     }

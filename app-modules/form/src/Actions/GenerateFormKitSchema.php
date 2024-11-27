@@ -3,7 +3,7 @@
 /*
 <COPYRIGHT>
 
-    Copyright © 2022-2023, Canyon GBS LLC. All rights reserved.
+    Copyright © 2016-2024, Canyon GBS LLC. All rights reserved.
 
     Advising App™ is licensed under the Elastic License 2.0. For more details,
     see https://github.com/canyongbs/advisingapp/blob/main/LICENSE.
@@ -62,7 +62,7 @@ class GenerateFormKitSchema
         return array_map(
             fn (array $component): array | string => match ($component['type'] ?? null) {
                 'bulletList' => ['$el' => 'ul', 'children' => $this->content($blocks, $component['content'] ?? [], $fields)],
-                'grid' => $this->grid($component, $fields),
+                'grid' => $this->grid($blocks, $component, $fields),
                 'gridColumn' => ['$el' => 'div', 'children' => $this->content($blocks, $component['content'], $fields), 'attrs' => ['class' => ['grid-col' => true]]],
                 'heading' => ['$el' => "h{$component['attrs']['level']}", 'children' => $this->content($blocks, $component['content'], $fields)],
                 'horizontalRule' => ['$el' => 'hr'],
@@ -78,7 +78,7 @@ class GenerateFormKitSchema
         );
     }
 
-    public function grid(array $component, ?Collection $fields): array
+    public function grid(array $blocks, array $component, ?Collection $fields): array
     {
         return [
             '$el' => 'div',
@@ -95,7 +95,7 @@ class GenerateFormKitSchema
                     },
                 ],
             ],
-            'children' => $this->content($component['content'], $fields),
+            'children' => $this->content($blocks, $component['content'], $fields),
         ];
     }
 

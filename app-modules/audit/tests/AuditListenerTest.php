@@ -3,7 +3,7 @@
 /*
 <COPYRIGHT>
 
-    Copyright © 2022-2023, Canyon GBS LLC. All rights reserved.
+    Copyright © 2016-2024, Canyon GBS LLC. All rights reserved.
 
     Advising App™ is licensed under the Elastic License 2.0. For more details,
     see https://github.com/canyongbs/advisingapp/blob/main/LICENSE.
@@ -37,26 +37,28 @@
 use function Tests\asSuperAdmin;
 
 use AdvisingApp\Audit\Settings\AuditSettings;
-use AdvisingApp\ServiceManagement\Models\ServiceRequest;
+use AdvisingApp\CaseManagement\Models\CaseModel;
 
-test('Audit logs are only created if the Model is set to be Audited by audit settings', function () {
+test('Audit logs are only created if the Model is not set to be excluded from Auditing by audit settings', function () {
     asSuperAdmin();
+
+    $case = CaseModel::factory()->make();
 
     $auditSettings = resolve(AuditSettings::class);
 
-    $auditSettings->audited_models = [];
+    $auditSettings->audited_models_exclude = [$case->getMorphClass()];
 
     $auditSettings->save();
 
-    $serviceRequest = ServiceRequest::factory()->create();
+    expect($case->audits)->toHaveCount(0);
 
-    expect($serviceRequest->audits)->toHaveCount(0);
-
-    $auditSettings->audited_models[] = $serviceRequest->getMorphClass();
+    $auditSettings->audited_models_exclude = [];
 
     $auditSettings->save();
 
-    $serviceRequest = ServiceRequest::factory()->create();
+    $case->save();
 
-    expect($serviceRequest->audits)->toHaveCount(1);
+    $case->refresh();
+
+    expect($case->audits)->toHaveCount(1);
 });

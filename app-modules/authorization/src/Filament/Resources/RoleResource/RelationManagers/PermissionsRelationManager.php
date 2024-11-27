@@ -3,7 +3,7 @@
 /*
 <COPYRIGHT>
 
-    Copyright © 2022-2023, Canyon GBS LLC. All rights reserved.
+    Copyright © 2016-2024, Canyon GBS LLC. All rights reserved.
 
     Advising App™ is licensed under the Elastic License 2.0. For more details,
     see https://github.com/canyongbs/advisingapp/blob/main/LICENSE.
@@ -36,17 +36,19 @@
 
 namespace AdvisingApp\Authorization\Filament\Resources\RoleResource\RelationManagers;
 
-use Filament\Forms\Form;
 use Filament\Tables\Table;
-use App\Filament\Columns\IdColumn;
-use Filament\Tables\Actions\EditAction;
+use Filament\Facades\Filament;
 use Filament\Tables\Columns\TextColumn;
-use Filament\Forms\Components\TextInput;
-use Filament\Tables\Actions\CreateAction;
-use Filament\Tables\Actions\DeleteAction;
+use Filament\Resources\Pages\ViewRecord;
+use App\Filament\Tables\Columns\IdColumn;
+use Filament\Tables\Actions\AttachAction;
+use Filament\Tables\Actions\DetachAction;
+use Filament\Tables\Filters\SelectFilter;
+use Illuminate\Database\Eloquent\Builder;
+use AdvisingApp\Authorization\Models\Role;
 use Filament\Tables\Actions\BulkActionGroup;
-use Filament\Tables\Actions\DeleteBulkAction;
-use App\Filament\Resources\RelationManagers\RelationManager;
+use Filament\Tables\Actions\DetachBulkAction;
+use Filament\Resources\RelationManagers\RelationManager;
 
 class PermissionsRelationManager extends RelationManager
 {
@@ -54,14 +56,19 @@ class PermissionsRelationManager extends RelationManager
 
     protected static ?string $recordTitleAttribute = 'name';
 
-    public function form(Form $form): Form
+    public function isReadOnly(): bool
     {
-        return $form
-            ->schema([
-                TextInput::make('name')
-                    ->required()
-                    ->maxLength(255),
-            ]);
+        if (blank($this->getPageClass())) {
+            return false;
+        }
+
+        $panel = Filament::getCurrentPanel();
+
+        if (! $panel) {
+            return false;
+        }
+
+        return is_subclass_of($this->getPageClass(), ViewRecord::class);
     }
 
     public function table(Table $table): Table
@@ -69,18 +76,34 @@ class PermissionsRelationManager extends RelationManager
         return $table
             ->columns([
                 IdColumn::make(),
+                TextColumn::make('group.name')
+                    ->sortable(),
                 TextColumn::make('name'),
             ])
+            ->filters([
+                SelectFilter::make('group')
+                    ->relationship('group', 'name')
+                    ->searchable()
+                    ->preload()
+                    ->multiple(),
+            ])
             ->headerActions([
-                CreateAction::make(),
+                AttachAction::make()
+                    ->recordSelectOptionsQuery(function (Builder $query) {
+                        /** @var Role $role */
+                        $role = $this->getOwnerRecord();
+
+                        $query->where('guard_name', $role->guard_name);
+                    })
+                    ->multiple()
+                    ->preloadRecordSelect(),
             ])
             ->actions([
-                EditAction::make(),
-                DeleteAction::make(),
+                DetachAction::make(),
             ])
             ->bulkActions([
                 BulkActionGroup::make([
-                    DeleteBulkAction::make(),
+                    DetachBulkAction::make(),
                 ]),
             ]);
     }

@@ -3,7 +3,7 @@
 /*
 <COPYRIGHT>
 
-    Copyright © 2022-2023, Canyon GBS LLC. All rights reserved.
+    Copyright © 2016-2024, Canyon GBS LLC. All rights reserved.
 
     Advising App™ is licensed under the Elastic License 2.0. For more details,
     see https://github.com/canyongbs/advisingapp/blob/main/LICENSE.
@@ -57,7 +57,7 @@ class SubscriptionPolicy
         }
 
         return $authenticatable->canOrElse(
-            abilities: ['subscription.*.view', "subscription.{$subscription->id}.view"],
+            abilities: ["subscription.{$subscription->id}.view"],
             denyResponse: 'You do not have permission to view this subscription.'
         );
     }
@@ -77,7 +77,7 @@ class SubscriptionPolicy
         }
 
         return $authenticatable->canOrElse(
-            abilities: ['subscription.*.update', "subscription.{$subscription->id}.update"],
+            abilities: ["subscription.{$subscription->id}.update"],
             denyResponse: 'You do not have permission to update this subscription.'
         );
     }
@@ -89,7 +89,7 @@ class SubscriptionPolicy
         }
 
         return $authenticatable->canOrElse(
-            abilities: ['subscription.*.delete', "subscription.{$subscription->id}.delete"],
+            abilities: ["subscription.{$subscription->id}.delete"],
             denyResponse: 'You do not have permission to delete this subscription.'
         );
     }
@@ -101,7 +101,7 @@ class SubscriptionPolicy
         }
 
         return $authenticatable->canOrElse(
-            abilities: ['subscription.*.restore', "subscription.{$subscription->id}.restore"],
+            abilities: ["subscription.{$subscription->id}.restore"],
             denyResponse: 'You do not have permission to restore this subscription.'
         );
     }
@@ -113,7 +113,7 @@ class SubscriptionPolicy
         }
 
         return $authenticatable->canOrElse(
-            abilities: ['subscription.*.force-delete', "subscription.{$subscription->id}.force-delete"],
+            abilities: ["subscription.{$subscription->id}.force-delete"],
             denyResponse: 'You do not have permission to permanently delete this subscription.'
         );
     }

@@ -3,7 +3,7 @@
 /*
 <COPYRIGHT>
 
-    Copyright © 2022-2023, Canyon GBS LLC. All rights reserved.
+    Copyright © 2016-2024, Canyon GBS LLC. All rights reserved.
 
     Advising App™ is licensed under the Elastic License 2.0. For more details,
     see https://github.com/canyongbs/advisingapp/blob/main/LICENSE.
@@ -39,6 +39,7 @@ namespace AdvisingApp\IntegrationTwilio\Filament\Pages;
 use App\Models\User;
 use Filament\Forms\Get;
 use Filament\Forms\Form;
+use App\Models\Authenticatable;
 use Filament\Pages\SettingsPage;
 use Filament\Forms\Components\Toggle;
 use Filament\Forms\Components\Section;
@@ -65,7 +66,7 @@ class ManageTwilioSettings extends SettingsPage
         /** @var User $user */
         $user = auth()->user();
 
-        return $user->can('integration-twilio.view_twilio_settings');
+        return $user->hasRole(Authenticatable::SUPER_ADMIN_ROLE) && parent::canAccess();
     }
 
     public function form(Form $form): Form
@@ -75,8 +76,11 @@ class ManageTwilioSettings extends SettingsPage
             ->schema([
                 Toggle::make('is_enabled')
                     ->label('Enabled')
-                    ->live()
-                    ->disabled(), //TODO: force enabled for now
+                    ->live(),
+                Toggle::make('is_demo_mode_enabled')
+                    ->label('SMS Demo Mode')
+                    ->helperText('When enabled, no messages will be sent.')
+                    ->live(),
                 Section::make()
                     ->schema([
                         TextInput::make('account_sid')
@@ -93,7 +97,8 @@ class ManageTwilioSettings extends SettingsPage
                         TextInput::make('from_number')
                             ->string()
                             ->required(),
-                    ])->visible(fn (Get $get) => $get('is_enabled')),
+                    ])
+                    ->visible(fn (Get $get) => $get('is_enabled') && ! $get('is_demo_mode_enabled')),
             ]);
     }
 }

@@ -3,7 +3,7 @@
 /*
 <COPYRIGHT>
 
-    Copyright © 2022-2023, Canyon GBS LLC. All rights reserved.
+    Copyright © 2016-2024, Canyon GBS LLC. All rights reserved.
 
     Advising App™ is licensed under the Elastic License 2.0. For more details,
     see https://github.com/canyongbs/advisingapp/blob/main/LICENSE.
@@ -34,8 +34,14 @@
 </COPYRIGHT>
 */
 
+use Spatie\LaravelData\Data;
 use App\Models\SettingsProperty;
+use App\Models\LandlordSettingsProperty;
 use App\DataTransferObjects\Casts\DataCast;
+use Spatie\LaravelSettings\SettingsCasts\DateTimeZoneCast;
+use Spatie\LaravelSettings\SettingsCasts\DateTimeInterfaceCast;
+use Spatie\LaravelSettings\SettingsRepositories\RedisSettingsRepository;
+use Spatie\LaravelSettings\SettingsRepositories\DatabaseSettingsRepository;
 
 return [
     /*
@@ -70,13 +76,19 @@ return [
      */
     'repositories' => [
         'database' => [
-            'type' => Spatie\LaravelSettings\SettingsRepositories\DatabaseSettingsRepository::class,
+            'type' => DatabaseSettingsRepository::class,
             'model' => SettingsProperty::class,
             'table' => null,
             'connection' => null,
         ],
+        'landlord_database' => [
+            'type' => DatabaseSettingsRepository::class,
+            'model' => LandlordSettingsProperty::class,
+            'table' => null,
+            'connection' => null,
+        ],
         'redis' => [
-            'type' => Spatie\LaravelSettings\SettingsRepositories\RedisSettingsRepository::class,
+            'type' => RedisSettingsRepository::class,
             'connection' => null,
             'prefix' => null,
         ],
@@ -99,9 +111,9 @@ return [
      * your settings class isn't a default PHP type.
      */
     'global_casts' => [
-        DateTimeInterface::class => Spatie\LaravelSettings\SettingsCasts\DateTimeInterfaceCast::class,
-        DateTimeZone::class => Spatie\LaravelSettings\SettingsCasts\DateTimeZoneCast::class,
-        Spatie\LaravelData\Data::class => DataCast::class,
+        DateTimeInterface::class => DateTimeInterfaceCast::class,
+        DateTimeZone::class => DateTimeZoneCast::class,
+        Data::class => DataCast::class,
     ],
 
     /*

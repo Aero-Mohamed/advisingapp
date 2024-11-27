@@ -3,7 +3,7 @@
 /*
 <COPYRIGHT>
 
-    Copyright © 2022-2023, Canyon GBS LLC. All rights reserved.
+    Copyright © 2016-2024, Canyon GBS LLC. All rights reserved.
 
     Advising App™ is licensed under the Elastic License 2.0. For more details,
     see https://github.com/canyongbs/advisingapp/blob/main/LICENSE.
@@ -64,7 +64,7 @@ it('busts the timeline cache for the associated educatable', function () {
 
     // The cache key for the educatable should be busted
     expect(Cache::has(
-        "{timeline.synced.{$initialResponse->sender->getMorphClass()}.{$initialResponse->sender->getKey()}}"
+        "timeline.synced.{$initialResponse->sender->getMorphClass()}.{$initialResponse->sender->getKey()}"
     ))->toBeFalse();
 });
 

@@ -1,7 +1,7 @@
 /*
 <COPYRIGHT>
 
-    Copyright © 2022-2023, Canyon GBS LLC. All rights reserved.
+    Copyright © 2016-2024, Canyon GBS LLC. All rights reserved.
 
     Advising App™ is licensed under the Elastic License 2.0. For more details,
     see https://github.com/canyongbs/advisingapp/blob/main/LICENSE.
@@ -32,7 +32,7 @@
 </COPYRIGHT>
 */
 @import '../../../../vendor/filament/filament/resources/css/theme.css';
-@import '../../../../vendor/awcodes/filament-tiptap-editor/resources/css/plugin.css';
+@import '../../../../vendor/canyongbs/filament-tiptap-editor/resources/css/plugin.css';
 @import 'tippy.js/dist/tippy.css';
 
 @config '../../../../tailwind.config.js';
@@ -63,6 +63,14 @@
 
 .fi-sidebar-nav > ul {
     @apply gap-y-4;
+}
+
+.chat-notifications .fi-no-notification-close-btn {
+    @apply hidden;
+}
+
+.embed-code-snippet code {
+    @apply text-wrap;
 }
 
 /* TipTap rendering */
@@ -131,4 +139,33 @@
             @apply grid-cols-5;
         }
     }
+}
+
+.fi-sidebar-group-label {
+    @apply text-gray-700 dark:text-gray-200 !important;
+}
+
+.fi-sidebar-item-label {
+    @apply text-gray-500 dark:text-gray-400 !important;
+}
+
+.fi-sidebar-item.fi-active .fi-sidebar-item-label {
+    @apply text-gray-700 dark:text-gray-200 !important;
+}
+
+.dark_button_border {
+    @apply dark:border dark:border-white dark:hover:border-white !important;
+}
+
+.fi-section.fi-section-has-subsections > .fi-section-content-ctn > .fi-section-content {
+    @apply p-0;
+}
+
+.fi-section.fi-section-has-subsections > .fi-section-content-ctn > .fi-section-content,
+.fi-section.fi-section-has-subsections > .fi-section-content-ctn > .fi-section-content > dl > .fi-fo-component-ctn {
+    @apply gap-0 divide-y divide-gray-200 dark:divide-white/10;
+}
+
+.fi-section.fi-scrollable > .fi-section-content-ctn > .fi-section-content {
+    @apply max-h-56 overflow-y-auto;
 }

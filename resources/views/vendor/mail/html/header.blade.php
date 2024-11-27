@@ -1,7 +1,7 @@
 {{--
 <COPYRIGHT>
 
-    Copyright © 2022-2023, Canyon GBS LLC. All rights reserved.
+    Copyright © 2016-2024, Canyon GBS LLC. All rights reserved.
 
     Advising App™ is licensed under the Elastic License 2.0. For more details,
     see https://github.com/canyongbs/advisingapp/blob/main/LICENSE.
@@ -37,8 +37,7 @@
     use AdvisingApp\Theme\Settings\ThemeSettings;
 
     $themeSettings = app(ThemeSettings::class);
-    $settingsProperty = SettingsProperty::getInstance('theme.is_logo_active');
-    $logo = $settingsProperty->getFirstMedia('logo');
+    $logo = $themeSettings->getSettingsPropertyModel('theme.is_logo_active')->getFirstMedia('logo');
 @endphp
 <tr>
     <td class="header">
@@ -53,7 +52,7 @@
                      style="height: 75px; max-height: 75px; max-width: 100vw;"
                      alt="{{ config('app.name') }}">
             @else
-                <img src="{{ Vite::asset('resources/images/default-logo-light.png') }}"
+                <img src="{{ url(Vite::asset('resources/images/default-logo-light-201124.svg')) }}"
                      style="height: 75px; max-height: 75px; max-width: 100vw;"
                      alt="{{ config('app.name') }}">
             @endif

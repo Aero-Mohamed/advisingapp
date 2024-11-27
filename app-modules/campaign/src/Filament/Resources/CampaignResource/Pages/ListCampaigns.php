@@ -3,7 +3,7 @@
 /*
 <COPYRIGHT>
 
-    Copyright © 2022-2023, Canyon GBS LLC. All rights reserved.
+    Copyright © 2016-2024, Canyon GBS LLC. All rights reserved.
 
     Advising App™ is licensed under the Elastic License 2.0. For more details,
     see https://github.com/canyongbs/advisingapp/blob/main/LICENSE.
@@ -36,15 +36,19 @@
 
 namespace AdvisingApp\Campaign\Filament\Resources\CampaignResource\Pages;
 
+use App\Models\User;
 use Filament\Tables\Table;
-use App\Filament\Columns\IdColumn;
 use Filament\Actions\CreateAction;
+use Filament\Tables\Filters\Filter;
 use Filament\Tables\Actions\EditAction;
 use Filament\Tables\Actions\ViewAction;
+use Filament\Tables\Columns\IconColumn;
 use Filament\Tables\Columns\TextColumn;
 use AdvisingApp\Campaign\Models\Campaign;
+use App\Filament\Tables\Columns\IdColumn;
 use Filament\Resources\Pages\ListRecords;
 use Filament\Tables\Actions\DeleteAction;
+use Illuminate\Database\Eloquent\Builder;
 use AdvisingApp\Campaign\Filament\Resources\CampaignResource;
 
 class ListCampaigns extends ListRecords
@@ -57,7 +61,17 @@ class ListCampaigns extends ListRecords
             ->columns([
                 IdColumn::make(),
                 TextColumn::make('name'),
-                TextColumn::make('caseload.name'),
+                TextColumn::make('segment.name')
+                    ->label('Population Segment'),
+                IconColumn::make('enabled')
+                    ->label('Enabled')
+                    ->boolean()
+                    ->toggleable(isToggledHiddenByDefault: true),
+                IconColumn::make('execution_status')
+                    ->label('Complete')
+                    ->getStateUsing(fn (Campaign $record) => $record->hasBeenExecuted())
+                    ->boolean()
+                    ->toggleable(isToggledHiddenByDefault: true),
             ])
             ->actions([
                 ViewAction::make(),
@@ -65,8 +79,21 @@ class ListCampaigns extends ListRecords
                     ->hidden(fn (Campaign $record) => $record->hasBeenExecuted() === true),
                 DeleteAction::make()
                     ->hidden(fn (Campaign $record) => $record->hasBeenExecuted() === true),
-            ])
-            ->bulkActions([
+            ])->filters([
+                Filter::make('My Campaigns')
+                    ->query(
+                        fn (Builder $query) => $query
+                            ->where('created_by_id', auth()->id())
+                            ->where('created_by_type', (new User())->getMorphClass()),
+                    ),
+                Filter::make('Enabled')
+                    ->query(fn (Builder $query) => $query->where('enabled', true)),
+                Filter::make('Completed')
+                    ->query(function (Builder $query) {
+                        $query->whereDoesntHave('actions', function (Builder $query) {
+                            $query->whereNull('successfully_executed_at');
+                        });
+                    }),
             ]);
     }
 

@@ -3,7 +3,7 @@
 /*
 <COPYRIGHT>
 
-    Copyright © 2022-2023, Canyon GBS LLC. All rights reserved.
+    Copyright © 2016-2024, Canyon GBS LLC. All rights reserved.
 
     Advising App™ is licensed under the Elastic License 2.0. For more details,
     see https://github.com/canyongbs/advisingapp/blob/main/LICENSE.
@@ -36,9 +36,6 @@
 
 namespace App\Actions\Finders;
 
-use Illuminate\Support\Collection;
-use Illuminate\Support\Facades\File;
-
 class ApplicationModules
 {
     public function moduleConfig(string $module, string $path): array
@@ -52,14 +49,5 @@ class ApplicationModules
         }
 
         return [];
-    }
-
-    public function moduleConfigDirectory(string $module, string $path): Collection
-    {
-        $path = base_path("app-modules/{$module}/config/{$path}");
-
-        return collect(File::files($path))->map(function ($file, $key) {
-            return explode('.' . $file->getExtension(), $file->getFilename())[0];
-        });
     }
 }

@@ -3,7 +3,7 @@
 /*
 <COPYRIGHT>
 
-    Copyright © 2022-2023, Canyon GBS LLC. All rights reserved.
+    Copyright © 2016-2024, Canyon GBS LLC. All rights reserved.
 
     Advising App™ is licensed under the Elastic License 2.0. For more details,
     see https://github.com/canyongbs/advisingapp/blob/main/LICENSE.
@@ -36,15 +36,19 @@
 
 namespace AdvisingApp\Consent\Models;
 
+use App\Models\User;
 use App\Models\BaseModel;
+use App\Models\Attributes\NoPermissions;
 use OwenIt\Auditing\Contracts\Auditable;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\Concerns\AsPivot;
 use AdvisingApp\Audit\Models\Concerns\Auditable as AuditableTrait;
 
 /**
  * @mixin IdeHelperUserConsentAgreement
  */
+#[NoPermissions]
 class UserConsentAgreement extends BaseModel implements Auditable
 {
     use AsPivot;
@@ -56,5 +60,16 @@ class UserConsentAgreement extends BaseModel implements Auditable
     protected $fillable = [
         'consent_agreement_id',
         'ip_address',
+        'user_id',
     ];
+
+    public function consentAgreement(): BelongsTo
+    {
+        return $this->belongsTo(ConsentAgreement::class);
+    }
+
+    public function user(): BelongsTo
+    {
+        return $this->belongsTo(User::class);
+    }
 }

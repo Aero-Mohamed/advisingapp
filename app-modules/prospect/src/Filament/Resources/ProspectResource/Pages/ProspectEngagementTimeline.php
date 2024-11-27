@@ -3,7 +3,7 @@
 /*
 <COPYRIGHT>
 
-    Copyright © 2022-2023, Canyon GBS LLC. All rights reserved.
+    Copyright © 2016-2024, Canyon GBS LLC. All rights reserved.
 
     Advising App™ is licensed under the Elastic License 2.0. For more details,
     see https://github.com/canyongbs/advisingapp/blob/main/LICENSE.
@@ -36,23 +36,32 @@
 
 namespace AdvisingApp\Prospect\Filament\Resources\ProspectResource\Pages;
 
+use AdvisingApp\Task\Histories\TaskHistory;
+use AdvisingApp\Alert\Histories\AlertHistory;
 use AdvisingApp\Engagement\Models\Engagement;
+use AdvisingApp\Interaction\Models\Interaction;
 use AdvisingApp\Engagement\Models\EngagementResponse;
 use AdvisingApp\Timeline\Filament\Pages\TimelinePage;
+use AdvisingApp\Prospect\Concerns\ProspectHolisticViewPage;
 use AdvisingApp\Prospect\Filament\Resources\ProspectResource;
 
 class ProspectEngagementTimeline extends TimelinePage
 {
+    use ProspectHolisticViewPage;
+
     protected static string $resource = ProspectResource::class;
 
     protected static ?string $navigationLabel = 'Timeline';
 
     public string $emptyStateMessage = 'There are no engagements to show for this prospect.';
 
-    public string $noMoreRecordsMessage = "You have reached the end of this prospects's engagement timeline.";
+    public string $noMoreRecordsMessage = "You have reached the end of this prospect's engagement timeline.";
 
     public array $modelsToTimeline = [
         Engagement::class,
         EngagementResponse::class,
+        AlertHistory::class,
+        TaskHistory::class,
+        Interaction::class,
     ];
 }

@@ -1,7 +1,7 @@
 {{--
 <COPYRIGHT>
 
-    Copyright © 2022-2023, Canyon GBS LLC. All rights reserved.
+    Copyright © 2016-2024, Canyon GBS LLC. All rights reserved.
 
     Advising App™ is licensed under the Elastic License 2.0. For more details,
     see https://github.com/canyongbs/advisingapp/blob/main/LICENSE.
@@ -39,7 +39,7 @@
             <div class="mx-auto text-center">
                 <img
                     class="mx-auto mb-3 max-w-md"
-                    src="{{ Vite::asset('resources/svg/flowbite-500.svg') }}"
+                    src="{{ Vite::asset('resources/svg/canyongbs-500.svg') }}"
                     alt="Internal Server Error"
                 >
                 <h1 class="mb-3 text-5xl font-extrabold text-primary-600 dark:text-primary-500">

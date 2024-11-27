@@ -3,7 +3,7 @@
 /*
 <COPYRIGHT>
 
-    Copyright © 2022-2023, Canyon GBS LLC. All rights reserved.
+    Copyright © 2016-2024, Canyon GBS LLC. All rights reserved.
 
     Advising App™ is licensed under the Elastic License 2.0. For more details,
     see https://github.com/canyongbs/advisingapp/blob/main/LICENSE.
@@ -41,11 +41,8 @@ use AdvisingApp\Prospect\Models\Prospect;
 use App\Filament\Widgets\ProspectGrowthChart;
 use Filament\Pages\Dashboard as BaseDashboard;
 use Symfony\Component\HttpFoundation\Response;
-use AdvisingApp\Prospect\Filament\Widgets\ProspectCount;
+use AdvisingApp\Prospect\Filament\Widgets\ProspectStats;
 use AdvisingApp\Prospect\Filament\Widgets\ProspectTasks;
-use AdvisingApp\Prospect\Filament\Widgets\ProspectAlertCount;
-use AdvisingApp\Prospect\Filament\Widgets\ProspectCaseloadCount;
-use AdvisingApp\Prospect\Filament\Widgets\ProspectSubscriptionCount;
 
 class RecruitmentCrmDashboard extends BaseDashboard
 {
@@ -53,11 +50,13 @@ class RecruitmentCrmDashboard extends BaseDashboard
 
     protected static ?int $navigationSort = 10;
 
-    protected static ?string $navigationLabel = 'Dashboard';
+    protected static ?string $navigationLabel = 'My Dashboard';
 
     protected static ?string $title = 'Recruitment CRM Dashboard';
 
     protected static string $routePath = 'recruitment-crm-dashboard';
+
+    protected static ?string $navigationIcon = '';
 
     public static function shouldRegisterNavigation(): bool
     {
@@ -78,24 +77,9 @@ class RecruitmentCrmDashboard extends BaseDashboard
     public function getWidgets(): array
     {
         return [
-            //1
-            ProspectCount::class,
-            ProspectSubscriptionCount::class,
-            ProspectAlertCount::class,
-            ProspectCaseloadCount::class,
-            //2
+            ProspectStats::class,
             ProspectGrowthChart::class,
-            //3
             ProspectTasks::class,
-        ];
-    }
-
-    public function getColumns(): int | string | array
-    {
-        return [
-            'sm' => 1,
-            'md' => 2,
-            'lg' => 4,
         ];
     }
 }

@@ -1,6 +1,6 @@
 includes:
-    - phpstan-baseline.neon
     - ./vendor/larastan/larastan/extension.neon
+    - ./vendor/tpetry/laravel-postgresql-enhanced/phpstan-extension.neon
 
 parameters:
 
@@ -19,3 +19,6 @@ parameters:
 
     # Level 9 is the highest level
     level: 1
+
+    ignoreErrors:
+        - '#Call to an undefined static method Illuminate\\Support\\Facades\\Queue::pushed\(\)#'

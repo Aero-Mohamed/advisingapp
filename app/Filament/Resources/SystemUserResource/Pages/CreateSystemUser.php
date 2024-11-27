@@ -3,7 +3,7 @@
 /*
 <COPYRIGHT>
 
-    Copyright © 2022-2023, Canyon GBS LLC. All rights reserved.
+    Copyright © 2016-2024, Canyon GBS LLC. All rights reserved.
 
     Advising App™ is licensed under the Elastic License 2.0. For more details,
     see https://github.com/canyongbs/advisingapp/blob/main/LICENSE.
@@ -45,7 +45,7 @@ class CreateSystemUser extends CreateRecord
 {
     protected static string $resource = SystemUserResource::class;
 
-    protected ?string $heading = 'Creat Programmatic (API) User';
+    protected ?string $heading = 'Create Programmatic (API) User';
 
     public function form(Form $form): Form
     {

@@ -1,18 +1,31 @@
 "Account of a person who utilizes this application."
-type User @model(class: "user") {
+type User @model(class: "App\\Models\\User") {
     "Unique primary key."
     id: UUID!
 
     "Unique email address."
-    email: String!
+    email: Email! @canRoot(ability: "viewEmail")
+
+    consent_agreements: [ConsentAgreement!]!
+        @belongsToMany(relation: "consentAgreements")
+
+    consent_agreements_count: Int @count(relation: "consentAgreements")
+
+    audits: [Audit!] @hasMany
+
+    audits_count: Int @count(relation: "audits")
 }
 
-input UserQuery {
+input UsersQuery {
     "Unique primary key."
-    id: UUID!
+    id: UUID
 
     "Users email address."
-    email: String!
+    email: Email @canUseInQuery(ability: "viewEmail")
+
+    consent_agreements: ConsentAgreementsQuery
+
+    audits: AuditsQuery
 }
 
 type UserQueries {
@@ -30,10 +43,9 @@ type UserQueries {
     ): User @find @canResolved(ability: "view")
 
     "List multiple users."
-    list(
-        "Filters by name. Accepts SQL LIKE wildcards `%` and `_`."
-        name: String @where(operator: "like")
-    ): [User!]! @paginate @canModel(ability: "viewAny")
+    list(where: UsersQuery @searchBy): [User!]!
+        @paginate
+        @canModel(ability: "viewAny")
 }
 
 extend type Query {

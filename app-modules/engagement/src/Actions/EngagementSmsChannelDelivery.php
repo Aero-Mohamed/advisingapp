@@ -3,7 +3,7 @@
 /*
 <COPYRIGHT>
 
-    Copyright © 2022-2023, Canyon GBS LLC. All rights reserved.
+    Copyright © 2016-2024, Canyon GBS LLC. All rights reserved.
 
     Advising App™ is licensed under the Elastic License 2.0. For more details,
     see https://github.com/canyongbs/advisingapp/blob/main/LICENSE.
@@ -36,16 +36,25 @@
 
 namespace AdvisingApp\Engagement\Actions;
 
+use AdvisingApp\Engagement\Enums\EngagementDeliveryStatus;
 use AdvisingApp\Engagement\Notifications\EngagementSmsNotification;
 
 class EngagementSmsChannelDelivery extends QueuedEngagementDelivery
 {
     public function deliver(): void
     {
-        $this
-            ->deliverable
-            ->engagement
-            ->recipient
-            ->notify(new EngagementSmsNotification($this->deliverable));
+        $recipient = $this->deliverable->engagement->recipient;
+
+        if (! $recipient->canRecieveSms()) {
+            $this->deliverable->update([
+                'delivery_status' => EngagementDeliveryStatus::DispatchFailed,
+                'last_delivery_attempt' => now(),
+                'delivery_response' => 'System determined recipient cannot receive SMS messages.',
+            ]);
+
+            return;
+        }
+
+        $recipient->notifyNow(new EngagementSmsNotification($this->deliverable));
     }
 }

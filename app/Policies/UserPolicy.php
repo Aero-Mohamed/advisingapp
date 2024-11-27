@@ -3,7 +3,7 @@
 /*
 <COPYRIGHT>
 
-    Copyright © 2022-2023, Canyon GBS LLC. All rights reserved.
+    Copyright © 2016-2024, Canyon GBS LLC. All rights reserved.
 
     Advising App™ is licensed under the Elastic License 2.0. For more details,
     see https://github.com/canyongbs/advisingapp/blob/main/LICENSE.
@@ -53,8 +53,16 @@ class UserPolicy
     public function view(Authenticatable $authenticatable, User $model): Response
     {
         return $authenticatable->canOrElse(
-            abilities: ['user.*.view', "user.{$model->id}.view"],
+            abilities: ["user.{$model->id}.view"],
             denyResponse: 'You do not have permission to view this user.'
+        );
+    }
+
+    public function viewEmail(Authenticatable $authenticatable): Response
+    {
+        return $authenticatable->canOrElse(
+            abilities: ['user.view-email'],
+            denyResponse: 'You do not have permission to view user email addresses.'
         );
     }
 
@@ -66,10 +74,18 @@ class UserPolicy
         );
     }
 
+    public function import(Authenticatable $authenticatable): Response
+    {
+        return $authenticatable->canOrElse(
+            abilities: 'user.import',
+            denyResponse: 'You do not have permission to import users.',
+        );
+    }
+
     public function update(Authenticatable $authenticatable, User $model): Response
     {
         return $authenticatable->canOrElse(
-            abilities: ['user.*.update', "user.{$model->id}.update"],
+            abilities: ["user.{$model->id}.update"],
             denyResponse: 'You do not have permission to update this user.'
         );
     }
@@ -77,7 +93,7 @@ class UserPolicy
     public function delete(Authenticatable $authenticatable, User $model): Response
     {
         return $authenticatable->canOrElse(
-            abilities: ['user.*.delete', "user.{$model->id}.delete"],
+            abilities: ["user.{$model->id}.delete"],
             denyResponse: 'You do not have permission to delete this user.'
         );
     }
@@ -85,7 +101,7 @@ class UserPolicy
     public function restore(Authenticatable $authenticatable, User $model): Response
     {
         return $authenticatable->canOrElse(
-            abilities: ['user.*.restore', "user.{$model->id}.restore"],
+            abilities: ["user.{$model->id}.restore"],
             denyResponse: 'You do not have permission to restore this user.'
         );
     }
@@ -93,8 +109,16 @@ class UserPolicy
     public function forceDelete(Authenticatable $authenticatable, User $model): Response
     {
         return $authenticatable->canOrElse(
-            abilities: ['user.*.force-delete', "user.{$model->id}.force-delete"],
+            abilities: ["user.{$model->id}.force-delete"],
             denyResponse: 'You do not have permission to permanently delete this user.'
+        );
+    }
+
+    public function resetMultifactorAuthentication(Authenticatable $authenticatable, User $model): Response
+    {
+        return $authenticatable->canOrElse(
+            abilities: ["user.{$model->id}.update"],
+            denyResponse: 'You do not have permission to update this user, therefore you may not reset their MFA.'
         );
     }
 }

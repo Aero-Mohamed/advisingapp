@@ -3,7 +3,7 @@
 /*
 <COPYRIGHT>
 
-    Copyright © 2022-2023, Canyon GBS LLC. All rights reserved.
+    Copyright © 2016-2024, Canyon GBS LLC. All rights reserved.
 
     Advising App™ is licensed under the Elastic License 2.0. For more details,
     see https://github.com/canyongbs/advisingapp/blob/main/LICENSE.
@@ -84,10 +84,10 @@ class ViewDivision extends ViewRecord
                             ->url(fn (Division $record) => $record->notificationSetting?->setting ? NotificationSettingResource::getUrl('edit', ['record' => $record->notificationSetting->setting]) : null),
                         TextEntry::make('header')
                             ->columnSpanFull()
-                            ->view('filament.infolists.entries.html'),
+                            ->view('filament.infolists.components.html'),
                         TextEntry::make('footer')
                             ->columnSpanFull()
-                            ->view('filament.infolists.entries.html'),
+                            ->view('filament.infolists.components.html'),
                     ])
                     ->columns(),
             ]);

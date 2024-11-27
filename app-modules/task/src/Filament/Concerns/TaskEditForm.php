@@ -3,7 +3,7 @@
 /*
 <COPYRIGHT>
 
-    Copyright © 2022-2023, Canyon GBS LLC. All rights reserved.
+    Copyright © 2016-2024, Canyon GBS LLC. All rights reserved.
 
     Advising App™ is licensed under the Elastic License 2.0. For more details,
     see https://github.com/canyongbs/advisingapp/blob/main/LICENSE.
@@ -39,8 +39,8 @@ namespace AdvisingApp\Task\Filament\Concerns;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
-use App\Filament\Fields\EducatableSelect;
 use Filament\Forms\Components\DateTimePicker;
+use App\Filament\Forms\Components\EducatableSelect;
 
 trait TaskEditForm
 {

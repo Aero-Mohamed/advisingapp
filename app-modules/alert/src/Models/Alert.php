@@ -3,7 +3,7 @@
 /*
 <COPYRIGHT>
 
-    Copyright © 2022-2023, Canyon GBS LLC. All rights reserved.
+    Copyright © 2016-2024, Canyon GBS LLC. All rights reserved.
 
     Advising App™ is licensed under the Elastic License 2.0. For more details,
     see https://github.com/canyongbs/advisingapp/blob/main/LICENSE.
@@ -37,18 +37,24 @@
 namespace AdvisingApp\Alert\Models;
 
 use Exception;
+use App\Models\User;
 use App\Models\BaseModel;
+use Illuminate\Support\Collection;
 use AdvisingApp\Alert\Enums\AlertStatus;
 use OwenIt\Auditing\Contracts\Auditable;
 use AdvisingApp\Prospect\Models\Prospect;
 use Illuminate\Database\Eloquent\Builder;
 use AdvisingApp\Alert\Enums\AlertSeverity;
+use AdvisingApp\Alert\Histories\AlertHistory;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use AdvisingApp\Campaign\Models\CampaignAction;
 use AdvisingApp\StudentDataModel\Models\Student;
 use Illuminate\Database\Eloquent\Relations\MorphTo;
+use AdvisingApp\Timeline\Models\Contracts\HasHistory;
+use Illuminate\Database\Eloquent\Relations\MorphMany;
 use AdvisingApp\Notification\Models\Contracts\Subscribable;
 use AdvisingApp\StudentDataModel\Models\Contracts\Educatable;
+use AdvisingApp\Timeline\Models\Concerns\InteractsWithHistory;
 use AdvisingApp\Audit\Models\Concerns\Auditable as AuditableTrait;
 use AdvisingApp\StudentDataModel\Models\Scopes\LicensedToEducatable;
 use AdvisingApp\StudentDataModel\Models\Concerns\BelongsToEducatable;
@@ -60,11 +66,12 @@ use AdvisingApp\Notification\Models\Contracts\CanTriggerAutoSubscription;
  *
  * @mixin IdeHelperAlert
  */
-class Alert extends BaseModel implements Auditable, CanTriggerAutoSubscription, ExecutableFromACampaignAction
+class Alert extends BaseModel implements Auditable, CanTriggerAutoSubscription, ExecutableFromACampaignAction, HasHistory
 {
     use SoftDeletes;
     use AuditableTrait;
     use BelongsToEducatable;
+    use InteractsWithHistory;
 
     protected $fillable = [
         'concern_id',
@@ -79,6 +86,23 @@ class Alert extends BaseModel implements Auditable, CanTriggerAutoSubscription, 
         'severity' => AlertSeverity::class,
         'status' => AlertStatus::class,
     ];
+
+    public function processCustomHistories(string $event, Collection $old, Collection $new, Collection $pending): void
+    {
+        if ($event !== 'updated') {
+            return;
+        }
+
+        if ($new->has('status')) {
+            $this->recordHistory('status_changed', $old->only('status'), $new->only('status'), $pending);
+            $new->forget('status');
+        }
+    }
+
+    public function histories(): MorphMany
+    {
+        return $this->morphMany(AlertHistory::class, 'subject');
+    }
 
     public function concern(): MorphTo
     {
@@ -98,16 +122,20 @@ class Alert extends BaseModel implements Auditable, CanTriggerAutoSubscription, 
     public static function executeFromCampaignAction(CampaignAction $action): bool|string
     {
         try {
-            $action->campaign->caseload->retrieveRecords()->each(function (Educatable $educatable) use ($action) {
-                Alert::create([
-                    'concern_type' => $educatable->getMorphClass(),
-                    'concern_id' => $educatable->getKey(),
-                    'description' => $action->data['description'],
-                    'severity' => $action->data['severity'],
-                    'status' => $action->data['status'],
-                    'suggested_intervention' => $action->data['suggested_intervention'],
-                ]);
-            });
+            $action
+                ->campaign
+                ->segment
+                ->retrieveRecords()
+                ->each(function (Educatable $educatable) use ($action) {
+                    Alert::create([
+                        'concern_type' => $educatable->getMorphClass(),
+                        'concern_id' => $educatable->getKey(),
+                        'description' => $action->data['description'],
+                        'severity' => $action->data['severity'],
+                        'status' => $action->data['status'],
+                        'suggested_intervention' => $action->data['suggested_intervention'],
+                    ]);
+                });
 
             return true;
         } catch (Exception $e) {
@@ -115,6 +143,11 @@ class Alert extends BaseModel implements Auditable, CanTriggerAutoSubscription, 
         }
 
         // Do we need to be able to relate campaigns/actions to the RESULT of their actions?
+    }
+
+    public function createdBy()
+    {
+        return $this->belongsTo(User::class, 'created_by');
     }
 
     protected static function booted(): void

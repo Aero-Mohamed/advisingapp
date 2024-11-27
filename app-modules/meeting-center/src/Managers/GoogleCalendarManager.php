@@ -3,7 +3,7 @@
 /*
 <COPYRIGHT>
 
-    Copyright © 2022-2023, Canyon GBS LLC. All rights reserved.
+    Copyright © 2016-2024, Canyon GBS LLC. All rights reserved.
 
     Advising App™ is licensed under the Elastic License 2.0. For more details,
     see https://github.com/canyongbs/advisingapp/blob/main/LICENSE.
@@ -51,7 +51,7 @@ use Google\Service\Calendar\CalendarListEntry;
 use AdvisingApp\MeetingCenter\Models\CalendarEvent;
 use AdvisingApp\MeetingCenter\Settings\GoogleCalendarSettings;
 use AdvisingApp\MeetingCenter\Managers\Contracts\CalendarInterface;
-use AdvisingApp\MeetingCenter\Notifications\CalendarRequiresReconnect;
+use AdvisingApp\MeetingCenter\Notifications\CalendarRequiresReconnectNotification;
 
 class GoogleCalendarManager implements CalendarInterface
 {
@@ -277,7 +277,7 @@ class GoogleCalendarManager implements CalendarInterface
                 'oauth_token_expires_at' => null,
             ]);
 
-            $calendar->user->notify(new CalendarRequiresReconnect($calendar));
+            $calendar->user->notify(new CalendarRequiresReconnectNotification($calendar));
 
             throw $e;
         }

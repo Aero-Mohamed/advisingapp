@@ -1,94 +1,82 @@
-version: '3.8'
 services:
-  php:
+  advisingapp.local:
     build:
       target: development
+      args:
+        TOTAL_QUEUE_WORKERS: '${TOTAL_QUEUE_WORKERS:-1}'
+        MULTIPLE_DEVELOPMENT_QUEUES: '${MULTIPLE_DEVELOPMENT_QUEUES:-false}'
+        USER_ID: '${SPIN_USER_ID:-9999}'
+        GROUP_ID: '${SPIN_GROUP_ID:-9999}'
     environment:
       SSL_MODE: "mixed"
-#      PUID: '${UID:-1000}'
-#      PGID: '${GID:-1000}'
+      LANDLORD_MIGRATE: '${LANDLORD_MIGRATE:-true}'
+      TENANT_MIGRATE: '${TENANT_MIGRATE:-true}'
       LARAVEL_SCHEDULER_ENABLED: '${LARAVEL_SCHEDULER_ENABLED:-true}'
       LARAVEL_QUEUE_ENABLED: '${LARAVEL_QUEUE_ENABLED:-true}'
+      LARAVEL_OCTANE_WATCH: '${LARAVEL_OCTANE_WATCH:-false}'
+      CACHE_MODULES: '${CACHE_MODULES:-false}'
+      CACHE_CONFIG: '${CACHE_CONFIG:-false}'
+      CACHE_ROUTES: '${CACHE_ROUTES:-false}'
+      CACHE_VIEWS: '${CACHE_VIEWS:-false}'
+      CACHE_EVENTS: '${CACHE_EVENTS:-false}'
+      CACHE_ICONS: '${CACHE_ICONS:-false}'
+      CACHE_FILAMENT_COMPONENTS: '${CACHE_FILAMENT_COMPONENTS:-false}'
+      PUID: '${SPIN_USER_ID:-9999}'
+      PGID: '${SPIN_GROUP_ID:-9999}'
+      SQS_QUEUE: '${SQS_QUEUE:-default}'
+      LANDLORD_SQS_QUEUE: '${LANDLORD_SQS_QUEUE:-landlord}'
+      OUTBOUND_COMMUNICATION_QUEUE: '${OUTBOUND_COMMUNICATION_QUEUE:-outbound-communication}'
+      AUDIT_QUEUE_QUEUE: '${AUDIT_QUEUE_QUEUE:-audit}'
+      MEETING_CENTER_QUEUE: '${MEETING_CENTER_QUEUE:-meeting-center}'
+      IMPORT_EXPORT_QUEUE: '${IMPORT_EXPORT_QUEUE:-import-export}'
+      FIX_PERMISSIONS: '${FIX_PERMISSIONS:-true}'
     labels:
-      - dev.orbstack.domains=*.advisingapp.local
+      - "traefik.enable=true"
+      - "traefik.http.routers.advisingapp-app.rule=HostRegexp(`advisingapp.local`, `{subdomain:[a-z0-9]+}.advisingapp.local`)"
+      - "traefik.http.routers.advisingapp-app.entrypoints=websecure"
+      - "traefik.http.routers.advisingapp-app.tls=true"
+      - "traefik.http.services.advisingapp-app.loadbalancer.server.port=443"
+      - "traefik.http.services.advisingapp-app.loadbalancer.server.scheme=https"
     extra_hosts:
       - 'host.docker.internal:host-gateway'
-    ports:
-      - '${APP_PORT:-80}:80'
-      - '${APP_HTTPS_PORT:-443}:443'
-      - '${VITE_PORT:-5173}:${VITE_PORT:-5173}'
     volumes:
       - '.:/var/www/html'
     networks:
-      - development
+      cgbs-development:
+        ipv4_address: 172.16.1.3
+    dns:
+      - 172.16.1.1
     depends_on:
-      - redis
-      - meilisearch
-      - minio
-      - mailpit
-      - redshift
-      - pgsql
-  redis:
+      - advisingapp-redis
+      - advisingapp-mailpit
+      - advisingapp-pgsql
+
+  advisingapp-redis:
     image: 'redis:alpine'
     ports:
-      - '${FORWARD_REDIS_PORT:-6379}:6379'
+      - '${FORWARD_REDIS_PORT:-63791}:6379'
     volumes:
       - 'advisingapp-redis:/data'
     networks:
-      - development
+      - cgbs-development
     healthcheck:
-      test:
-        - CMD
-        - redis-cli
-        - ping
+      test: [ "CMD", "redis-cli", "ping" ]
       retries: 3
       timeout: 5s
-  meilisearch:
-    image: 'getmeili/meilisearch:v1.2.0'
-    ports:
-      - '${FORWARD_MEILISEARCH_PORT:-7700}:7700'
-    volumes:
-      - 'advisingapp-meilisearch:/meili_data'
-    networks:
-      - development
-    healthcheck:
-      test:
-        - CMD
-        - wget
-        - '--no-verbose'
-        - '--spider'
-        - 'http://localhost:7700/health'
-      retries: 3
-      timeout: 5s
-  minio:
-    image: 'minio/minio:RELEASE.2023-07-07T07-13-57Z'
-    ports:
-      - '${FORWARD_MINIO_PORT:-9000}:9000'
-      - '${FORWARD_MINIO_CONSOLE_PORT:-8900}:8900'
-    environment:
-      MINIO_ROOT_USER: advisingapp
-      MINIO_ROOT_PASSWORD: password
-    volumes:
-      - 'advisingapp-minio:/data/minio'
-    networks:
-      - development
-    command: 'minio server /data/minio --console-address ":8900"'
-    healthcheck:
-      test:
-        - CMD
-        - curl
-        - '-f'
-        - 'http://localhost:9000/minio/health/live'
-      retries: 3
-      timeout: 5s
-  mailpit:
+
+  advisingapp-mailpit:
     image: 'axllent/mailpit:latest'
-    ports:
-      - '${FORWARD_MAILPIT_PORT:-1025}:1025'
-      - '${FORWARD_MAILPIT_DASHBOARD_PORT:-8025}:8025'
     networks:
-      - development
-  pgsql:
+      - cgbs-development
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.advisingapp-mailpit.rule=Host(`mail.tools.advisingapp.local`)"
+      - "traefik.http.routers.advisingapp-mailpit.entrypoints=websecure"
+      - "traefik.http.routers.advisingapp-mailpit.tls=true"
+      - "traefik.http.services.advisingapp-mailpit.loadbalancer.server.port=8025"
+      - "traefik.http.services.advisingapp-mailpit.loadbalancer.server.scheme=http"
+
+  advisingapp-pgsql:
     image: 'postgres:15'
     ports:
       - '${FORWARD_DB_PORT:-5432}:5432'
@@ -101,54 +89,18 @@ services:
       - 'advisingapp-pgsql:/var/lib/postgresql/data'
       - './docker/pgsql/create-testing-database.sql:/docker-entrypoint-initdb.d/10-create-testing-database.sql'
     networks:
-      - development
+      - cgbs-development
     healthcheck:
-      test:
-        - CMD
-        - pg_isready
-        - '-q'
-        - '-d'
-        - '${DB_DATABASE}'
-        - '-U'
-        - '${DB_USERNAME}'
+      test: [ "CMD", "pg_isready", "-q", "-d", "${DB_DATABASE}", "-U", "${DB_USERNAME}" ]
       retries: 3
       timeout: 5s
-  redshift:
-    image: 'postgres:15'
-    ports:
-      - '${FORWARD_SIS_DB_PORT:-5433}:5433'
-    environment:
-      PGPASSWORD: '${SIS_DB_PASSWORD:-secret}'
-      POSTGRES_DB: '${SIS_DB_DATABASE}'
-      POSTGRES_USER: '${SIS_DB_USERNAME}'
-      POSTGRES_PASSWORD: '${SIS_DB_PASSWORD:-secret}'
-    volumes:
-      - 'advisingapp-redshift:/var/lib/postgresql/data'
-      - './docker/pgsql/create-testing-sis-database.sql:/docker-entrypoint-initdb.d/10-create-testing-database.sql'
-    command: -p 5433
-    networks:
-      - development
-    healthcheck:
-      test:
-        - CMD
-        - pg_isready
-        - '-q'
-        - '-d'
-        - '${SIS_DB_DATABASE}'
-        - '-U'
-        - '${SIS_DB_USERNAME}'
-      retries: 3
-      timeout: 5s
+
 networks:
-  development:
+  cgbs-development:
+    external: true
+
 volumes:
   advisingapp-redis:
-    driver: local
-  advisingapp-meilisearch:
-    driver: local
-  advisingapp-minio:
-    driver: local
-  advisingapp-redshift:
     driver: local
   advisingapp-pgsql:
     driver: local

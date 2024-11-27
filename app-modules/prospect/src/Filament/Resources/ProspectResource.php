@@ -3,7 +3,7 @@
 /*
 <COPYRIGHT>
 
-    Copyright © 2022-2023, Canyon GBS LLC. All rights reserved.
+    Copyright © 2016-2024, Canyon GBS LLC. All rights reserved.
 
     Advising App™ is licensed under the Elastic License 2.0. For more details,
     see https://github.com/canyongbs/advisingapp/blob/main/LICENSE.
@@ -40,6 +40,8 @@ use Filament\Resources\Resource;
 use Filament\Resources\Pages\Page;
 use Illuminate\Database\Eloquent\Model;
 use AdvisingApp\Prospect\Models\Prospect;
+use Illuminate\Database\Eloquent\Builder;
+use App\Filament\Resources\Concerns\HasGlobalSearchResultScoring;
 use AdvisingApp\Prospect\Filament\Resources\ProspectResource\Pages\EditProspect;
 use AdvisingApp\Prospect\Filament\Resources\ProspectResource\Pages\ViewProspect;
 use AdvisingApp\Prospect\Filament\Resources\ProspectResource\Pages\ListProspects;
@@ -49,8 +51,9 @@ use AdvisingApp\Prospect\Filament\Resources\ProspectResource\Pages\ManageProspec
 use AdvisingApp\Prospect\Filament\Resources\ProspectResource\Pages\ManageProspectAlerts;
 use AdvisingApp\Prospect\Filament\Resources\ProspectResource\Pages\ManageProspectEvents;
 use AdvisingApp\Prospect\Filament\Resources\ProspectResource\Pages\ManageProspectCareTeam;
+use AdvisingApp\Prospect\Filament\Resources\ProspectResource\Pages\ManageProspectPrograms;
+use AdvisingApp\Prospect\Filament\Resources\ProspectResource\Pages\ProspectCaseManagement;
 use AdvisingApp\Prospect\Filament\Resources\ProspectResource\Pages\ManageProspectEngagement;
-use AdvisingApp\Prospect\Filament\Resources\ProspectResource\Pages\ProspectServiceManagement;
 use AdvisingApp\Prospect\Filament\Resources\ProspectResource\Pages\ManageProspectInteractions;
 use AdvisingApp\Prospect\Filament\Resources\ProspectResource\Pages\ProspectEngagementTimeline;
 use AdvisingApp\Prospect\Filament\Resources\ProspectResource\Pages\ManageProspectSubscriptions;
@@ -59,13 +62,13 @@ use AdvisingApp\Prospect\Filament\Resources\ProspectResource\Pages\ManageProspec
 
 class ProspectResource extends Resource
 {
+    use HasGlobalSearchResultScoring;
+
     protected static ?string $model = Prospect::class;
 
-    protected static ?string $navigationIcon = 'heroicon-o-users';
+    protected static ?int $navigationSort = 20;
 
     protected static ?string $navigationGroup = 'Recruitment CRM';
-
-    protected static ?int $navigationSort = 20;
 
     protected static ?string $recordTitleAttribute = 'full_name';
 
@@ -84,14 +87,24 @@ class ProspectResource extends Resource
             ManageProspectCareTeam::class,
             ManageProspectFormSubmissions::class,
             ManageProspectApplicationSubmissions::class,
-            ProspectServiceManagement::class,
+            ProspectCaseManagement::class,
             ManageProspectEvents::class,
+            ManageProspectPrograms::class,
+        ]);
+    }
+
+    public static function modifyGlobalSearchQuery(Builder $query, string $search): void
+    {
+        static::scoreGlobalSearchResults($query, $search, [
+            'full_name' => 100,
+            'email' => 75,
+            'email_2' => 75,
         ]);
     }
 
     public static function getGloballySearchableAttributes(): array
     {
-        return ['full_name', 'email', 'email_2', 'mobile', 'phone'];
+        return ['full_name', 'email', 'email_2', 'mobile', 'phone', 'preferred'];
     }
 
     public static function getGlobalSearchResultDetails(Model $record): array
@@ -101,7 +114,13 @@ class ProspectResource extends Resource
             'Other ID' => $record->otherid,
             'Email Address' => collect([$record->email, $record->email_id])->filter()->implode(', '),
             'Phone' => collect([$record->mobile, $record->phone])->filter()->implode(', '),
+            'Preferred Name' => $record->preferred,
         ], fn (mixed $value): bool => filled($value));
+    }
+
+    public static function getGlobalSearchResultUrl(Model $record): string
+    {
+        return ProspectResource::getUrl('view', ['record' => $record]);
     }
 
     public static function getPages(): array
@@ -121,8 +140,9 @@ class ProspectResource extends Resource
             'view' => ViewProspect::route('/{record}'),
             'timeline' => ProspectEngagementTimeline::route('/{record}/timeline'),
             'care-team' => ManageProspectCareTeam::route('/{record}/care-team'),
-            'service-management' => ProspectServiceManagement::route('/{record}/service-management'),
+            'case-management' => ProspectCaseManagement::route('/{record}/case-management'),
             'events' => ManageProspectEvents::route('/{record}/events'),
+            'programs' => ManageProspectPrograms::route('/{record}/programs'),
         ];
     }
 }

@@ -3,7 +3,7 @@
 /*
 <COPYRIGHT>
 
-    Copyright © 2022-2023, Canyon GBS LLC. All rights reserved.
+    Copyright © 2016-2024, Canyon GBS LLC. All rights reserved.
 
     Advising App™ is licensed under the Elastic License 2.0. For more details,
     see https://github.com/canyongbs/advisingapp/blob/main/LICENSE.
@@ -48,15 +48,17 @@ use FilamentTiptapEditor\TiptapEditor;
 use Filament\Forms\Components\Checkbox;
 use Filament\Forms\Components\Fieldset;
 use Filament\Forms\Components\TextInput;
+use Filament\Notifications\Notification;
 use Filament\Resources\Pages\EditRecord;
-use App\Filament\Fields\EducatableSelect;
+use AdvisingApp\Prospect\Models\Prospect;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Query\Expression;
-use FilamentTiptapEditor\Enums\TiptapOutput;
 use AdvisingApp\Engagement\Models\Engagement;
 use Filament\Forms\Components\Actions\Action;
 use Filament\Forms\Components\DateTimePicker;
 use AdvisingApp\Engagement\Models\EmailTemplate;
+use AdvisingApp\StudentDataModel\Models\Student;
+use App\Filament\Forms\Components\EducatableSelect;
 use AdvisingApp\Engagement\Enums\EngagementDeliveryMethod;
 use AdvisingApp\Engagement\Filament\Resources\EngagementResource;
 use AdvisingApp\Engagement\Filament\Resources\EngagementResource\Fields\EngagementSmsBodyField;
@@ -77,15 +79,12 @@ class EditEngagement extends EditRecord
                     ->visible(fn (Engagement $record): bool => $record->deliverable->channel === EngagementDeliveryMethod::Email),
                 TiptapEditor::make('body')
                     ->disk('s3-public')
-                    ->visibility('public')
-                    ->directory('editor-images/engagements')
                     ->label('Body')
                     ->mergeTags([
                         'student full name',
                         'student email',
                     ])
                     ->profile('email')
-                    ->output(TiptapOutput::Json)
                     ->required()
                     ->hintAction(fn (TiptapEditor $component) => Action::make('loadEmailTemplate')
                         ->form([
@@ -134,7 +133,9 @@ class EditEngagement extends EditRecord
                                 return;
                             }
 
-                            $component->state($template->content);
+                            $component->state(
+                                $component->generateImageUrls($template->content),
+                            );
                         }))
                     ->visible(fn (Engagement $record): bool => $record->deliverable->channel === EngagementDeliveryMethod::Email)
                     ->showMergeTagsInBlocksPanel($form->getLivewire() instanceof Page)
@@ -154,6 +155,28 @@ class EditEngagement extends EditRecord
                             ->visible(fn (callable $get) => $get('send_later')),
                     ]),
             ]);
+    }
+
+    protected function beforeSave(): void
+    {
+        $record = null;
+
+        $data = $this->form->getState();
+
+        if ($data['recipient_type'] == app(Prospect::class)->getMorphClass()) {
+            $record = Prospect::find($data['recipient_id']);
+        } elseif ($data['recipient_type'] == app(Student::class)->getMorphClass()) {
+            $record = Student::find($data['recipient_id']);
+        }
+
+        if ($record && ! $record->canRecieveSms()) {
+            Notification::make()
+                ->title(ucfirst($data['recipient_type']) . ' does not have mobile number.')
+                ->danger()
+                ->send();
+
+            $this->halt();
+        }
     }
 
     protected function getHeaderActions(): array

@@ -3,7 +3,7 @@
 /*
 <COPYRIGHT>
 
-    Copyright © 2022-2023, Canyon GBS LLC. All rights reserved.
+    Copyright © 2016-2024, Canyon GBS LLC. All rights reserved.
 
     Advising App™ is licensed under the Elastic License 2.0. For more details,
     see https://github.com/canyongbs/advisingapp/blob/main/LICENSE.
@@ -37,14 +37,14 @@
 namespace AdvisingApp\Authorization\Models;
 
 use App\Models\SystemUser;
-use Illuminate\Support\Collection;
 use OwenIt\Auditing\Contracts\Auditable;
 use Illuminate\Contracts\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Spatie\Permission\Models\Permission as SpatiePermission;
 use Spatie\Multitenancy\Models\Concerns\UsesTenantConnection;
-use AdvisingApp\Authorization\Models\Concerns\DefinesPermissions;
 use AdvisingApp\Audit\Models\Concerns\Auditable as AuditableTrait;
 
 /**
@@ -53,24 +53,18 @@ use AdvisingApp\Audit\Models\Concerns\Auditable as AuditableTrait;
 class Permission extends SpatiePermission implements Auditable
 {
     use HasFactory;
-    use DefinesPermissions;
     use HasUuids;
     use AuditableTrait;
     use UsesTenantConnection;
 
-    public function getWebPermissions(): Collection
-    {
-        return collect(['view-any', '*.view']);
-    }
-
-    public function getApiPermissions(): Collection
-    {
-        return collect([]);
-    }
-
-    public function systemUsers()
+    public function systemUsers(): BelongsToMany
     {
         return $this->belongsToMany(SystemUser::class);
+    }
+
+    public function group(): BelongsTo
+    {
+        return $this->belongsTo(PermissionGroup::class, 'group_id');
     }
 
     public function scopeApi(Builder $query): void

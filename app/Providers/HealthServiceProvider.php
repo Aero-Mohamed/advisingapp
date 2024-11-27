@@ -3,7 +3,7 @@
 /*
 <COPYRIGHT>
 
-    Copyright © 2022-2023, Canyon GBS LLC. All rights reserved.
+    Copyright © 2016-2024, Canyon GBS LLC. All rights reserved.
 
     Advising App™ is licensed under the Elastic License 2.0. For more details,
     see https://github.com/canyongbs/advisingapp/blob/main/LICENSE.
@@ -41,12 +41,12 @@ use Illuminate\Support\ServiceProvider;
 use Spatie\Health\Checks\Checks\PingCheck;
 use Spatie\Health\Checks\Checks\CacheCheck;
 use Spatie\Health\Checks\Checks\QueueCheck;
+use Spatie\Health\Checks\Checks\RedisCheck;
 use Spatie\Health\Checks\Checks\DatabaseCheck;
 use Spatie\Health\Checks\Checks\ScheduleCheck;
 use Spatie\Health\Checks\Checks\DebugModeCheck;
 use Spatie\Health\Checks\Checks\EnvironmentCheck;
 use Spatie\Health\Checks\Checks\OptimizedAppCheck;
-use Spatie\Health\Checks\Checks\UsedDiskSpaceCheck;
 
 class HealthServiceProvider extends ServiceProvider
 {
@@ -60,27 +60,29 @@ class HealthServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        $local = app()->isLocal() && str(config('app.url'))->contains(['localhost', '.local']);
+        $parsed_url = parse_url(config('app.url'));
+
         Health::checks([
             CacheCheck::new(),
-            OptimizedAppCheck::new(),
+            OptimizedAppCheck::new()
+                ->unless($local),
             DatabaseCheck::new()
                 ->name('tenant')
                 ->connectionName(config('multitenancy.tenant_database_connection_name'))
                 ->label('PostgreSQL Database'),
-            DatabaseCheck::new()
-                ->name('sis')
-                ->label('SIS Database')
-                ->connectionName('sis'),
-            DebugModeCheck::new(),
-            EnvironmentCheck::new(),
+            DebugModeCheck::new()
+                ->unless($local),
+            EnvironmentCheck::new()
+                ->unless($local || app()->environment('staging')),
             // cloudflare dns
             PingCheck::new()
-                ->url('1.1.1.1')
+                ->url($parsed_url['host'])
                 ->timeout(2),
             QueueCheck::new(),
-            // RedisCheck::new(),
-            ScheduleCheck::new(),
-            UsedDiskSpaceCheck::new(),
+            RedisCheck::new(),
+            ScheduleCheck::new()
+                ->heartbeatMaxAgeInMinutes(2),
         ]);
     }
 }

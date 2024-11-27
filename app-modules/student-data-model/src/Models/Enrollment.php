@@ -3,7 +3,7 @@
 /*
 <COPYRIGHT>
 
-    Copyright © 2022-2023, Canyon GBS LLC. All rights reserved.
+    Copyright © 2016-2024, Canyon GBS LLC. All rights reserved.
 
     Advising App™ is licensed under the Elastic License 2.0. For more details,
     see https://github.com/canyongbs/advisingapp/blob/main/LICENSE.
@@ -36,23 +36,29 @@
 
 namespace AdvisingApp\StudentDataModel\Models;
 
-use Illuminate\Support\Collection;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Spatie\Multitenancy\Models\Concerns\UsesTenantConnection;
-use AdvisingApp\Authorization\Models\Concerns\DefinesPermissions;
 
 /**
  * @mixin IdeHelperEnrollment
  */
 class Enrollment extends Model
 {
+    use SoftDeletes;
     use HasFactory;
-    use DefinesPermissions;
     use UsesTenantConnection;
 
-    // TODO: Need to revisit whether or not this should be the primary key, just using it for now since there is nothing else
-    protected $primaryKey = 'sisid';
+    protected $table = 'enrollments';
+
+    /**
+     * This Model has a primary key that is auto generated as a v4 UUID by Postgres.
+     * We do so so that we can do things like view, edit, and delete a specific record in the UI / API.
+     * This ID should NEVER be used for relationships as these records do not belong to our system, our reset during syncs, and are not truly unique.
+     */
+    protected $primaryKey = 'id';
 
     public $incrementing = false;
 
@@ -60,24 +66,33 @@ class Enrollment extends Model
 
     public $timestamps = false;
 
-    public function getWebPermissions(): Collection
-    {
-        return collect(['view-any', '*.view']);
-    }
+    protected $fillable = [
+        'sisid',
+        'division',
+        'class_nbr',
+        'crse_grade_off',
+        'unt_taken',
+        'unt_earned',
+        'last_upd_dt_stmp',
+        'section',
+        'name',
+        'department',
+        'faculty_name',
+        'faculty_email',
+        'semester_code',
+        'semester_name',
+        'start_date',
+        'end_date',
+    ];
 
-    public function getApiPermissions(): Collection
-    {
-        return collect([]);
-    }
+    protected $casts = [
+        'last_upd_dt_stmp' => 'datetime',
+        'start_date' => 'datetime',
+        'end_date' => 'datetime',
+    ];
 
-    public function getTable()
+    public function student(): BelongsTo
     {
-        if ($this->table) {
-            return $this->table;
-        }
-
-        return config('database.adm_materialized_views_enabled')
-            ? 'enrollments_local'
-            : 'enrollments';
+        return $this->belongsTo(Student::class, 'sisid', 'sisid');
     }
 }

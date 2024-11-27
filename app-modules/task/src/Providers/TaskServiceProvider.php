@@ -3,7 +3,7 @@
 /*
 <COPYRIGHT>
 
-    Copyright © 2022-2023, Canyon GBS LLC. All rights reserved.
+    Copyright © 2016-2024, Canyon GBS LLC. All rights reserved.
 
     Advising App™ is licensed under the Elastic License 2.0. For more details,
     see https://github.com/canyongbs/advisingapp/blob/main/LICENSE.
@@ -37,72 +37,34 @@
 namespace AdvisingApp\Task\Providers;
 
 use Filament\Panel;
-use Filament\Support\Assets\Js;
 use AdvisingApp\Task\TaskPlugin;
 use AdvisingApp\Task\Models\Task;
 use Illuminate\Support\ServiceProvider;
-use Filament\Support\Facades\FilamentAsset;
+use AdvisingApp\Task\Histories\TaskHistory;
 use AdvisingApp\Task\Observers\TaskObserver;
+use AdvisingApp\Task\Observers\TaskHistoryObserver;
 use Illuminate\Database\Eloquent\Relations\Relation;
-use AdvisingApp\Authorization\AuthorizationRoleRegistry;
-use AdvisingApp\Authorization\AuthorizationPermissionRegistry;
 
 class TaskServiceProvider extends ServiceProvider
 {
     public function register(): void
     {
-        Panel::configureUsing(fn (Panel $panel) => $panel->plugin(new TaskPlugin()));
+        Panel::configureUsing(fn (Panel $panel) => ($panel->getId() !== 'admin') || $panel->plugin(new TaskPlugin()));
     }
 
     public function boot(): void
     {
-        Relation::morphMap(
-            [
-                'task' => Task::class,
-            ]
-        );
-
-        $this->registerRolesAndPermissions();
+        Relation::morphMap([
+            'task' => Task::class,
+            'task_history' => TaskHistory::class,
+        ]);
 
         $this->registerObservers();
-
-        $this->registerAssets();
-    }
-
-    protected function registerRolesAndPermissions()
-    {
-        $permissionRegistry = app(AuthorizationPermissionRegistry::class);
-
-        $permissionRegistry->registerApiPermissions(
-            module: 'task',
-            path: 'permissions/api/custom'
-        );
-
-        $permissionRegistry->registerWebPermissions(
-            module: 'task',
-            path: 'permissions/web/custom'
-        );
-
-        $roleRegistry = app(AuthorizationRoleRegistry::class);
-
-        $roleRegistry->registerApiRoles(
-            module: 'task',
-            path: 'roles/api'
-        );
-
-        $roleRegistry->registerWebRoles(
-            module: 'task',
-            path: 'roles/web'
-        );
     }
 
     protected function registerObservers(): void
     {
         Task::observe(TaskObserver::class);
-    }
-
-    protected function registerAssets(): void
-    {
-        FilamentAsset::register([Js::make('kanban', __DIR__ . '/../../resources/js/kanban.js')->loadedOnRequest()], 'canyon-gbs/task');
+        TaskHistory::observe(TaskHistoryObserver::class);
     }
 }

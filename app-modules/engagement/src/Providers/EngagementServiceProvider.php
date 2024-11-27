@@ -3,7 +3,7 @@
 /*
 <COPYRIGHT>
 
-    Copyright © 2022-2023, Canyon GBS LLC. All rights reserved.
+    Copyright © 2016-2024, Canyon GBS LLC. All rights reserved.
 
     Advising App™ is licensed under the Elastic License 2.0. For more details,
     see https://github.com/canyongbs/advisingapp/blob/main/LICENSE.
@@ -38,8 +38,9 @@ namespace AdvisingApp\Engagement\Providers;
 
 use Filament\Panel;
 use App\Models\Tenant;
+use App\Concerns\ImplementsGraphQL;
+use App\Models\Scopes\SetupIsComplete;
 use Illuminate\Support\ServiceProvider;
-use Spatie\Multitenancy\TenantCollection;
 use Illuminate\Console\Scheduling\Schedule;
 use AdvisingApp\Engagement\EngagementPlugin;
 use AdvisingApp\Engagement\Models\Engagement;
@@ -50,21 +51,23 @@ use AdvisingApp\Engagement\Models\EngagementBatch;
 use Illuminate\Database\Eloquent\Relations\Relation;
 use AdvisingApp\Engagement\Models\EngagementResponse;
 use AdvisingApp\Engagement\Actions\DeliverEngagements;
-use AdvisingApp\Authorization\AuthorizationRoleRegistry;
 use AdvisingApp\Engagement\Models\EngagementDeliverable;
 use AdvisingApp\Engagement\Observers\EngagementObserver;
 use AdvisingApp\Engagement\Models\EngagementFileEntities;
 use AdvisingApp\Engagement\Observers\SmsTemplateObserver;
+use AdvisingApp\Engagement\Enums\EngagementDeliveryMethod;
+use AdvisingApp\Engagement\Enums\EngagementDeliveryStatus;
 use AdvisingApp\Engagement\Observers\EmailTemplateObserver;
 use AdvisingApp\Engagement\Observers\EngagementBatchObserver;
-use AdvisingApp\Authorization\AuthorizationPermissionRegistry;
 use AdvisingApp\Engagement\Observers\EngagementFileEntitiesObserver;
 
 class EngagementServiceProvider extends ServiceProvider
 {
+    use ImplementsGraphQL;
+
     public function register(): void
     {
-        Panel::configureUsing(fn (Panel $panel) => $panel->plugin(new EngagementPlugin()));
+        Panel::configureUsing(fn (Panel $panel) => ($panel->getId() !== 'admin') || $panel->plugin(new EngagementPlugin()));
     }
 
     public function boot(): void
@@ -81,24 +84,24 @@ class EngagementServiceProvider extends ServiceProvider
 
         $this->callAfterResolving(Schedule::class, function (Schedule $schedule) {
             $schedule->call(function () {
-                /** @var TenantCollection $tenants */
-                $tenants = Tenant::cursor();
-
-                $tenants->each(function (Tenant $tenant) {
-                    $tenant->execute(function () {
-                        dispatch(new DeliverEngagements());
+                Tenant::query()
+                    ->tap(new SetupIsComplete())
+                    ->cursor()
+                    ->each(function (Tenant $tenant) {
+                        $tenant->execute(function () {
+                            dispatch(new DeliverEngagements());
+                        });
                     });
-                });
             })
                 ->everyMinute()
-                ->name('DeliverEngagements')
+                ->name('DeliverEngagementsSchedule')
                 ->onOneServer()
                 ->withoutOverlapping();
         });
 
         $this->registerObservers();
 
-        $this->registerRolesAndPermissions();
+        $this->registerGraphQL();
     }
 
     public function registerObservers(): void
@@ -110,30 +113,11 @@ class EngagementServiceProvider extends ServiceProvider
         SmsTemplate::observe(SmsTemplateObserver::class);
     }
 
-    protected function registerRolesAndPermissions()
+    protected function registerGraphQL(): void
     {
-        $permissionRegistry = app(AuthorizationPermissionRegistry::class);
+        $this->discoverSchema(__DIR__ . '/../../graphql/*');
 
-        $permissionRegistry->registerApiPermissions(
-            module: 'engagement',
-            path: 'permissions/api/custom'
-        );
-
-        $permissionRegistry->registerWebPermissions(
-            module: 'engagement',
-            path: 'permissions/web/custom'
-        );
-
-        $roleRegistry = app(AuthorizationRoleRegistry::class);
-
-        $roleRegistry->registerApiRoles(
-            module: 'engagement',
-            path: 'roles/api'
-        );
-
-        $roleRegistry->registerWebRoles(
-            module: 'engagement',
-            path: 'roles/web'
-        );
+        $this->registerEnum(EngagementDeliveryMethod::class);
+        $this->registerEnum(EngagementDeliveryStatus::class);
     }
 }

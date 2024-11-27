@@ -3,7 +3,7 @@
 /*
 <COPYRIGHT>
 
-    Copyright © 2022-2023, Canyon GBS LLC. All rights reserved.
+    Copyright © 2016-2024, Canyon GBS LLC. All rights reserved.
 
     Advising App™ is licensed under the Elastic License 2.0. For more details,
     see https://github.com/canyongbs/advisingapp/blob/main/LICENSE.
@@ -45,16 +45,20 @@ use AdvisingApp\Task\Enums\TaskStatus;
 use OwenIt\Auditing\Contracts\Auditable;
 use AdvisingApp\Prospect\Models\Prospect;
 use Illuminate\Database\Eloquent\Builder;
+use AdvisingApp\Task\Histories\TaskHistory;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use AdvisingApp\Campaign\Models\CampaignAction;
 use AdvisingApp\StudentDataModel\Models\Student;
 use Bvtterfly\ModelStateMachine\HasStateMachine;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Relations\MorphTo;
+use AdvisingApp\Timeline\Models\Contracts\HasHistory;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\MorphMany;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use AdvisingApp\Notification\Models\Contracts\Subscribable;
 use AdvisingApp\StudentDataModel\Models\Contracts\Educatable;
+use AdvisingApp\Timeline\Models\Concerns\InteractsWithHistory;
 use AdvisingApp\Audit\Models\Concerns\Auditable as AuditableTrait;
 use AdvisingApp\StudentDataModel\Models\Scopes\LicensedToEducatable;
 use AdvisingApp\StudentDataModel\Models\Concerns\BelongsToEducatable;
@@ -66,7 +70,7 @@ use AdvisingApp\Notification\Models\Contracts\CanTriggerAutoSubscription;
  *
  * @mixin IdeHelperTask
  */
-class Task extends BaseModel implements Auditable, CanTriggerAutoSubscription, ExecutableFromACampaignAction
+class Task extends BaseModel implements Auditable, CanTriggerAutoSubscription, ExecutableFromACampaignAction, HasHistory
 {
     use BelongsToEducatable;
     use HasFactory;
@@ -74,6 +78,7 @@ class Task extends BaseModel implements Auditable, CanTriggerAutoSubscription, E
     use AuditableTrait;
     use SoftDeletes;
     use HasStateMachine;
+    use InteractsWithHistory;
 
     protected $fillable = [
         'title',
@@ -88,9 +93,21 @@ class Task extends BaseModel implements Auditable, CanTriggerAutoSubscription, E
         'due' => 'datetime',
     ];
 
-    public function getWebPermissions(): Collection
+    public function processCustomHistories(string $event, Collection $old, Collection $new, Collection $pending): void
     {
-        return collect(['import', ...$this->webPermissions()]);
+        if ($event !== 'updated') {
+            return;
+        }
+
+        if ($new->has('status')) {
+            $this->recordHistory('status_changed', $old->only('status'), $new->only('status'), $pending);
+            $new->forget('status');
+        }
+
+        if ($new->has('assigned_to')) {
+            $this->recordHistory('reassigned', $old->only('assigned_to'), $new->only('assigned_to'), $pending);
+            $new->forget('assigned_to');
+        }
     }
 
     public function getStateMachineFields(): array
@@ -116,6 +133,11 @@ class Task extends BaseModel implements Auditable, CanTriggerAutoSubscription, E
         return $this->belongsTo(User::class, 'created_by');
     }
 
+    public function histories(): MorphMany
+    {
+        return $this->morphMany(TaskHistory::class, 'subject');
+    }
+
     public function getSubscribable(): ?Subscribable
     {
         return $this->concern instanceof Subscribable ? $this->concern : null;
@@ -139,7 +161,7 @@ class Task extends BaseModel implements Auditable, CanTriggerAutoSubscription, E
 
             $action
                 ->campaign
-                ->caseload
+                ->segment
                 ->retrieveRecords()
                 ->each(function (Educatable $educatable) use ($action) {
                     $task = new Task([

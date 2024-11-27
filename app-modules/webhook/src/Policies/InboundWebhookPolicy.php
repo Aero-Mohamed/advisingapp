@@ -3,7 +3,7 @@
 /*
 <COPYRIGHT>
 
-    Copyright © 2022-2023, Canyon GBS LLC. All rights reserved.
+    Copyright © 2016-2024, Canyon GBS LLC. All rights reserved.
 
     Advising App™ is licensed under the Elastic License 2.0. For more details,
     see https://github.com/canyongbs/advisingapp/blob/main/LICENSE.
@@ -44,18 +44,20 @@ class InboundWebhookPolicy
 {
     public function viewAny(Authenticatable $authenticatable): Response
     {
-        return $authenticatable->canOrElse(
-            abilities: 'inbound_webhook.view-any',
-            denyResponse: 'You do not have permission to view inbound webhooks.'
-        );
+        if (! $authenticatable->hasRole(Authenticatable::SUPER_ADMIN_ROLE)) {
+            return Response::deny('You do not have permission to view inbound webhooks.');
+        }
+
+        return Response::allow();
     }
 
     public function view(Authenticatable $authenticatable, InboundWebhook $inboundWebhook): Response
     {
-        return $authenticatable->canOrElse(
-            abilities: ['inbound_webhook.*.view', "inbound_webhook.{$inboundWebhook->id}.view"],
-            denyResponse: 'You do not have permission to view this inbound webhook.'
-        );
+        if (! $authenticatable->hasRole(Authenticatable::SUPER_ADMIN_ROLE)) {
+            return Response::deny('You do not have permission to view this inbound webhook.');
+        }
+
+        return Response::allow();
     }
 
     public function create(Authenticatable $authenticatable): Response

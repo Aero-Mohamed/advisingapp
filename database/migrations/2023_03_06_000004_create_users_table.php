@@ -3,7 +3,7 @@
 /*
 <COPYRIGHT>
 
-    Copyright © 2022-2023, Canyon GBS LLC. All rights reserved.
+    Copyright © 2016-2024, Canyon GBS LLC. All rights reserved.
 
     Advising App™ is licensed under the Elastic License 2.0. For more details,
     see https://github.com/canyongbs/advisingapp/blob/main/LICENSE.
@@ -73,6 +73,7 @@ class CreateUsersTable extends Migration
             $table->boolean('working_hours_are_enabled')->default(false);
             $table->boolean('are_working_hours_visible_on_profile')->default(false);
             $table->jsonb('working_hours')->nullable();
+            $table->string('job_title')->nullable();
 
             $table->foreignUuid('pronouns_id')->nullable()->constrained('pronouns')->nullOnDelete();
             $table->boolean('are_pronouns_visible_on_profile')->default(false);

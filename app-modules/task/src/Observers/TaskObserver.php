@@ -3,7 +3,7 @@
 /*
 <COPYRIGHT>
 
-    Copyright © 2022-2023, Canyon GBS LLC. All rights reserved.
+    Copyright © 2016-2024, Canyon GBS LLC. All rights reserved.
 
     Advising App™ is licensed under the Elastic License 2.0. For more details,
     see https://github.com/canyongbs/advisingapp/blob/main/LICENSE.
@@ -41,6 +41,7 @@ use App\Models\User;
 use AdvisingApp\Task\Models\Task;
 use Illuminate\Support\Facades\DB;
 use AdvisingApp\Authorization\Models\Permission;
+use AdvisingApp\Authorization\Models\PermissionGroup;
 use AdvisingApp\Notification\Events\TriggeredAutoSubscription;
 use AdvisingApp\Task\Notifications\TaskAssignedToUserNotification;
 
@@ -49,25 +50,28 @@ class TaskObserver
     public function saving(Task $task): void
     {
         DB::beginTransaction();
-
-        if (is_null($task->created_by)) {
-            $user = auth()->user();
-
-            if ($user instanceof User) {
-                $task->created_by = $user->id;
-            }
-        }
-
-        if (is_null($task->assigned_to)) {
-            $task->assigned_to = auth()->id();
-        }
     }
 
     public function creating(Task $task): void
     {
+        $user = auth()->user();
+
+        if ($user) {
+            if (! $task->createdBy) {
+                $task->createdBy()->associate($user);
+            }
+
+            if (! $task->assignedTo) {
+                $task->assignedTo()->associate($user);
+            }
+        }
+
         Permission::create([
             'name' => "task.{$task->id}.update",
             'guard_name' => 'web',
+            'group_id' => PermissionGroup::query()
+                ->where('name', 'Task')
+                ->value('id'),
         ]);
     }
 

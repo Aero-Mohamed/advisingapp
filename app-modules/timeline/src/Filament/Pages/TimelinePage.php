@@ -3,7 +3,7 @@
 /*
 <COPYRIGHT>
 
-    Copyright © 2022-2023, Canyon GBS LLC. All rights reserved.
+    Copyright © 2016-2024, Canyon GBS LLC. All rights reserved.
 
     Advising App™ is licensed under the Elastic License 2.0. For more details,
     see https://github.com/canyongbs/advisingapp/blob/main/LICENSE.
@@ -36,18 +36,16 @@
 
 namespace AdvisingApp\Timeline\Filament\Pages;
 
-use Filament\Actions\ViewAction;
 use Filament\Resources\Pages\Page;
-use Illuminate\Database\Eloquent\Model;
-use App\Actions\GetRecordFromMorphAndKey;
-use AdvisingApp\Timeline\Actions\SyncTimelineData;
 use Filament\Resources\Pages\Concerns\InteractsWithRecord;
-use AdvisingApp\Timeline\Filament\Pages\Concerns\LoadsTimelineRecords;
+use AdvisingApp\Timeline\Livewire\Concerns\HasTimelineRecords;
+use AdvisingApp\Timeline\Livewire\Concerns\CanLoadTimelineRecords;
 
 abstract class TimelinePage extends Page
 {
     use InteractsWithRecord;
-    use LoadsTimelineRecords;
+    use HasTimelineRecords;
+    use CanLoadTimelineRecords;
 
     protected static ?string $navigationIcon = 'heroicon-o-queue-list';
 
@@ -57,35 +55,9 @@ abstract class TimelinePage extends Page
 
     public string $noMoreRecordsMessage = 'You have reached the end of this timeline.';
 
-    public array $modelsToTimeline = [];
-
-    public Model $currentRecordToView;
-
-    public Model $recordModel;
-
     public function mount($record): void
     {
         $this->recordModel = $this->record = $this->resolveRecord($record);
-
-        $this->timelineRecords = collect();
-
-        resolve(SyncTimelineData::class)->now($this->recordModel, $this->modelsToTimeline);
-
-        $this->loadTimelineRecords();
-    }
-
-    public function viewRecord($key, $morphReference)
-    {
-        $this->currentRecordToView = resolve(GetRecordFromMorphAndKey::class)->via($morphReference, $key);
-
-        $this->mountAction('view');
-    }
-
-    public function viewAction(): ViewAction
-    {
-        return $this->currentRecordToView
-            ->timeline()
-            ->modalViewAction($this->currentRecordToView);
     }
 
     public static function canAccess(array $parameters = []): bool

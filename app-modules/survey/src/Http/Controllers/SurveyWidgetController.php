@@ -3,7 +3,7 @@
 /*
 <COPYRIGHT>
 
-    Copyright © 2022-2023, Canyon GBS LLC. All rights reserved.
+    Copyright © 2016-2024, Canyon GBS LLC. All rights reserved.
 
     Advising App™ is licensed under the Elastic License 2.0. For more details,
     see https://github.com/canyongbs/advisingapp/blob/main/LICENSE.
@@ -68,9 +68,17 @@ class SurveyWidgetController extends Controller
                 'description' => $survey->description,
                 'is_authenticated' => $survey->is_authenticated,
                 ...($survey->is_authenticated ? [
-                    'authentication_url' => URL::signedRoute('surveys.request-authentication', ['survey' => $survey]),
+                    'authentication_url' => URL::signedRoute(
+                        name: 'surveys.request-authentication',
+                        parameters: ['survey' => $survey],
+                        absolute: false,
+                    ),
                 ] : [
-                    'submission_url' => URL::signedRoute('surveys.submit', ['survey' => $survey]),
+                    'submission_url' => URL::signedRoute(
+                        name: 'surveys.submit',
+                        parameters: ['survey' => $survey],
+                        absolute: false
+                    ),
                 ]),
                 'recaptcha_enabled' => $survey->recaptcha_enabled,
                 ...($survey->recaptcha_enabled ? [
@@ -111,10 +119,14 @@ class SurveyWidgetController extends Controller
 
         return response()->json([
             'message' => "We've sent an authentication code to {$data['email']}.",
-            'authentication_url' => URL::signedRoute('surveys.authenticate', [
-                'survey' => $survey,
-                'authentication' => $authentication,
-            ]),
+            'authentication_url' => URL::signedRoute(
+                name: 'surveys.authenticate',
+                parameters: [
+                    'survey' => $survey,
+                    'authentication' => $authentication,
+                ],
+                absolute: false
+            ),
         ]);
     }
 
@@ -137,10 +149,14 @@ class SurveyWidgetController extends Controller
         ]);
 
         return response()->json([
-            'submission_url' => URL::signedRoute('surveys.submit', [
-                'authentication' => $authentication,
-                'survey' => $authentication->submissible,
-            ]),
+            'submission_url' => URL::signedRoute(
+                name: 'surveys.submit',
+                parameters: [
+                    'authentication' => $authentication,
+                    'survey' => $authentication->submissible,
+                ],
+                absolute: false
+            ),
         ]);
     }
 

@@ -3,7 +3,7 @@
 /*
 <COPYRIGHT>
 
-    Copyright © 2022-2023, Canyon GBS LLC. All rights reserved.
+    Copyright © 2016-2024, Canyon GBS LLC. All rights reserved.
 
     Advising App™ is licensed under the Elastic License 2.0. For more details,
     see https://github.com/canyongbs/advisingapp/blob/main/LICENSE.
@@ -37,12 +37,13 @@
 namespace AdvisingApp\Notification\Notifications;
 
 use Exception;
+use App\Models\Tenant;
 use Illuminate\Support\Str;
 use Illuminate\Bus\Queueable;
 use Illuminate\Notifications\Notification;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use AdvisingApp\Notification\Models\OutboundDeliverable;
-use AdvisingApp\Notification\Actions\CreateOutboundDeliverable;
+use AdvisingApp\Notification\Actions\MakeOutboundDeliverable;
 use AdvisingApp\Notification\Notifications\Channels\SmsChannel;
 use AdvisingApp\Notification\Notifications\Channels\EmailChannel;
 use AdvisingApp\Notification\Notifications\Concerns\ChannelTrait;
@@ -57,6 +58,8 @@ abstract class BaseNotification extends Notification implements ShouldQueue
     use Queueable;
 
     protected array $metadata = [];
+
+    public $tries = 3;
 
     public function via(object $notifiable): array
     {
@@ -82,15 +85,30 @@ abstract class BaseNotification extends Notification implements ShouldQueue
             ->toArray();
     }
 
+    public function viaQueues(): array
+    {
+        return [
+            DatabaseChannel::class => config('queue.outbound_communication_queue'),
+            EmailChannel::class => config('queue.outbound_communication_queue'),
+            SmsChannel::class => config('queue.outbound_communication_queue'),
+        ];
+    }
+
     public function beforeSend(object $notifiable, string $channel): OutboundDeliverable|false
     {
-        $deliverable = resolve(CreateOutboundDeliverable::class)->handle($this, $notifiable, $channel);
+        $deliverable = resolve(MakeOutboundDeliverable::class)->handle($this, $notifiable, $channel);
+
+        $this->beforeSendHook($notifiable, $deliverable, $channel);
+
+        $deliverable->save();
 
         $this->metadata = [
             'outbound_deliverable_id' => $deliverable->id,
         ];
 
-        $this->beforeSendHook($notifiable, $deliverable, $channel);
+        if (Tenant::checkCurrent()) {
+            $this->metadata['tenant_id'] = Tenant::current()->getKey();
+        }
 
         return $deliverable;
     }
@@ -105,6 +123,11 @@ abstract class BaseNotification extends Notification implements ShouldQueue
         };
 
         $this->afterSendHook($notifiable, $deliverable);
+    }
+
+    public function getMetadata(): array
+    {
+        return $this->metadata;
     }
 
     protected function beforeSendHook(object $notifiable, OutboundDeliverable $deliverable, string $channel): void {}

@@ -3,7 +3,7 @@
 /*
 <COPYRIGHT>
 
-    Copyright © 2022-2023, Canyon GBS LLC. All rights reserved.
+    Copyright © 2016-2024, Canyon GBS LLC. All rights reserved.
 
     Advising App™ is licensed under the Elastic License 2.0. For more details,
     see https://github.com/canyongbs/advisingapp/blob/main/LICENSE.
@@ -38,8 +38,8 @@ namespace AdvisingApp\Audit\Database\Factories;
 
 use App\Models\User;
 use AdvisingApp\Audit\Models\Audit;
+use AdvisingApp\CaseManagement\Models\CaseModel;
 use Illuminate\Database\Eloquent\Factories\Factory;
-use AdvisingApp\ServiceManagement\Models\ServiceRequest;
 
 /**
  * @extends Factory<Audit>
@@ -52,8 +52,8 @@ class AuditFactory extends Factory
             'change_agent_type' => (new User())->getMorphClass(),
             'change_agent_id' => User::factory(),
             'event' => $this->faker->randomElement(['created', 'updated', 'deleted']),
-            'auditable_type' => (new ServiceRequest())->getMorphClass(),
-            'auditable_id' => ServiceRequest::factory(),
+            'auditable_type' => (new CaseModel())->getMorphClass(),
+            'auditable_id' => CaseModel::factory(),
             'old_values' => ['name' => $this->faker->word()],
             'new_values' => ['name' => $this->faker->word()],
             'url' => $this->faker->url(),

@@ -3,7 +3,7 @@
 /*
 <COPYRIGHT>
 
-    Copyright © 2022-2023, Canyon GBS LLC. All rights reserved.
+    Copyright © 2016-2024, Canyon GBS LLC. All rights reserved.
 
     Advising App™ is licensed under the Elastic License 2.0. For more details,
     see https://github.com/canyongbs/advisingapp/blob/main/LICENSE.
@@ -43,6 +43,7 @@ return new class () extends Migration {
     {
         Schema::create('engagements', function (Blueprint $table) {
             $table->uuid('id')->primary();
+
             $table->foreignUuid('user_id')->nullable()->constrained('users');
             $table->foreignUuid('engagement_batch_id')->nullable()->constrained('engagement_batches');
             $table->string('recipient_id')->nullable();
@@ -51,7 +52,9 @@ return new class () extends Migration {
             $table->json('body')->nullable();
             $table->boolean('scheduled')->default(true);
             $table->timestamp('deliver_at');
+
             $table->timestamps();
+            $table->softDeletes();
         });
     }
 };

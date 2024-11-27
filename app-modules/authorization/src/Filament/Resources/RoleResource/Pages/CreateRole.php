@@ -3,7 +3,7 @@
 /*
 <COPYRIGHT>
 
-    Copyright © 2022-2023, Canyon GBS LLC. All rights reserved.
+    Copyright © 2016-2024, Canyon GBS LLC. All rights reserved.
 
     Advising App™ is licensed under the Elastic License 2.0. For more details,
     see https://github.com/canyongbs/advisingapp/blob/main/LICENSE.
@@ -36,10 +36,42 @@
 
 namespace AdvisingApp\Authorization\Filament\Resources\RoleResource\Pages;
 
+use Filament\Forms\Get;
+use Filament\Forms\Form;
+use Filament\Forms\Components\Select;
+use Filament\Forms\Components\Textarea;
+use Illuminate\Validation\Rules\Unique;
+use Filament\Forms\Components\TextInput;
 use Filament\Resources\Pages\CreateRecord;
 use AdvisingApp\Authorization\Filament\Resources\RoleResource;
 
 class CreateRole extends CreateRecord
 {
     protected static string $resource = RoleResource::class;
+
+    public function form(Form $form): Form
+    {
+        return $form
+            ->schema([
+                TextInput::make('name')
+                    ->required()
+                    ->maxLength(125)
+                    ->unique(
+                        table: 'roles',
+                        column: 'name',
+                        modifyRuleUsing: function (Unique $rule, Get $get) {
+                            $rule->where('guard_name', $get('guard_name'));
+                        }
+                    ),
+                Select::make('guard_name')
+                    ->required()
+                    ->options([
+                        'web' => 'Web',
+                        'api' => 'API',
+                    ]),
+                Textarea::make('description')
+                    ->nullable()
+                    ->maxLength(65535),
+            ]);
+    }
 }

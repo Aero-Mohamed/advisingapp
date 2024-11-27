@@ -1,7 +1,7 @@
 /*
 <COPYRIGHT>
 
-    Copyright © 2022-2023, Canyon GBS LLC. All rights reserved.
+    Copyright © 2016-2024, Canyon GBS LLC. All rights reserved.
 
     Advising App™ is licensed under the Elastic License 2.0. For more details,
     see https://github.com/canyongbs/advisingapp/blob/main/LICENSE.
@@ -37,11 +37,7 @@ import laravel, { refreshPaths } from 'laravel-vite-plugin';
 export default defineConfig({
     plugins: [
         laravel({
-            input: [
-                'resources/css/app.css',
-                'resources/js/app.js',
-                'resources/css/filament/admin/theme.css'
-            ],
+            input: ['resources/css/app.css', 'resources/js/app.js', 'resources/css/filament/admin/theme.css'],
             refresh: [
                 ...refreshPaths,
                 'app/Filament/**',
@@ -50,6 +46,7 @@ export default defineConfig({
                 'app/Infolists/Components/**',
                 'app/Providers/Filament/**',
                 'app/Tables/Columns/**',
+                'portals/**',
             ],
         }),
     ],

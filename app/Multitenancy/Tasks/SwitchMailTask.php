@@ -3,7 +3,7 @@
 /*
 <COPYRIGHT>
 
-    Copyright © 2022-2023, Canyon GBS LLC. All rights reserved.
+    Copyright © 2016-2024, Canyon GBS LLC. All rights reserved.
 
     Advising App™ is licensed under the Elastic License 2.0. For more details,
     see https://github.com/canyongbs/advisingapp/blob/main/LICENSE.
@@ -37,7 +37,10 @@
 namespace App\Multitenancy\Tasks;
 
 use Spatie\Multitenancy\Models\Tenant;
+use Illuminate\Notifications\ChannelManager;
 use Spatie\Multitenancy\Tasks\SwitchTenantTask;
+use Illuminate\Notifications\Channels\MailChannel;
+use App\Multitenancy\DataTransferObjects\TenantMailConfig;
 
 class SwitchMailTask implements SwitchTenantTask
 {
@@ -67,19 +70,37 @@ class SwitchMailTask implements SwitchTenantTask
 
     public function makeCurrent(Tenant $tenant): void
     {
-        $config = $tenant->config;
+        /** @var TenantMailConfig $config */
+        $config = $tenant->config->mail;
+
+        if ($config->isDemoModeEnabled ?? false) {
+            $this->setMailConfig(
+                mailer: 'array',
+                fromAddress: $this->originalFromAddress,
+                fromName: $this->originalFromName,
+                smtpHost: null,
+                smtpPort: null,
+                smtpEncryption: null,
+                smtpUsername: null,
+                smtpPassword: null,
+                smtpTimeout: null,
+                smtpLocalDomain: null,
+            );
+
+            return;
+        }
 
         $this->setMailConfig(
-            mailer: $config->mail->mailer,
-            fromAddress: $config->mail->fromAddress,
-            fromName: $config->mail->fromName,
-            smtpHost: $config->mail->mailers->smtp->host,
-            smtpPort: $config->mail->mailers->smtp->port,
-            smtpEncryption: $config->mail->mailers->smtp->encryption,
-            smtpUsername: $config->mail->mailers->smtp->username,
-            smtpPassword: $config->mail->mailers->smtp->password,
-            smtpTimeout: $config->mail->mailers->smtp->timeout,
-            smtpLocalDomain: $config->mail->mailers->smtp->localDomain,
+            mailer: $config->mailer,
+            fromAddress: $config->fromAddress,
+            fromName: $config->fromName,
+            smtpHost: $config->mailers->smtp->host,
+            smtpPort: $config->mailers->smtp->port,
+            smtpEncryption: $config->mailers->smtp->encryption,
+            smtpUsername: $config->mailers->smtp->username,
+            smtpPassword: $config->mailers->smtp->password,
+            smtpTimeout: $config->mailers->smtp->timeout,
+            smtpLocalDomain: $config->mailers->smtp->localDomain,
         );
     }
 
@@ -125,5 +146,9 @@ class SwitchMailTask implements SwitchTenantTask
                 'mail.mailers.smtp.local_domain' => $smtpLocalDomain,
             ]
         );
+
+        app()->forgetInstance('mail.manager');
+        app()->forgetInstance(ChannelManager::class);
+        app()->forgetInstance(MailChannel::class);
     }
 }

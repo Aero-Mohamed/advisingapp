@@ -3,7 +3,7 @@
 /*
 <COPYRIGHT>
 
-    Copyright © 2022-2023, Canyon GBS LLC. All rights reserved.
+    Copyright © 2016-2024, Canyon GBS LLC. All rights reserved.
 
     Advising App™ is licensed under the Elastic License 2.0. For more details,
     see https://github.com/canyongbs/advisingapp/blob/main/LICENSE.
@@ -86,7 +86,8 @@ class FormSubmission extends Submission
             'submission_id',
             'field_id',
         )
-            ->withPivot(['id', 'response']);
+            ->withPivot(['id', 'response'])
+            ->using(FormFieldSubmission::class);
     }
 
     public function deliverRequest(): void

@@ -3,7 +3,7 @@
 /*
 <COPYRIGHT>
 
-    Copyright © 2022-2023, Canyon GBS LLC. All rights reserved.
+    Copyright © 2016-2024, Canyon GBS LLC. All rights reserved.
 
     Advising App™ is licensed under the Elastic License 2.0. For more details,
     see https://github.com/canyongbs/advisingapp/blob/main/LICENSE.
@@ -43,10 +43,12 @@ return new class () extends Migration {
     {
         Schema::create('consent_agreements', function (Blueprint $table) {
             $table->uuid('id')->primary();
+
             $table->string('type');
             $table->string('title');
             $table->longText('description');
             $table->longText('body');
+
             $table->timestamps();
             $table->softDeletes();
         });

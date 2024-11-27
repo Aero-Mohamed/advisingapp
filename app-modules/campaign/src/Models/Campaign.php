@@ -3,7 +3,7 @@
 /*
 <COPYRIGHT>
 
-    Copyright © 2022-2023, Canyon GBS LLC. All rights reserved.
+    Copyright © 2016-2024, Canyon GBS LLC. All rights reserved.
 
     Advising App™ is licensed under the Elastic License 2.0. For more details,
     see https://github.com/canyongbs/advisingapp/blob/main/LICENSE.
@@ -36,13 +36,13 @@
 
 namespace AdvisingApp\Campaign\Models;
 
-use App\Models\User;
 use App\Models\BaseModel;
+use AdvisingApp\Segment\Models\Segment;
 use OwenIt\Auditing\Contracts\Auditable;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\SoftDeletes;
-use AdvisingApp\CaseloadManagement\Models\Caseload;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\MorphTo;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use AdvisingApp\Audit\Models\Concerns\Auditable as AuditableTrait;
 
@@ -55,23 +55,18 @@ class Campaign extends BaseModel implements Auditable
     use SoftDeletes;
 
     protected $fillable = [
-        'caseload_id',
         'name',
         'enabled',
+        'segment_id',
     ];
 
     protected $casts = [
         'enabled' => 'boolean',
     ];
 
-    public function user(): BelongsTo
+    public function segment(): BelongsTo
     {
-        return $this->belongsTo(User::class);
-    }
-
-    public function caseload(): BelongsTo
-    {
-        return $this->belongsTo(Caseload::class);
+        return $this->belongsTo(Segment::class);
     }
 
     public function actions(): HasMany
@@ -91,6 +86,11 @@ class Campaign extends BaseModel implements Auditable
         return $this->actions->contains(fn (CampaignAction $action) => $action->hasBeenExecuted());
     }
 
+    public function createdBy(): MorphTo
+    {
+        return $this->morphTo();
+    }
+
     protected static function booted(): void
     {
         static::addGlobalScope('licensed', function (Builder $builder) {
@@ -98,7 +98,7 @@ class Campaign extends BaseModel implements Auditable
                 return;
             }
 
-            $builder->whereHas('caseload');
+            $builder->whereHas('segment');
         });
     }
 }

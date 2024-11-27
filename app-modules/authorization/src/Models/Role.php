@@ -3,7 +3,7 @@
 /*
 <COPYRIGHT>
 
-    Copyright © 2022-2023, Canyon GBS LLC. All rights reserved.
+    Copyright © 2016-2024, Canyon GBS LLC. All rights reserved.
 
     Advising App™ is licensed under the Elastic License 2.0. For more details,
     see https://github.com/canyongbs/advisingapp/blob/main/LICENSE.
@@ -36,7 +36,7 @@
 
 namespace AdvisingApp\Authorization\Models;
 
-use Illuminate\Support\Collection;
+use App\Models\Authenticatable;
 use OwenIt\Auditing\Contracts\Auditable;
 use Illuminate\Database\Eloquent\Builder;
 use Spatie\Permission\PermissionRegistrar;
@@ -44,10 +44,7 @@ use Spatie\Permission\Models\Role as SpatieRole;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
-use AdvisingApp\Authorization\Models\Concerns\HasRoleGroups;
 use Spatie\Multitenancy\Models\Concerns\UsesTenantConnection;
-use AdvisingApp\Authorization\Models\Pivots\RoleGroupRolePivot;
-use AdvisingApp\Authorization\Models\Concerns\DefinesPermissions;
 use AdvisingApp\Audit\Models\Concerns\Auditable as AuditableTrait;
 
 /**
@@ -56,19 +53,9 @@ use AdvisingApp\Audit\Models\Concerns\Auditable as AuditableTrait;
 class Role extends SpatieRole implements Auditable
 {
     use HasFactory;
-    use DefinesPermissions;
-    use HasRoleGroups {
-        HasRoleGroups::roleGroups as traitRoleGroups;
-    }
     use HasUuids;
     use AuditableTrait;
     use UsesTenantConnection;
-
-    public function roleGroups(): BelongsToMany
-    {
-        return $this->traitRoleGroups()
-            ->using(RoleGroupRolePivot::class);
-    }
 
     public function users(): BelongsToMany
     {
@@ -76,19 +63,9 @@ class Role extends SpatieRole implements Auditable
             getModelForGuard($this->attributes['guard_name'] ?? config('auth.defaults.guard')),
             'model',
             config('permission.table_names.model_has_roles'),
-            PermissionRegistrar::$pivotRole,
+            app(PermissionRegistrar::class)->pivotRole,
             config('permission.column_names.model_morph_key')
-        )->withPivot('via');
-    }
-
-    public function getWebPermissions(): Collection
-    {
-        return collect(['view-any', '*.view']);
-    }
-
-    public function getApiPermissions(): Collection
-    {
-        return collect([]);
+        );
     }
 
     public function scopeApi(Builder $query): void
@@ -104,7 +81,7 @@ class Role extends SpatieRole implements Auditable
     public function scopeSuperAdmin(Builder $query): void
     {
         $query
-            ->where('name', 'authorization.super_admin')
+            ->where('name', Authenticatable::SUPER_ADMIN_ROLE)
             ->where('guard_name', 'web');
     }
 }

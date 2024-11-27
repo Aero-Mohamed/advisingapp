@@ -3,7 +3,7 @@
 /*
 <COPYRIGHT>
 
-    Copyright © 2022-2023, Canyon GBS LLC. All rights reserved.
+    Copyright © 2016-2024, Canyon GBS LLC. All rights reserved.
 
     Advising App™ is licensed under the Elastic License 2.0. For more details,
     see https://github.com/canyongbs/advisingapp/blob/main/LICENSE.
@@ -75,5 +75,17 @@ class SesEventData extends Data
             deliveryDelay: isset($data['deliveryDelay']) ? SesDeliveryDelayData::from($data['deliveryDelay']) : Optional::create(),
             subscription: isset($data['subscription']) ? SesSubscriptionData::from($data['subscription']) : Optional::create(),
         );
+    }
+
+    public function errorMessageFromType(): ?string
+    {
+        return match ($this->eventType) {
+            'Bounce' => 'The email was not successfully delivered due to a permanent rejection from the recipient mail server.',
+            'Delivery' => 'The email was successfully delivered.',
+            'DeliveryDelay' => 'The email was not successfully delivered due to a temporary issue.',
+            'Reject' => 'The email was not attempted to be delivered due to unsafe contents.',
+            'RenderingFailure' => 'The email not successfully delivered due to a template rendering error.',
+            default => null,
+        };
     }
 }

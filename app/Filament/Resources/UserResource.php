@@ -3,7 +3,7 @@
 /*
 <COPYRIGHT>
 
-    Copyright © 2022-2023, Canyon GBS LLC. All rights reserved.
+    Copyright © 2016-2024, Canyon GBS LLC. All rights reserved.
 
     Advising App™ is licensed under the Elastic License 2.0. For more details,
     see https://github.com/canyongbs/advisingapp/blob/main/LICENSE.
@@ -37,116 +37,45 @@
 namespace App\Filament\Resources;
 
 use App\Models\User;
-use Filament\Forms\Form;
-use Filament\Tables\Table;
-use Illuminate\Support\Carbon;
 use Filament\Resources\Resource;
-use App\Filament\Columns\IdColumn;
-use App\Forms\Components\Licenses;
-use Filament\Forms\Components\Toggle;
-use Filament\Forms\Components\Section;
-use Filament\Tables\Actions\EditAction;
-use Filament\Tables\Actions\ViewAction;
-use Filament\Tables\Columns\TextColumn;
-use Filament\Forms\Components\TextInput;
-use Filament\Tables\Actions\BulkActionGroup;
-use AdvisingApp\Authorization\Models\License;
-use Filament\Tables\Actions\DeleteBulkAction;
+use App\Models\Scopes\WithoutSuperAdmin;
+use App\Filament\Clusters\UserManagement;
+use Illuminate\Database\Eloquent\Builder;
 use App\Filament\Resources\UserResource\Pages\EditUser;
 use App\Filament\Resources\UserResource\Pages\ViewUser;
-use STS\FilamentImpersonate\Tables\Actions\Impersonate;
 use App\Filament\Resources\UserResource\Pages\ListUsers;
 use App\Filament\Resources\UserResource\Pages\CreateUser;
 use App\Filament\Resources\UserResource\RelationManagers\RolesRelationManager;
-use App\Filament\Resources\UserResource\RelationManagers\RoleGroupsRelationManager;
 use App\Filament\Resources\UserResource\RelationManagers\PermissionsRelationManager;
 
 class UserResource extends Resource
 {
     protected static ?string $model = User::class;
 
-    protected static ?string $navigationIcon = 'heroicon-o-rectangle-stack';
+    protected static ?string $navigationIcon = 'heroicon-o-users';
 
-    protected static ?string $navigationGroup = 'Users and Permissions';
+    protected static ?string $cluster = UserManagement::class;
 
-    protected static ?int $navigationSort = 30;
+    protected static ?int $navigationSort = 10;
 
-    protected static ?string $navigationLabel = 'Product Users';
+    protected static ?string $navigationLabel = 'Users';
 
-    protected static ?string $breadcrumb = 'Product Users';
+    protected static ?string $breadcrumb = 'Users';
 
     protected static ?string $modelLabel = 'User';
 
-    public static function form(Form $form): Form
+    public static function getEloquentQuery(): Builder
     {
-        return $form
-            ->disabled(false)
-            ->schema([
-                Section::make()
-                    ->columns()
-                    ->schema([
-                        TextInput::make('name')
-                            ->required()
-                            ->maxLength(255),
-                        TextInput::make('email')
-                            ->label('Email address')
-                            ->email()
-                            ->required()
-                            ->maxLength(255),
-                        Toggle::make('is_external')
-                            ->label('User can only log in via a social provider.'),
-                        TextInput::make('created_at')
-                            ->formatStateUsing(fn ($state) => Carbon::parse($state)->format(config('project.datetime_format') ?? 'Y-m-d H:i:s'))
-                            ->disabled(),
-                        TextInput::make('updated_at')
-                            ->formatStateUsing(fn ($state) => Carbon::parse($state)->format(config('project.datetime_format') ?? 'Y-m-d H:i:s'))
-                            ->disabled(),
-                    ])
-                    ->disabled(fn (string $operation) => $operation === 'view'),
-                Licenses::make()
-                    ->hidden(fn (?User $record) => is_null($record))
-                    ->disabled(function () {
-                        /** @var User $user */
-                        $user = auth()->user();
-
-                        return $user->cannot('create', License::class);
-                    }),
-            ]);
-    }
-
-    public static function table(Table $table): Table
-    {
-        return $table
-            ->columns([
-                IdColumn::make(),
-                TextColumn::make('name'),
-                TextColumn::make('email')
-                    ->label('Email address'),
-                TextColumn::make('created_at')
-                    ->label('Created At')
-                    ->dateTime(config('project.datetime_format') ?? 'Y-m-d H:i:s')
-                    ->sortable(),
-                TextColumn::make('updated_at')
-                    ->label('Updated At')
-                    ->dateTime(config('project.datetime_format') ?? 'Y-m-d H:i:s')
-                    ->sortable(),
-            ])
-            ->actions([
-                Impersonate::make(),
-                ViewAction::make(),
-                EditAction::make(),
-            ])
-            ->bulkActions([
-                BulkActionGroup::make([
-                    DeleteBulkAction::make(),
-                ]),
-            ]);
+        return parent::getEloquentQuery()
+            ->unless(
+                auth()->user()->isSuperAdmin(),
+                fn (Builder $query) => $query->tap(new WithoutSuperAdmin())
+            );
     }
 
     public static function getRelations(): array
     {
         return [
-            RoleGroupsRelationManager::class,
             RolesRelationManager::class,
             PermissionsRelationManager::class,
         ];

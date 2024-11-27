@@ -3,7 +3,7 @@
 /*
 <COPYRIGHT>
 
-    Copyright © 2022-2023, Canyon GBS LLC. All rights reserved.
+    Copyright © 2016-2024, Canyon GBS LLC. All rights reserved.
 
     Advising App™ is licensed under the Elastic License 2.0. For more details,
     see https://github.com/canyongbs/advisingapp/blob/main/LICENSE.
@@ -36,6 +36,7 @@
 
 namespace AdvisingApp\Engagement\Filament\Concerns;
 
+use Illuminate\Support\HtmlString;
 use Filament\Infolists\Components\Fieldset;
 use Filament\Infolists\Components\IconEntry;
 use Filament\Infolists\Components\TextEntry;
@@ -56,8 +57,7 @@ trait EngagementInfolist
                         ->hidden(fn ($state): bool => blank($state))
                         ->columnSpanFull(),
                     TextEntry::make('body')
-                        ->getStateUsing(fn (Engagement $engagement): string => $engagement->getBody())
-                        ->markdown()
+                        ->getStateUsing(fn (Engagement $engagement): HtmlString => $engagement->getBody())
                         ->columnSpanFull(),
                 ]),
             Fieldset::make('deliverable')
@@ -67,16 +67,8 @@ trait EngagementInfolist
                     TextEntry::make('deliverable.channel')
                         ->label('Channel'),
                     IconEntry::make('deliverable.delivery_status')
-                        ->icon(fn (EngagementDeliveryStatus $state): string => match ($state) {
-                            EngagementDeliveryStatus::Successful => 'heroicon-o-check-circle',
-                            EngagementDeliveryStatus::Awaiting => 'heroicon-o-clock',
-                            EngagementDeliveryStatus::Failed => 'heroicon-o-x-circle',
-                        })
-                        ->color(fn (EngagementDeliveryStatus $state): string => match ($state) {
-                            EngagementDeliveryStatus::Successful => 'success',
-                            EngagementDeliveryStatus::Awaiting => 'warning',
-                            EngagementDeliveryStatus::Failed => 'danger',
-                        })
+                        ->icon(fn (EngagementDeliveryStatus $state): string => $state->getIconClass())
+                        ->color(fn (EngagementDeliveryStatus $state): string => $state->getColor())
                         ->label('Status'),
                     TextEntry::make('deliverable.delivered_at')
                         ->label('Delivered At')

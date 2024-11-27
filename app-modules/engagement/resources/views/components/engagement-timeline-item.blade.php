@@ -1,7 +1,7 @@
 {{--
 <COPYRIGHT>
 
-    Copyright © 2022-2023, Canyon GBS LLC. All rights reserved.
+    Copyright © 2016-2024, Canyon GBS LLC. All rights reserved.
 
     Advising App™ is licensed under the Elastic License 2.0. For more details,
     see https://github.com/canyongbs/advisingapp/blob/main/LICENSE.
@@ -57,22 +57,9 @@
                             class="h-5 w-5 text-gray-400 dark:text-gray-100"
                             icon="heroicon-o-envelope"
                         />
-                        @php
-                            $emailStatusColor = match ($deliverable->delivery_status) {
-                                EngagementDeliveryStatus::Awaiting => 'text-yellow-500',
-                                EngagementDeliveryStatus::Successful => 'text-green-500',
-                                EngagementDeliveryStatus::Failed => 'text-red-500',
-                            };
-
-                            $emailStatusIcon = match ($deliverable->delivery_status) {
-                                EngagementDeliveryStatus::Awaiting => 'heroicon-s-clock',
-                                EngagementDeliveryStatus::Successful => 'heroicon-s-check-circle',
-                                EngagementDeliveryStatus::Failed => 'heroicon-s-exclamation-circle',
-                            };
-                        @endphp
                         <x-filament::icon
-                            class="{{ $emailStatusColor }} absolute bottom-0 right-0 h-2 w-2"
-                            icon="{{ $emailStatusIcon }}"
+                            class="{{ $deliverable->delivery_status->getTextColorClass() }} absolute bottom-0 right-0 h-2 w-2"
+                            icon="{{ $deliverable->delivery_status->getIconClass() }}"
                         />
                     </div>
                 @endif
@@ -82,22 +69,9 @@
                             class="h-5 w-5 text-gray-400 dark:text-gray-100"
                             icon="heroicon-o-chat-bubble-left"
                         />
-                        @php
-                            $smsStatusColor = match ($deliverable->delivery_status) {
-                                EngagementDeliveryStatus::Awaiting => 'text-yellow-500',
-                                EngagementDeliveryStatus::Successful => 'text-green-500',
-                                EngagementDeliveryStatus::Failed => 'text-red-500',
-                            };
-
-                            $smsStatusIcon = match ($deliverable->delivery_status) {
-                                EngagementDeliveryStatus::Awaiting => 'heroicon-s-clock',
-                                EngagementDeliveryStatus::Successful => 'heroicon-s-check-circle',
-                                EngagementDeliveryStatus::Failed => 'heroicon-s-exclamation-circle',
-                            };
-                        @endphp
                         <x-filament::icon
-                            class="{{ $smsStatusColor }} absolute bottom-0 right-0 h-2 w-2"
-                            icon="{{ $smsStatusIcon }}"
+                            class="{{ $deliverable->delivery_status->getTextColorClass() }} absolute bottom-0 right-0 h-2 w-2"
+                            icon="{{ $deliverable->delivery_status->getIconClass() }}"
                         />
                     </div>
                 @endif
@@ -124,7 +98,7 @@
         <div class="flex flex-col">
             <p class="text-xs text-gray-400 dark:text-gray-500">Body:</p>
             <div class="prose dark:prose-invert">
-                {{ str($record->getBody())->markdown()->sanitizeHtml()->toHtmlString() }}
+                {{ $record->getBody() }}
             </div>
         </div>
     </div>

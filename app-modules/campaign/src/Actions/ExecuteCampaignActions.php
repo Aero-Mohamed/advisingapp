@@ -3,7 +3,7 @@
 /*
 <COPYRIGHT>
 
-    Copyright © 2022-2023, Canyon GBS LLC. All rights reserved.
+    Copyright © 2016-2024, Canyon GBS LLC. All rights reserved.
 
     Advising App™ is licensed under the Elastic License 2.0. For more details,
     see https://github.com/canyongbs/advisingapp/blob/main/LICENSE.
@@ -41,18 +41,18 @@ use Illuminate\Bus\Queueable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
-use Illuminate\Contracts\Queue\ShouldBeUnique;
 use AdvisingApp\Campaign\Models\CampaignAction;
+use Illuminate\Queue\Middleware\WithoutOverlapping;
 
-class ExecuteCampaignActions implements ShouldQueue, ShouldBeUnique
+class ExecuteCampaignActions implements ShouldQueue
 {
     use Dispatchable;
     use InteractsWithQueue;
     use Queueable;
 
-    public function uniqueId(): string
+    public function middleware(): array
     {
-        return Tenant::current()->id;
+        return [(new WithoutOverlapping(Tenant::current()->id))->dontRelease()->expireAfter(180)];
     }
 
     public function handle(): void

@@ -3,7 +3,7 @@
 /*
 <COPYRIGHT>
 
-    Copyright © 2022-2023, Canyon GBS LLC. All rights reserved.
+    Copyright © 2016-2024, Canyon GBS LLC. All rights reserved.
 
     Advising App™ is licensed under the Elastic License 2.0. For more details,
     see https://github.com/canyongbs/advisingapp/blob/main/LICENSE.
@@ -38,10 +38,13 @@ namespace AdvisingApp\Interaction\Filament\Resources\InteractionStatusResource\P
 
 use Filament\Actions;
 use Filament\Tables\Table;
-use App\Filament\Columns\IdColumn;
+use Filament\Tables\Filters\Filter;
 use Filament\Tables\Actions\EditAction;
+use Filament\Tables\Columns\IconColumn;
 use Filament\Tables\Columns\TextColumn;
+use App\Filament\Tables\Columns\IdColumn;
 use Filament\Resources\Pages\ListRecords;
+use Illuminate\Database\Eloquent\Builder;
 use Filament\Tables\Actions\BulkActionGroup;
 use Filament\Tables\Actions\DeleteBulkAction;
 use AdvisingApp\Interaction\Models\InteractionStatus;
@@ -62,6 +65,14 @@ class ListInteractionStatuses extends ListRecords
                     ->label('Color')
                     ->badge()
                     ->color(fn (InteractionStatus $interactionStatus) => $interactionStatus->color->value),
+                IconColumn::make('is_default')
+                    ->label('Default')
+                    ->boolean(),
+            ])
+            ->filters([
+                Filter::make('is_default')
+                    ->label('Default')
+                    ->query(fn (Builder $query) => $query->where('is_default', true)),
             ])
             ->actions([
                 EditAction::make(),

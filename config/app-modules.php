@@ -3,7 +3,7 @@
 /*
 <COPYRIGHT>
 
-    Copyright © 2022-2023, Canyon GBS LLC. All rights reserved.
+    Copyright © 2016-2024, Canyon GBS LLC. All rights reserved.
 
     Advising App™ is licensed under the Elastic License 2.0. For more details,
     see https://github.com/canyongbs/advisingapp/blob/main/LICENSE.
@@ -114,14 +114,13 @@ return [
     'stubs' => [
         'composer.json' => base_path('stubs/app-modules/composer-stub.json'),
         'src/Providers/StubClassNamePrefixServiceProvider.php' => base_path('stubs/app-modules/app/ServiceProvider.php'),
+        'src/Registries/StubClassNamePrefixRbacRegistry.php' => base_path('stubs/app-modules/app/Registries/RbacRegistry.php'),
         'src/StubClassNamePrefixPlugin.php' => base_path('stubs/app-modules/app/Plugin.php'),
         'src/Models/.gitkeep' => base_path('stubs/app-modules/.gitkeep'),
         'tests/.gitkeep' => base_path('stubs/app-modules/.gitkeep'),
         'database/factories/.gitkeep' => base_path('stubs/app-modules/.gitkeep'),
         'database/migrations/.gitkeep' => base_path('stubs/app-modules/.gitkeep'),
         'database/seeders/.gitkeep' => base_path('stubs/app-modules/.gitkeep'),
-        'config/permissions/api/custom.php' => base_path('stubs/app-modules/config/permissions/api/custom.php'),
-        'config/permissions/web/custom.php' => base_path('stubs/app-modules/config/permissions/web/custom.php'),
         'config/roles/api/StubModuleName_roles.php' => base_path('stubs/app-modules/config/roles/api/module_roles.php'),
         'config/roles/web/StubModuleName_roles.php' => base_path('stubs/app-modules/config/roles/web/module_roles.php'),
     ],

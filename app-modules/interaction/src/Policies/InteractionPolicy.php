@@ -3,7 +3,7 @@
 /*
 <COPYRIGHT>
 
-    Copyright © 2022-2023, Canyon GBS LLC. All rights reserved.
+    Copyright © 2016-2024, Canyon GBS LLC. All rights reserved.
 
     Advising App™ is licensed under the Elastic License 2.0. For more details,
     see https://github.com/canyongbs/advisingapp/blob/main/LICENSE.
@@ -39,6 +39,7 @@ namespace AdvisingApp\Interaction\Policies;
 use App\Models\Authenticatable;
 use Illuminate\Auth\Access\Response;
 use App\Concerns\PerformsLicenseChecks;
+use AdvisingApp\Prospect\Models\Prospect;
 use AdvisingApp\Interaction\Models\Interaction;
 use AdvisingApp\Authorization\Enums\LicenseType;
 use App\Policies\Contracts\PerformsChecksBeforeAuthorization;
@@ -71,13 +72,17 @@ class InteractionPolicy implements PerformsChecksBeforeAuthorization
         }
 
         return $authenticatable->canOrElse(
-            abilities: ['interaction.*.view', "interaction.{$interaction->id}.view"],
+            abilities: ["interaction.{$interaction->id}.view"],
             denyResponse: 'You do not have permission to view this interaction.'
         );
     }
 
-    public function create(Authenticatable $authenticatable): Response
+    public function create(Authenticatable $authenticatable, ?Prospect $prospect = null): Response
     {
+        if ($prospect?->student()->exists()) {
+            return Response::deny('You cannot create interactions for a Prospect that has been converted to a Student.');
+        }
+
         return $authenticatable->canOrElse(
             abilities: 'interaction.create',
             denyResponse: 'You do not have permission to create interactions.'
@@ -86,12 +91,16 @@ class InteractionPolicy implements PerformsChecksBeforeAuthorization
 
     public function update(Authenticatable $authenticatable, Interaction $interaction): Response
     {
+        if ($interaction->interactable_type === (new Prospect())->getMorphClass() && filled($interaction->interactable->student_id)) {
+            return Response::deny('You cannot edit this interaction as the related Prospect has been converted to a Student.');
+        }
+
         if (! $authenticatable->can('view', $interaction->interactable)) {
             return Response::deny('You do not have permission to update this interaction.');
         }
 
         return $authenticatable->canOrElse(
-            abilities: ['interaction.*.update', "interaction.{$interaction->id}.update"],
+            abilities: ["interaction.{$interaction->id}.update"],
             denyResponse: 'You do not have permission to update this interaction.'
         );
     }
@@ -103,7 +112,7 @@ class InteractionPolicy implements PerformsChecksBeforeAuthorization
         }
 
         return $authenticatable->canOrElse(
-            abilities: ['interaction.*.delete', "interaction.{$interaction->id}.delete"],
+            abilities: ["interaction.{$interaction->id}.delete"],
             denyResponse: 'You do not have permission to delete this interaction.'
         );
     }
@@ -115,7 +124,7 @@ class InteractionPolicy implements PerformsChecksBeforeAuthorization
         }
 
         return $authenticatable->canOrElse(
-            abilities: ['interaction.*.restore', "interaction.{$interaction->id}.restore"],
+            abilities: ["interaction.{$interaction->id}.restore"],
             denyResponse: 'You do not have permission to restore this interaction.'
         );
     }
@@ -127,7 +136,7 @@ class InteractionPolicy implements PerformsChecksBeforeAuthorization
         }
 
         return $authenticatable->canOrElse(
-            abilities: ['interaction.*.force-delete', "interaction.{$interaction->id}.force-delete"],
+            abilities: ["interaction.{$interaction->id}.force-delete"],
             denyResponse: 'You do not have permission to permanently delete this interaction.'
         );
     }

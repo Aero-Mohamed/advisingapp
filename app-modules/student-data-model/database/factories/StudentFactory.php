@@ -3,7 +3,7 @@
 /*
 <COPYRIGHT>
 
-    Copyright © 2022-2023, Canyon GBS LLC. All rights reserved.
+    Copyright © 2016-2024, Canyon GBS LLC. All rights reserved.
 
     Advising App™ is licensed under the Elastic License 2.0. For more details,
     see https://github.com/canyongbs/advisingapp/blob/main/LICENSE.
@@ -36,9 +36,8 @@
 
 namespace AdvisingApp\StudentDataModel\Database\Factories;
 
-use Illuminate\Support\Collection;
-use Illuminate\Support\Facades\DB;
-use Illuminate\Database\Eloquent\Model;
+use Carbon\Carbon;
+use Faker\Provider\en_US\Address;
 use AdvisingApp\StudentDataModel\Models\Student;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
@@ -49,24 +48,28 @@ class StudentFactory extends Factory
 {
     public function definition(): array
     {
-        return [
-            'sisid' => $this->faker->randomNumber(9),
-            'otherid' => $this->faker->randomNumber(9),
+        $startDate = Carbon::now()->subYear();
+        $endDate = Carbon::yesterday();
+        $sourceDate = $this->faker->dateTimeBetween($startDate, $endDate);
+
+        $attributes = [
+            'sisid' => $this->faker->unique()->numerify('########'),
+            'otherid' => $this->faker->numerify('##########'),
             'first' => $this->faker->firstName(),
             'last' => $this->faker->lastName(),
-            'full_name' => $this->faker->name(),
-            'preferred' => $this->faker->firstName(),
+            'full_name' => fn (array $attributes) => "{$attributes['first']} {$attributes['last']}",
+            'preferred' => $this->faker->randomElement([$this->faker->firstName(), null]),
             'email' => $this->faker->email(),
             'email_2' => $this->faker->email(),
-            'mobile' => $this->faker->phoneNumber(),
+            'mobile' => $this->faker->numerify('+1 ### ### ####'),
             'sms_opt_out' => $this->faker->boolean(),
             'email_bounce' => $this->faker->boolean(),
-            'phone' => $this->faker->phoneNumber(),
-            'address' => $this->faker->address(),
-            'address2' => $this->faker->address(),
-            'address3' => $this->faker->address(),
+            'phone' => $this->faker->numerify('+1 ### ### ####'),
+            'address' => $this->faker->buildingNumber() . ' ' . $this->faker->streetName(),
+            'address2' => $this->faker->randomElement([null, Address::secondaryAddress()]),
+            'address3' => null,
             'city' => $this->faker->city(),
-            'state' => $this->faker->locale(),
+            'state' => Address::stateAbbr(),
             'postal' => $this->faker->postcode(),
             'birthdate' => $this->faker->date(),
             'hsgrad' => $this->faker->year(),
@@ -74,31 +77,19 @@ class StudentFactory extends Factory
             'ferpa' => $this->faker->boolean(),
             'dfw' => $this->faker->date(),
             'sap' => $this->faker->boolean(),
-            'holds' => $this->faker->word(),
+            'holds' => $this->faker->regexify('[A-Z]{5}'),
             'firstgen' => $this->faker->boolean(),
             'ethnicity' => $this->faker->randomElement(['White', 'Black', 'Hispanic', 'Asian', 'Other']),
             'lastlmslogin' => $this->faker->dateTime(),
-            'f_e_term' => $this->faker->randomNumber(4),
-            'mr_e_term' => $this->faker->randomNumber(4),
+            'f_e_term' => $this->faker->numerify('####'),
+            'mr_e_term' => $this->faker->numerify('####'),
         ];
-    }
 
-    protected function store(Collection $results)
-    {
-        if (config('database.adm_materialized_views_enabled')) {
-            // Because Students points to a Materialized View, we need to set the table to the actual table name before storing and then refresh the view after storing.
+        $attributes['created_at'] = now();
+        $attributes['updated_at'] = now();
+        $attributes['created_at_source'] = $sourceDate;
+        $attributes['updated_at_source'] = $sourceDate;
 
-            $results = $results->map(fn (Model $result) => $result->setTable('students'));
-
-            parent::store($results);
-
-            $results->each(function (Model $result) {
-                $result->setTable('students_local');
-            });
-
-            DB::connection(config('multitenancy.tenant_database_connection_name'))->statement('REFRESH MATERIALIZED VIEW students_local');
-        } else {
-            parent::store($results);
-        }
+        return $attributes;
     }
 }

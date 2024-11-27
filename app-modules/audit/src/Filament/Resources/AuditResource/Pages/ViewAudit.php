@@ -3,7 +3,7 @@
 /*
 <COPYRIGHT>
 
-    Copyright © 2022-2023, Canyon GBS LLC. All rights reserved.
+    Copyright © 2016-2024, Canyon GBS LLC. All rights reserved.
 
     Advising App™ is licensed under the Elastic License 2.0. For more details,
     see https://github.com/canyongbs/advisingapp/blob/main/LICENSE.
@@ -47,6 +47,8 @@ class ViewAudit extends ViewRecord
 {
     protected static string $resource = AuditResource::class;
 
+    protected static ?string $title = 'View System Administration';
+
     public function infolist(Infolist $infolist): Infolist
     {
         return $infolist
@@ -55,9 +57,9 @@ class ViewAudit extends ViewRecord
                     ->schema([
                         TextEntry::make('auditable_type')
                             ->label('Auditable'),
-                        TextEntry::make('user.name')
+                        TextEntry::make('change_agent_name')
                             ->label('Change Agent (User)')
-                            ->placeholder('N/A'),
+                            ->placeholder('System'),
                         TextEntry::make('event')
                             ->label('Event'),
                         TextEntry::make('url')
@@ -72,7 +74,7 @@ class ViewAudit extends ViewRecord
                             ->state(function (Audit $record) {
                                 return $record->getModified();
                             })
-                            ->view('filament.infolists.entries.change-entry'),
+                            ->view('filament.infolists.components.change-entry'),
                     ])
                     ->columns(),
             ]);

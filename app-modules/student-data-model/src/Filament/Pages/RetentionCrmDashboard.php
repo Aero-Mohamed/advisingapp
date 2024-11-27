@@ -3,7 +3,7 @@
 /*
 <COPYRIGHT>
 
-    Copyright © 2022-2023, Canyon GBS LLC. All rights reserved.
+    Copyright © 2016-2024, Canyon GBS LLC. All rights reserved.
 
     Advising App™ is licensed under the Elastic License 2.0. For more details,
     see https://github.com/canyongbs/advisingapp/blob/main/LICENSE.
@@ -40,11 +40,8 @@ use App\Models\User;
 use Filament\Pages\Dashboard as BaseDashboard;
 use Symfony\Component\HttpFoundation\Response;
 use AdvisingApp\StudentDataModel\Models\Student;
-use AdvisingApp\StudentDataModel\Filament\Widgets\StudentCount;
+use AdvisingApp\StudentDataModel\Filament\Widgets\StudentStats;
 use AdvisingApp\StudentDataModel\Filament\Widgets\StudentTasks;
-use AdvisingApp\StudentDataModel\Filament\Widgets\StudentAlertCount;
-use AdvisingApp\StudentDataModel\Filament\Widgets\StudentCaseloadCount;
-use AdvisingApp\StudentDataModel\Filament\Widgets\StudentSubscriptionCount;
 
 class RetentionCrmDashboard extends BaseDashboard
 {
@@ -52,11 +49,13 @@ class RetentionCrmDashboard extends BaseDashboard
 
     protected static ?int $navigationSort = 10;
 
-    protected static ?string $navigationLabel = 'Dashboard';
+    protected static ?string $navigationLabel = 'My Dashboard';
 
     protected static ?string $title = 'Retention CRM Dashboard';
 
     protected static string $routePath = 'retention-crm-dashboard';
+
+    protected static ?string $navigationIcon = '';
 
     public static function shouldRegisterNavigation(): bool
     {
@@ -77,22 +76,8 @@ class RetentionCrmDashboard extends BaseDashboard
     public function getWidgets(): array
     {
         return [
-            //1
-            StudentCount::class,
-            StudentSubscriptionCount::class,
-            StudentAlertCount::class,
-            StudentCaseloadCount::class,
-            //2
+            StudentStats::class,
             StudentTasks::class,
-        ];
-    }
-
-    public function getColumns(): int | string | array
-    {
-        return [
-            'sm' => 1,
-            'md' => 2,
-            'lg' => 4,
         ];
     }
 }

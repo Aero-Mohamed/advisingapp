@@ -3,75 +3,66 @@ Roles and permissions in the application have been setup in a flexible and maint
 
 This application uses the [Spatie Laravel-permission](https://spatie.be/docs/laravel-permission/v5/introduction) package in order to facilitate the usage of roles and permissions.
 
-The application uses a dedicated convention in order to define and populate roles and permissions, leaving little in the way of thinking when it comes time to stand up the application locally or in a live environment. Roles and permissions are mainly controlled through the `authorization` module, but each additional module also has some responsibility in order to correctly configure what it may need to properly facilitate role based access control.
+The application uses a dedicated convention in order to define and populate roles and permissions, leaving little in the way of thinking when it comes time to stand up the application locally or in a live environment.
 
 ### Local Setup
-In order to get your local environment correctly set up, you won't have to do anything beyond running the `composer refresh-database` command. Under the hood, this command will call on the `DatabaseSeeder`, which calls the `SyncRolesAndPermissions` artisan command. This command will seed and sync all of the roles and permissions defined in the application.
-
-## Role Groups
-Role Groups are a key component to understand in this application, as they are more akin to what we typically think of as Roles.
-
-In order to make the assignment and management of roles simple, Role Groups are used as logical groupings of Roles, which are even smaller logical groupings containing Permissions.
-
-A Role can belong to many Role Groups, and a User can belong to many Role Groups. When a User is assigned to a Role Group, they inherit all of the Roles that are attached to that Role Group. Any time a Role is added to a Role Group, any User that belongs to the Role Group will receive access to the Role that was added.
-
-> In order for a User to exist in a Role Group, they **must** have every Role defined in the Role Group.
-
-This means that if a Role is removed from a User, but that Role belongs to a Role Group that the User is also in, the User will lose access to the Role Group, and subsequently any other Roles that the Role Group had attached
-
-*Note: There is a planned improvement in the works which would allow an administering user to "directly" apply the remaining Roles of a Role Group to a user in the event they just want to remove a single Role.*
-
-A good example of how Role Groups are used in the application and how they interact with Roles and Permissions can be understood as follows.
-
-The Advising App provides a model called ServiceRequest. This represents service requests opened and managed within the Advising App system. Associated with this model are many permissions pertaining to the viewing, creating, updating, and deleting of cases. In order to group these permissions, we may want to create a "Service Request Manager" Role. This Role can be directly applied to a User, but it may also be applied to a User through a Role Group.
-
-We can create a Role Group called "Administrator", which could receive the "Service Request Manager" Role, as well as the "Knowledge Base Manager" Role, among others. Then, when a new administrator is added to the system, they can simply be granted the "Administrator" Role Group in order to inherit all of the roles and subsequent permissions that fall into this grouping.
-
-There are some high level rules about Role Groups that should be understood.
-
-1. When a user is assigned to a RoleGroup, any Role within this group that the User has *not already been assigned* will be assigned to the User, and will be denoted by the `via: role_group` pivot attribute.
-2. When a Role is assigned to a RoleGroup, any User within this group will be assigned the new Role *if they have not already been assigned*. If a Role was previously directly assigned, it will not be overwritten when the Role is added to the RoleGroup.
-3. When removing a Role from a User, if it belongs to a RoleGroup, the User will be removed from the RoleGroup entirely. A User cannot exist as a member of a RoleGroup without *all* of the Roles that exist within it.
-4. When a Role is removed from a RoleGroup, that Role is removed from any User in the RoleGroup, who had that Role assigned to them via the RoleGroup. If a Role exists within multiple RoleGroups to which a user is assigned, but the Role is only removed from one, the User will keep that Role via the RoleGroup that still contains the Role.
+In order to get your local environment correctly set up, you won't have to do anything beyond running the setup process defined in the documentation. Permissions are created in data migrations and roles are created by seeders when a Tenant is created.
 
 ## Permissions
-The application defines two distinct types of permissions: those related directly to models and those that are not. In the application, these are aptly referred to as `model` permissions and `custom` permissions.
+Permissions in the application are created and managed through special Data Migrations called Permission Migrations. Details on Data Migrations can be found in the [Data Migrations](/docs/data-migrations.md) documentation.
 
-The application defines a sane set of defaults for each model in the application, but also provides extensibility. In order to ensure that any new model introduced in the application automatically has the default `model` permissions defined for it, the following needs to be done:
+### Permission Migrations
+Permission Migrations operate much the same as regular Data Migrations but adhere to a few slightly different or additional rules:
 
-1. Register the model with the `Relation::morphMap()` in your module service provider
-2. Extend the `BaseModel`, or directly use the `AdvisingApp\Authorization\Models\Concerns\DefinesPermissions.php` trait on your model.
+1. Prepend the name of the migration with `seed_permissions_` to differentiate it from schema migrations and Data Migrations.
+2. Use the helpers in the `Database\Migrations\Concerns\CanModifyPermissions` trait.
+3. Any other queries you write should be surrounded by both a database transaction and a `try`/`catch` block to catch any SQL errors such as a `UniqueConstraintViolation`.
 
-Doing the following will ensure your model gets the following permission definitions:
+### What permissions to create
 
-- 'your-model.view-any'
-- 'your-model.create'
-- 'your-model.*.view'
-- 'your-model.*.update'
-- 'your-model.*.delete'
-- 'your-model.*.restore'
-- 'your-model.*.force-delete'
+#### Models
+Typically new Models added to the application should have the following default permissions created for them:
 
-As stated earlier, the application offers flexibility to override or extend this pattern. For example, if a particular model did not abide by typical CRUD conventions, and instead just needed a permission that defined the ability to "export", we could define the following method on that model:
+- `your-model.view-any`
+- `your-model.create`
+- `your-model.*.view`
+- `your-model.*.update`
+- `your-model.*.delete`
+- `your-model.*.restore`
+- `your-model.*.force-delete`
 
+But, for Models, there may be special cases where either additional permissions should be created. Or some permissions should **not** be created. (For example, if it is expected that Model should never be updated, we would not want the `your-model.*.update` update permission)
+
+What permissions should or should not be created should be decided on prior to creation. But if details are not provided before hand, it is the developers resonsobility to ensure discussion on deciding the permissions takes place.
+
+#### Custom Permissions
+Sometimes we have a need for permissions that are not neccarily related to Models. We call these "custom permissions". For example, if we are gating access to a certain page or feature based on a custom RBAC setup.
+
+The name of this permission can be virtually anything and should be decided upon by the developer with feedback from the team and Product.
+
+#### Permission Groups
+Permission Groups are a labelling system applied to permissions to put them into a grouping for better management and organization in the UI. As such all permissions **MUST** be related to a `PermissionGroup`.
+
+Many `PermissionGroup`s currently exist, so new permissions can be created and added to them. Or when creating a permission an new `PermissionGroup` can be created. What group to assign a permission to should be decided by the developer and/or decided upon by the team and Product.
+
+#### Make Migration Command
+
+This application has a command, virtually the same as the default `make:migration` command to create Permission Migrations.
+
+```bash
+php artisan make:permission-migration 
 ```
-public function getWebPermissions(): Collection
-{
-    return collect(['*.export']);
-}
+
+Example usage:
+
+```bash
+php artisan make:permission-migration seed_permissions_add_foo_permissions
 ```
 
-This would override application defaults and just define this single permission for whatever model this method existed on. If we just wanted to extend the existing functionality, and add this permission *in addition to* all of the existing defaults, our extending method could look like this:
-
-```
-public function getWebPermissions(): Collection
-{
-    return collect(['*.export', ...$this->webPermissions()]);
-}
-```
+This command works with the `--module` flag.
 
 ## Roles
-Similar to permissions, Roles are also configurable at the module level. Within configuration files in a module, you can define a Role and the Permissions that it will have.
+Roles are also configurable at the module level. Within configuration files in a module, you can define a Role and the Permissions that it will have.
 
 Roles will inherit their name from the name of their config file, and should be structured like so:
 
@@ -105,10 +96,6 @@ return [
     ]
 ];
 ```
-
-1. There are two ways roles can be assigned:
-   1. "directly" by simply assigning a single Role to a User
-   2. "role_group" by assigning a RoleGroup to a User, wherein they inherit all of the Roles that belong to this group
 
 ## Registering Roles and Permissions
 In order to register Roles and Permissions, the `authorization` module exposes registries that every other module can interact with. The Advising App platform expects that your Roles and Permissions are defined within configuration files.

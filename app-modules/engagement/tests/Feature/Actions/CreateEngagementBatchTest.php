@@ -3,7 +3,7 @@
 /*
 <COPYRIGHT>
 
-    Copyright © 2022-2023, Canyon GBS LLC. All rights reserved.
+    Copyright © 2016-2024, Canyon GBS LLC. All rights reserved.
 
     Advising App™ is licensed under the Elastic License 2.0. For more details,
     see https://github.com/canyongbs/advisingapp/blob/main/LICENSE.
@@ -58,7 +58,7 @@ it('will create a new engagement batch', function () {
         'user' => User::factory()->create(),
         'records' => Student::factory()->count(1)->create(),
         'subject' => 'Test Subject',
-        'body' => ['Test Body'],
+        'body' => ['type' => 'doc', 'content' => [['type' => 'paragraph', 'content' => [['type' => 'text', 'text' => 'Test Body']]]]],
         'deliveryMethod' => EngagementDeliveryMethod::Email->value,
     ]));
 
@@ -69,16 +69,19 @@ it('will create an engagement for every record provided', function () {
     Queue::fake([EngagementEmailChannelDelivery::class, EngagementSmsChannelDelivery::class]);
     Notification::fake();
 
+    $students = Student::factory()->count(3)->create();
+
     CreateEngagementBatch::dispatch(EngagementBatchCreationData::from([
         'user' => User::factory()->create(),
-        'records' => Student::factory()->count(3)->create(),
+        'records' => $students,
         'subject' => 'Test Subject',
-        'body' => ['Test Body'],
+        'body' => ['type' => 'doc', 'content' => [['type' => 'paragraph', 'content' => [['type' => 'text', 'text' => 'Test Body']]]]],
         'deliveryMethod' => EngagementDeliveryMethod::Email->value,
     ]));
 
     expect(Engagement::count())->toBe(3);
-    expect(Student::first()->engagements()->count())->toBe(1);
+
+    $students->each(fn (Student $student) => expect($student->engagements()->count())->toBe(1));
 });
 
 it('will associate the engagement with the batch', function () {
@@ -89,7 +92,7 @@ it('will associate the engagement with the batch', function () {
         'user' => User::factory()->create(),
         'records' => Student::factory()->count(4)->create(),
         'subject' => 'Test Subject',
-        'body' => ['Test Body'],
+        'body' => ['type' => 'doc', 'content' => [['type' => 'paragraph', 'content' => [['type' => 'text', 'text' => 'Test Body']]]]],
         'deliveryMethod' => EngagementDeliveryMethod::Email->value,
     ]));
 
@@ -104,12 +107,12 @@ it('will create deliverables for the created engagements', function () {
         'user' => User::factory()->create(),
         'records' => Student::factory()->count(1)->create(),
         'subject' => 'Test Subject',
-        'body' => ['Test Body'],
+        'body' => ['type' => 'doc', 'content' => [['type' => 'paragraph', 'content' => [['type' => 'text', 'text' => 'Test Body']]]]],
         'deliveryMethod' => EngagementDeliveryMethod::Email->value,
     ]));
 
-    expect(EngagementDeliverable::count())->toBe(1);
-    expect(Engagement::first()->deliverable()->count())->toBe(1);
+    expect(EngagementDeliverable::count())->toBe(1)
+        ->and(Engagement::first()->deliverable()->count())->toBe(1);
 });
 
 it('will dispatch a batch of jobs for each engagement that needs to be delivered', function () {
@@ -120,7 +123,7 @@ it('will dispatch a batch of jobs for each engagement that needs to be delivered
         'user' => User::factory()->create(),
         'records' => Student::factory()->count(5)->create(),
         'subject' => 'Test Subject',
-        'body' => ['Test Body'],
+        'body' => ['type' => 'doc', 'content' => [['type' => 'paragraph', 'content' => [['type' => 'text', 'text' => 'Test Body']]]]],
         'deliveryMethod' => EngagementDeliveryMethod::Email->value,
     ]));
 
@@ -132,8 +135,6 @@ it('will dispatch a batch of jobs for each engagement that needs to be delivered
         return $batch->jobs->every(function ($job) {
             return $job instanceof EngagementEmailChannelDelivery;
         });
-
-        return true;
     });
 });
 
@@ -146,7 +147,7 @@ it('will dispatch a notification to the user who initiated the batch engagement 
         'user' => $user,
         'records' => Student::factory()->count(1)->create(),
         'subject' => 'Test Subject',
-        'body' => ['Test Body'],
+        'body' => ['type' => 'doc', 'content' => [['type' => 'paragraph', 'content' => [['type' => 'text', 'text' => 'Test Body']]]]],
         'deliveryMethod' => EngagementDeliveryMethod::Email->value,
     ]));
 

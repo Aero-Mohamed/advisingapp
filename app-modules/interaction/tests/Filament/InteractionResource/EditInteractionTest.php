@@ -3,7 +3,7 @@
 /*
 <COPYRIGHT>
 
-    Copyright © 2022-2023, Canyon GBS LLC. All rights reserved.
+    Copyright © 2016-2024, Canyon GBS LLC. All rights reserved.
 
     Advising App™ is licensed under the Elastic License 2.0. For more details,
     see https://github.com/canyongbs/advisingapp/blob/main/LICENSE.
@@ -47,7 +47,7 @@ test('EditInteraction is gated with proper access control', function () {
 
     $user->givePermissionTo('student.*.view');
     $user->givePermissionTo('prospect.*.view');
-    $user->givePermissionTo('service_request.*.view');
+    $user->givePermissionTo('case.*.view');
 
     $interaction = Interaction::factory()->create();
 

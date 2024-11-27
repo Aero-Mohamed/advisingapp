@@ -3,7 +3,7 @@
 /*
 <COPYRIGHT>
 
-    Copyright © 2022-2023, Canyon GBS LLC. All rights reserved.
+    Copyright © 2016-2024, Canyon GBS LLC. All rights reserved.
 
     Advising App™ is licensed under the Elastic License 2.0. For more details,
     see https://github.com/canyongbs/advisingapp/blob/main/LICENSE.
@@ -40,13 +40,16 @@ use Illuminate\Database\Eloquent\Collection;
 use AdvisingApp\Authorization\Enums\LicenseType;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\MorphToMany;
+use AdvisingApp\Notification\Models\Contracts\NotifiableInterface;
 
 /**
  * @property-read Collection $careTeam
  * @property string $email
  */
-interface Educatable extends Identifiable
+interface Educatable extends Identifiable, NotifiableInterface
 {
+    public static function getLabel(): string;
+
     public static function displayNameKey(): string;
 
     public static function displayEmailKey(): string;
@@ -56,4 +59,6 @@ interface Educatable extends Identifiable
     public static function getLicenseType(): LicenseType;
 
     public function eventAttendeeRecords(): HasMany;
+
+    public function canRecieveSms(): bool;
 }

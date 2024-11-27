@@ -3,7 +3,7 @@
 /*
 <COPYRIGHT>
 
-    Copyright © 2022-2023, Canyon GBS LLC. All rights reserved.
+    Copyright © 2016-2024, Canyon GBS LLC. All rights reserved.
 
     Advising App™ is licensed under the Elastic License 2.0. For more details,
     see https://github.com/canyongbs/advisingapp/blob/main/LICENSE.
@@ -38,13 +38,19 @@ namespace AdvisingApp\Engagement\Models;
 
 use App\Models\User;
 use App\Models\BaseModel;
+use Spatie\MediaLibrary\HasMedia;
+use Spatie\MediaLibrary\InteractsWithMedia;
+use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 /**
  * @mixin IdeHelperEmailTemplate
  */
-class EmailTemplate extends BaseModel
+class EmailTemplate extends BaseModel implements HasMedia
 {
+    use InteractsWithMedia;
+    use SoftDeletes;
+
     protected $fillable = [
         'name',
         'description',

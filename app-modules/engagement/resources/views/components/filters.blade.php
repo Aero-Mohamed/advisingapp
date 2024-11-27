@@ -1,7 +1,7 @@
 {{--
 <COPYRIGHT>
 
-    Copyright © 2022-2023, Canyon GBS LLC. All rights reserved.
+    Copyright © 2016-2024, Canyon GBS LLC. All rights reserved.
 
     Advising App™ is licensed under the Elastic License 2.0. For more details,
     see https://github.com/canyongbs/advisingapp/blob/main/LICENSE.
@@ -80,6 +80,13 @@
     </div>
 
     <label class="flex items-center">
+        <x-filament::input.checkbox wire:model.live="filterMemberOfCareTeam" />
+        <span class="ml-2">
+            Member of Care team
+        </span>
+    </label>
+
+    <label class="flex items-center">
         <x-filament::input.checkbox wire:model.live="filterSubscribed" />
 
         <span class="ml-2">
@@ -95,9 +102,10 @@
     </label>
 
     <label class="flex items-center">
-        <x-filament::input.checkbox wire:model.live="filterOpenServiceRequests" />
+        <x-filament::input.checkbox wire:model.live="filterOpenCases" />
         <span class="ml-2">
-            Open Service Requests
+            Open Cases
         </span>
     </label>
+
 </div>

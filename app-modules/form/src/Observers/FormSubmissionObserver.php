@@ -3,7 +3,7 @@
 /*
 <COPYRIGHT>
 
-    Copyright © 2022-2023, Canyon GBS LLC. All rights reserved.
+    Copyright © 2016-2024, Canyon GBS LLC. All rights reserved.
 
     Advising App™ is licensed under the Elastic License 2.0. For more details,
     see https://github.com/canyongbs/advisingapp/blob/main/LICENSE.
@@ -36,7 +36,6 @@
 
 namespace AdvisingApp\Form\Observers;
 
-use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Event;
 use AdvisingApp\Form\Models\FormSubmission;
 use AdvisingApp\Form\Events\FormSubmissionCreated;
@@ -48,12 +47,5 @@ class FormSubmissionObserver
         Event::dispatch(
             event: new FormSubmissionCreated(submission: $submission)
         );
-
-        if (! is_null($submission->author)) {
-            Cache::tags('{form-submission-count}')
-                ->forget(
-                    "{form-submission-count-{$submission->author->getKey()}}"
-                );
-        }
     }
 }

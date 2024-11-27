@@ -3,7 +3,7 @@
 /*
 <COPYRIGHT>
 
-    Copyright © 2022-2023, Canyon GBS LLC. All rights reserved.
+    Copyright © 2016-2024, Canyon GBS LLC. All rights reserved.
 
     Advising App™ is licensed under the Elastic License 2.0. For more details,
     see https://github.com/canyongbs/advisingapp/blob/main/LICENSE.
@@ -38,23 +38,30 @@ namespace AdvisingApp\Engagement\Models;
 
 use App\Models\User;
 use App\Models\BaseModel;
+use Spatie\MediaLibrary\HasMedia;
 use Illuminate\Support\Collection;
+use Illuminate\Support\HtmlString;
 use Illuminate\Database\Eloquent\Model;
+use League\HTMLToMarkdown\HtmlConverter;
 use OwenIt\Auditing\Contracts\Auditable;
 use AdvisingApp\Prospect\Models\Prospect;
 use AdvisingApp\Timeline\Models\Timeline;
 use Illuminate\Database\Eloquent\Builder;
+use Spatie\MediaLibrary\InteractsWithMedia;
+use Illuminate\Database\Eloquent\SoftDeletes;
 use AdvisingApp\StudentDataModel\Models\Student;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\Relations\MorphTo;
 use Illuminate\Database\Eloquent\Relations\MorphOne;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use AdvisingApp\Timeline\Timelines\EngagementTimeline;
+use AdvisingApp\Engagement\Enums\EngagementDeliveryMethod;
 use AdvisingApp\Engagement\Enums\EngagementDeliveryStatus;
 use AdvisingApp\Notification\Models\Contracts\Subscribable;
 use AdvisingApp\Timeline\Models\Contracts\ProvidesATimeline;
 use AdvisingApp\StudentDataModel\Models\Contracts\Educatable;
-use AdvisingApp\Engagement\Actions\GenerateEmailMarkdownContent;
+use AdvisingApp\Engagement\Models\Contracts\HasDeliveryMethod;
+use AdvisingApp\Engagement\Actions\GenerateEngagementBodyContent;
 use AdvisingApp\Audit\Models\Concerns\Auditable as AuditableTrait;
 use AdvisingApp\StudentDataModel\Models\Scopes\LicensedToEducatable;
 use AdvisingApp\StudentDataModel\Models\Concerns\BelongsToEducatable;
@@ -65,10 +72,12 @@ use AdvisingApp\Notification\Models\Contracts\CanTriggerAutoSubscription;
  *
  * @mixin IdeHelperEngagement
  */
-class Engagement extends BaseModel implements Auditable, CanTriggerAutoSubscription, ProvidesATimeline
+class Engagement extends BaseModel implements Auditable, CanTriggerAutoSubscription, ProvidesATimeline, HasDeliveryMethod, HasMedia
 {
     use AuditableTrait;
     use BelongsToEducatable;
+    use SoftDeletes;
+    use InteractsWithMedia;
 
     protected $fillable = [
         'user_id',
@@ -185,7 +194,7 @@ class Engagement extends BaseModel implements Auditable, CanTriggerAutoSubscript
 
     public function hasBeenDelivered(): bool
     {
-        return (bool) $this->deliverable->hasBeenDelivered();
+        return $this->deliverable->hasBeenDelivered();
     }
 
     public function getSubscribable(): ?Subscribable
@@ -193,20 +202,52 @@ class Engagement extends BaseModel implements Auditable, CanTriggerAutoSubscript
         return $this->recipient instanceof Subscribable ? $this->recipient : null;
     }
 
-    public function getBody(): string
+    public function getBody(): HtmlString
     {
-        return app(GenerateEmailMarkdownContent::class)(
-            [$this->body],
+        return app(GenerateEngagementBodyContent::class)(
+            $this->body,
             $this->getMergeData(),
+            $this->batch ?? $this,
+            'body',
         );
+    }
+
+    public function getBodyMarkdown(): string
+    {
+        return stripslashes((new HtmlConverter())->convert($this->getBody()));
     }
 
     public function getMergeData(): array
     {
         return [
+            'student first name' => $this->recipient->getAttribute($this->recipient->displayFirstNameKey()),
+            'student last name' => $this->recipient->getAttribute($this->recipient->displayLastNameKey()),
             'student full name' => $this->recipient->getAttribute($this->recipient->displayNameKey()),
             'student email' => $this->recipient->getAttribute($this->recipient->displayEmailKey()),
+            'student preferred name' => $this->recipient->getAttribute($this->recipient->displayPreferredNameKey()),
         ];
+    }
+
+    /**
+     * @param class-string $type
+     */
+    public static function getMergeTags(string $type): array
+    {
+        return match ($type) {
+            Student::class => [
+                'student first name',
+                'student last name',
+                'student full name',
+                'student email',
+                'student preferred name',
+            ],
+            default => [],
+        };
+    }
+
+    public function getDeliveryMethod(): EngagementDeliveryMethod
+    {
+        return $this->deliverable->channel;
     }
 
     protected static function booted(): void

@@ -3,7 +3,7 @@
 /*
 <COPYRIGHT>
 
-    Copyright © 2022-2023, Canyon GBS LLC. All rights reserved.
+    Copyright © 2016-2024, Canyon GBS LLC. All rights reserved.
 
     Advising App™ is licensed under the Elastic License 2.0. For more details,
     see https://github.com/canyongbs/advisingapp/blob/main/LICENSE.
@@ -38,14 +38,15 @@ namespace AdvisingApp\Consent\Filament\Resources\ConsentAgreementResource\Pages;
 
 use Filament\Forms\Form;
 use Filament\Tables\Table;
-use App\Filament\Columns\IdColumn;
 use Filament\Tables\Actions\Action;
 use Filament\Forms\Components\Fieldset;
 use Filament\Forms\Components\Textarea;
 use Filament\Tables\Actions\EditAction;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Forms\Components\TextInput;
+use App\Filament\Tables\Columns\IdColumn;
 use Filament\Resources\Pages\ListRecords;
+use AdvisingApp\Consent\Enums\ConsentAgreementType;
 use AdvisingApp\Consent\Filament\Resources\ConsentAgreementResource;
 
 class ListConsentAgreements extends ListRecords
@@ -59,6 +60,7 @@ class ListConsentAgreements extends ListRecords
         return $form
             ->schema([
                 TextInput::make('type')
+                    ->formatStateUsing(fn ($state) => ConsentAgreementType::from($state)->getLabel())
                     ->disabled()
                     ->helperText('This field is not editable.'),
                 TextInput::make('title')
@@ -81,7 +83,8 @@ class ListConsentAgreements extends ListRecords
         return $table
             ->columns([
                 IdColumn::make(),
-                TextColumn::make('type'),
+                TextColumn::make('type')
+                    ->formatStateUsing(fn (ConsentAgreementType $state) => $state->getLabel()),
                 TextColumn::make('title'),
             ])
             ->actions([

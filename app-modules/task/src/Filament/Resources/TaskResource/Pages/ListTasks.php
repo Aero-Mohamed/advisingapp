@@ -3,7 +3,7 @@
 /*
 <COPYRIGHT>
 
-    Copyright © 2022-2023, Canyon GBS LLC. All rights reserved.
+    Copyright © 2016-2024, Canyon GBS LLC. All rights reserved.
 
     Advising App™ is licensed under the Elastic License 2.0. For more details,
     see https://github.com/canyongbs/advisingapp/blob/main/LICENSE.
@@ -41,7 +41,6 @@ use Filament\Forms\Set;
 use Filament\Tables\Table;
 use Filament\Actions\Action;
 use AdvisingApp\Task\Models\Task;
-use App\Filament\Columns\IdColumn;
 use Filament\Actions\CreateAction;
 use Filament\Actions\ImportAction;
 use Filament\Tables\Filters\Filter;
@@ -52,6 +51,7 @@ use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\BaseFilter;
 use App\Filament\Resources\UserResource;
 use AdvisingApp\Prospect\Models\Prospect;
+use App\Filament\Tables\Columns\IdColumn;
 use Filament\Resources\Pages\ListRecords;
 use Filament\Tables\Filters\SelectFilter;
 use Illuminate\Database\Eloquent\Builder;
@@ -102,7 +102,7 @@ class ListTasks extends ListRecords
                     ->label('Assigned To')
                     ->url(fn (Task $record) => $record->assignedTo ? UserResource::getUrl('view', ['record' => $record->assignedTo]) : null)
                     ->hidden(function (Table $table) {
-                        return $table->getFilter('my_tasks')->getState()['isActive'];
+                        return $table->getFilter('my_tasks')->getState()['isActive'] ?? false;
                     }),
                 TextColumn::make('concern.display_name')
                     ->label('Related To')

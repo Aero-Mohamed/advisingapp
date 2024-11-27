@@ -3,7 +3,7 @@
 /*
 <COPYRIGHT>
 
-    Copyright © 2022-2023, Canyon GBS LLC. All rights reserved.
+    Copyright © 2016-2024, Canyon GBS LLC. All rights reserved.
 
     Advising App™ is licensed under the Elastic License 2.0. For more details,
     see https://github.com/canyongbs/advisingapp/blob/main/LICENSE.
@@ -37,6 +37,7 @@
 namespace AdvisingApp\Form\Models;
 
 use App\Models\Attributes\NoPermissions;
+use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
@@ -46,6 +47,8 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 #[NoPermissions]
 class FormStep extends SubmissibleStep
 {
+    use SoftDeletes;
+
     protected $fillable = [
         'label',
         'content',

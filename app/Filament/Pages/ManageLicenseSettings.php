@@ -3,7 +3,7 @@
 /*
 <COPYRIGHT>
 
-    Copyright © 2022-2023, Canyon GBS LLC. All rights reserved.
+    Copyright © 2016-2024, Canyon GBS LLC. All rights reserved.
 
     Advising App™ is licensed under the Elastic License 2.0. For more details,
     see https://github.com/canyongbs/advisingapp/blob/main/LICENSE.
@@ -36,31 +36,35 @@
 
 namespace App\Filament\Pages;
 
+use App\Models\User;
+use Filament\Forms\Get;
 use Filament\Forms\Form;
+use Filament\Actions\Action;
+use App\Models\Authenticatable;
 use Filament\Pages\SettingsPage;
 use App\Settings\LicenseSettings;
 use Filament\Forms\Components\Toggle;
 use Filament\Forms\Components\Section;
 use Filament\Forms\Components\TextInput;
-use App\Filament\Clusters\GlobalSettings;
 use Filament\Forms\Components\DatePicker;
 use App\DataTransferObjects\LicenseManagement\LicenseData;
 
 class ManageLicenseSettings extends SettingsPage
 {
-    protected static ?string $navigationIcon = 'heroicon-o-key';
-
     protected static ?string $navigationLabel = 'Subscription';
 
     protected static ?int $navigationSort = 10;
 
     protected static string $settings = LicenseSettings::class;
 
-    protected static ?string $cluster = GlobalSettings::class;
+    protected static ?string $navigationGroup = 'Global Administration';
 
     public static function canAccess(): bool
     {
-        return auth()->user()->can('license_settings.manage');
+        /** @var User $user */
+        $user = auth()->user();
+
+        return $user->hasRole(Authenticatable::SUPER_ADMIN_ROLE) && parent::canAccess();
     }
 
     public function form(Form $form): Form
@@ -69,9 +73,7 @@ class ManageLicenseSettings extends SettingsPage
             ->schema([
                 TextInput::make('license_key')
                     ->label('License Key')
-                    ->required()
-                    ->disabled()
-                    ->dehydrated(),
+                    ->required(),
                 Section::make('Subscription Information')
                     ->columns()
                     ->schema(
@@ -105,29 +107,40 @@ class ManageLicenseSettings extends SettingsPage
                             TextInput::make('data.limits.conversationalAiSeats')
                                 ->label('Artificial Intelligence Seats')
                                 ->numeric()
+                                ->minValue(0)
                                 ->required(),
+                            TextInput::make('data.limits.conversationalAiAssistants')
+                                ->label('Artificial Intelligence Assistants')
+                                ->numeric()
+                                ->minValue(0)
+                                ->required()
+                                ->disabled(fn (Get $get): bool => (bool) $get('conversationalAiSeats')),
                             TextInput::make('data.limits.retentionCrmSeats')
                                 ->label('Student Success / Retention Seats')
                                 ->numeric()
+                                ->minValue(0)
                                 ->required(),
                             TextInput::make('data.limits.recruitmentCrmSeats')
                                 ->label('Recruitment CRM Seats')
                                 ->numeric()
+                                ->minValue(0)
                                 ->required(),
                             TextInput::make('data.limits.emails')
                                 ->label('Emails')
                                 ->numeric()
+                                ->minValue(0)
                                 ->required(),
                             TextInput::make('data.limits.sms')
                                 ->label('SMS')
                                 ->numeric()
+                                ->minValue(0)
                                 ->required(),
                             TextInput::make('data.limits.resetDate')
                                 ->label('Reset Date')
                                 ->required(),
                         ]
                     ),
-                Section::make('Addons')
+                Section::make('Enabled Features')
                     ->columns()
                     ->schema(
                         [
@@ -138,18 +151,37 @@ class ManageLicenseSettings extends SettingsPage
                             Toggle::make('data.addons.onlineAdmissions')
                                 ->label('Online Admissions'),
                             Toggle::make('data.addons.serviceManagement')
-                                ->label('Service Management'),
+                                ->label('Case Management'),
                             Toggle::make('data.addons.knowledgeManagement')
-                                ->label('Knowledge Management'),
+                                ->label('Resource Hub'),
                             Toggle::make('data.addons.eventManagement')
                                 ->label('Event Management'),
                             Toggle::make('data.addons.realtimeChat')
                                 ->label('Realtime Chat'),
                             Toggle::make('data.addons.mobileApps')
                                 ->label('Mobile Apps'),
+                            Toggle::make('data.addons.experimentalReporting')
+                                ->label('Experimental Reporting')
+                                ->disabled(fn (LicenseSettings $settings): bool => $settings->data->limits->conversationalAiSeats < 1)
+                                ->live()
+                                ->afterStateUpdated(fn (Toggle $component, $state) => $state ? $component->state(false) && $this->mountAction('enableExperimentalReporting') : null),
+                            Toggle::make('data.addons.scheduleAndAppointments')
+                                ->label('Schedule & Appointments'),
+                            Toggle::make('data.addons.customAiAssistants')
+                                ->label('Custom AI Assistants'),
                         ]
                     ),
-            ]);
+            ])
+            ->disabled(! config('app.allow_license_settings_editing'));
+    }
+
+    public function enableExperimentalReporting(): Action
+    {
+        return Action::make('enableExperimentalReporting')
+            ->color('danger')
+            ->requiresConfirmation()
+            ->modalDescription('Experimental reporting is not currently a reliable method to explore your data, but is representative of a capability in research and development at Canyon GBS to innovatively extend AI to allow you to explore your data through natural language processing. This feature should be used for educational purposes only, and should not be be relied upon for decision making at your institution.')
+            ->action(fn () => $this->data['data']['addons']['experimentalReporting'] = true);
     }
 
     protected function mutateFormDataBeforeSave(array $data): array

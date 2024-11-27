@@ -3,7 +3,7 @@
 /*
 <COPYRIGHT>
 
-    Copyright © 2022-2023, Canyon GBS LLC. All rights reserved.
+    Copyright © 2016-2024, Canyon GBS LLC. All rights reserved.
 
     Advising App™ is licensed under the Elastic License 2.0. For more details,
     see https://github.com/canyongbs/advisingapp/blob/main/LICENSE.
@@ -38,6 +38,7 @@ namespace AdvisingApp\Engagement\Filament\Resources\EngagementResource\Pages;
 
 use Filament\Actions\EditAction;
 use Filament\Infolists\Infolist;
+use Illuminate\Support\HtmlString;
 use App\Filament\Resources\UserResource;
 use Filament\Resources\Pages\ViewRecord;
 use AdvisingApp\Prospect\Models\Prospect;
@@ -62,13 +63,11 @@ class ViewEngagement extends ViewRecord
                     ->schema([
                         TextEntry::make('user.name')
                             ->label('Created By')
-                            ->translateLabel()
                             ->color('primary')
                             ->url(function (Engagement $record) {
                                 return UserResource::getUrl('view', ['record' => $record->user->id]);
                             }),
                         TextEntry::make('recipient')
-                            ->translateLabel()
                             ->color('primary')
                             ->state(function (Engagement $record): string {
                                 /** @var Student|Prospect $recipient */
@@ -94,8 +93,7 @@ class ViewEngagement extends ViewRecord
                                     ->hidden(fn ($state): bool => blank($state))
                                     ->columnSpanFull(),
                                 TextEntry::make('body')
-                                    ->getStateUsing(fn (Engagement $engagement): string => $engagement->getBody())
-                                    ->markdown()
+                                    ->getStateUsing(fn (Engagement $engagement): HtmlString => $engagement->getBody())
                                     ->columnSpanFull(),
                             ]),
                     ])

@@ -3,7 +3,7 @@
 /*
 <COPYRIGHT>
 
-    Copyright © 2022-2023, Canyon GBS LLC. All rights reserved.
+    Copyright © 2016-2024, Canyon GBS LLC. All rights reserved.
 
     Advising App™ is licensed under the Elastic License 2.0. For more details,
     see https://github.com/canyongbs/advisingapp/blob/main/LICENSE.
@@ -44,11 +44,9 @@ use AdvisingApp\Application\Models\Application;
 use AdvisingApp\Application\Models\ApplicationStep;
 use AdvisingApp\Application\Models\ApplicationField;
 use Illuminate\Database\Eloquent\Relations\Relation;
-use AdvisingApp\Authorization\AuthorizationRoleRegistry;
 use AdvisingApp\Application\Models\ApplicationSubmission;
 use AdvisingApp\Application\Models\ApplicationAuthentication;
 use AdvisingApp\Application\Models\ApplicationSubmissionState;
-use AdvisingApp\Authorization\AuthorizationPermissionRegistry;
 use AdvisingApp\Application\Events\ApplicationSubmissionCreated;
 use AdvisingApp\Application\Observers\ApplicationSubmissionObserver;
 use AdvisingApp\Application\Listeners\NotifySubscribersOfApplicationSubmission;
@@ -57,7 +55,7 @@ class ApplicationServiceProvider extends ServiceProvider
 {
     public function register()
     {
-        Panel::configureUsing(fn (Panel $panel) => $panel->plugin(new ApplicationPlugin()));
+        Panel::configureUsing(fn (Panel $panel) => ($panel->getId() !== 'admin') || $panel->plugin(new ApplicationPlugin()));
     }
 
     public function boot()
@@ -71,7 +69,6 @@ class ApplicationServiceProvider extends ServiceProvider
             'application_submission_state' => ApplicationSubmissionState::class,
         ]);
 
-        $this->registerRolesAndPermissions();
         $this->registerObservers();
         $this->registerEvents();
     }
@@ -86,33 +83,6 @@ class ApplicationServiceProvider extends ServiceProvider
         Event::listen(
             events: ApplicationSubmissionCreated::class,
             listener: NotifySubscribersOfApplicationSubmission::class
-        );
-    }
-
-    protected function registerRolesAndPermissions()
-    {
-        $permissionRegistry = app(AuthorizationPermissionRegistry::class);
-
-        $permissionRegistry->registerApiPermissions(
-            module: 'application',
-            path: 'permissions/api/custom'
-        );
-
-        $permissionRegistry->registerWebPermissions(
-            module: 'application',
-            path: 'permissions/web/custom'
-        );
-
-        $roleRegistry = app(AuthorizationRoleRegistry::class);
-
-        $roleRegistry->registerApiRoles(
-            module: 'application',
-            path: 'roles/api'
-        );
-
-        $roleRegistry->registerWebRoles(
-            module: 'application',
-            path: 'roles/web'
         );
     }
 }

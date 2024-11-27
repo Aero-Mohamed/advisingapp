@@ -1,7 +1,7 @@
 {{--
 <COPYRIGHT>
 
-    Copyright © 2022-2023, Canyon GBS LLC. All rights reserved.
+    Copyright © 2016-2024, Canyon GBS LLC. All rights reserved.
 
     Advising App™ is licensed under the Elastic License 2.0. For more details,
     see https://github.com/canyongbs/advisingapp/blob/main/LICENSE.
@@ -100,18 +100,30 @@
                                                     'text-primary-600 dark:text-primary-400' =>
                                                         $conversation?->getKey() === $conversationItem->getKey(),
                                                 ])>
-                                                    @if (filled($conversationItem->channel_name))
-                                                        {{ $conversationItem->channel_name }}
-                                                    @else
-                                                        {{ $conversationItem->participants->where('id', '!=', auth()->id())->first()?->name }}
-                                                    @endif
+                                                    {{ $conversationItem->getLabel() }}
                                                 </span>
-                                                <x-filament::loading-indicator :attributes="(new \Illuminate\View\ComponentAttributeBag([
-                                                    'wire:loading.delay.' .
-                                                    config('filament.livewire_loading_delay', 'default') => '',
-                                                    'wire:target' =>
-                                                        'selectConversation(\'' . $conversationItem->getKey() . '\')',
-                                                ]))->class(['w-5 h-5'])" />
+                                                <div class="flex items-center gap-1">
+                                                    @if ($conversationItem->participant->unread_messages_count)
+                                                        <x-filament::badge color="warning">
+                                                            {{ $conversationItem->participant->unread_messages_count }}
+                                                        </x-filament::badge>
+                                                    @endif
+
+                                                    @if (!$conversationItem->participant->last_read_at)
+                                                        <x-filament::badge color="warning">
+                                                            New
+                                                        </x-filament::badge>
+                                                    @endif
+
+                                                    <x-filament::loading-indicator :attributes="(new \Illuminate\View\ComponentAttributeBag([
+                                                        'wire:loading.delay.' .
+                                                        config('filament.livewire_loading_delay', 'default') => '',
+                                                        'wire:target' =>
+                                                            'selectConversation(\'' .
+                                                            $conversationItem->getKey() .
+                                                            '\')',
+                                                    ]))->class(['w-5 h-5'])" />
+                                                </div>
                                             </button>
                                             @php
                                                 /** @var TwilioConversationUser $participant */
@@ -152,8 +164,13 @@
             @if ($conversation)
                 <div
                     class="col-span-1 flex h-full flex-col gap-2 overflow-hidden md:col-span-3"
-                    x-data="userToUserChat({ selectedConversation: @js($conversation->getKey()), users: @js($users) })"
+                    x-data="userToUserChat({
+                        selectedConversation: @js($conversation->getKey()),
+                        users: @js($users),
+                        activeUsers: $wire.$entangle('conversationActiveUsers'),
+                    })"
                     wire:key="conversation-{{ $conversation->getKey() }}"
+                    wire:poll.60s="loadConversationActiveUsers"
                 >
                     <div
                         class="flex flex-col items-center self-center"
@@ -201,12 +218,23 @@
                                             <div
                                                 class="mx-auto flex flex-1 gap-6 text-base md:max-w-2xl lg:max-w-[38rem] xl:max-w-3xl">
                                                 <div class="relative mt-1 flex flex-shrink-0 flex-col items-end">
-                                                    <x-filament::avatar
-                                                        class="rounded-full"
-                                                        alt="User Avatar"
-                                                        x-bind:src="message.avatar"
-                                                        size="lg"
-                                                    />
+                                                    <div class="relative">
+                                                        <x-filament::avatar
+                                                            class="rounded-full"
+                                                            alt="User Avatar"
+                                                            x-bind:src="message.avatar"
+                                                            size="lg"
+                                                        />
+
+                                                        <div
+                                                            class="absolute bottom-0 end-0 h-3 w-3 rounded-full"
+                                                            x-bind:class="{
+                                                                'bg-success-500': activeUsers.includes(message
+                                                                    .authorId),
+                                                                'bg-gray-500': !activeUsers.includes(message.authorId),
+                                                            }"
+                                                        ></div>
+                                                    </div>
                                                 </div>
                                                 <div
                                                     class="relative flex w-[calc(100%-50px)] flex-col lg:w-[calc(100%-115px)]">
@@ -256,28 +284,20 @@
                                     <div
                                         x-data="chatEditor({ currentUser: @js(auth()->id()), users: @js($users) })"
                                         x-model="message"
+                                        x-on:click.outside="$refs.colorPicker.close(); $refs.emojiPicker.close()"
                                         wire:ignore
                                         x-modelable="content"
                                     >
                                         <template x-if="isLoaded()">
-                                            <div class="flex flex-wrap gap-1 border-b px-3 py-2 dark:border-gray-700">
+                                            <div
+                                                class="flex flex-wrap items-center gap-1 border-b px-3 py-2 dark:border-gray-700">
                                                 <button
                                                     class="rounded p-0.5"
                                                     type="button"
                                                     x-on:click="toggleBold()"
                                                     x-bind:class="{ 'bg-gray-200 dark:bg-gray-700': isActive('bold', updatedAt) }"
                                                 >
-                                                    <svg
-                                                        class="h-5 w-5"
-                                                        fill="currentColor"
-                                                        viewBox="0 0 1024 1024"
-                                                        version="1.1"
-                                                        xmlns="http://www.w3.org/2000/svg"
-                                                    >
-                                                        <path
-                                                            d="M576 661.333H426.667v-128H576c35.413 0 64 28.587 64 64 0 35.414-28.587 64-64 64m-149.333-384h128c35.413 0 64 28.587 64 64 0 35.414-28.587 64-64 64h-128m238.933 55.04C706.987 431.36 736 384 736 341.333c0-96.426-74.667-170.666-170.667-170.666H298.667V768H599.04c89.6 0 158.293-72.533 158.293-161.707 0-64.853-36.693-120.32-91.733-145.92z"
-                                                        />
-                                                    </svg>
+                                                    @svg('icon-bold', 'h-5 w-5')
                                                 </button>
 
                                                 <button
@@ -286,17 +306,7 @@
                                                     x-on:click="toggleItalic()"
                                                     x-bind:class="{ 'bg-gray-200 dark:bg-gray-700': isActive('italic', updatedAt) }"
                                                 >
-                                                    <svg
-                                                        class="h-5 w-5"
-                                                        fill="currentColor"
-                                                        viewBox="0 0 1024 1024"
-                                                        version="1.1"
-                                                        xmlns="http://www.w3.org/2000/svg"
-                                                    >
-                                                        <path
-                                                            d="M426.667 170.667v128h94.293L375.04 640H256v128h341.333V640H503.04l145.92-341.333H768v-128H426.667z"
-                                                        />
-                                                    </svg>
+                                                    @svg('icon-italic', 'h-5 w-5')
                                                 </button>
 
                                                 <button
@@ -305,18 +315,226 @@
                                                     x-on:click="toggleUnderline()"
                                                     x-bind:class="{ 'bg-gray-200 dark:bg-gray-700': isActive('underline', updatedAt) }"
                                                 >
-                                                    <svg
-                                                        class="h-5 w-5"
-                                                        fill="currentColor"
-                                                        viewBox="0 0 1024 1024"
-                                                        version="1.1"
-                                                        xmlns="http://www.w3.org/2000/svg"
-                                                    >
-                                                        <path
-                                                            d="M232 872h560v-80H232v80m280-160c132.4 0 240-107.6 240-240V152H652v320c0 77.2-62.8 140-140 140s-140-62.8-140-140V152H272v320c0 132.4 107.6 240 240 240z"
-                                                        />
-                                                    </svg>
+                                                    @svg('icon-underline', 'h-5 w-5')
                                                 </button>
+
+                                                <div>
+                                                    <button
+                                                        class="rounded p-0.5"
+                                                        type="button"
+                                                        x-on:click="toggleLink"
+                                                        x-bind:class="{ 'bg-gray-200 dark:bg-gray-700': isActive('link', updatedAt) }"
+                                                    >
+                                                        @svg('icon-link', 'mt-0.5 h-4 w-4')
+                                                    </button>
+
+                                                    <form
+                                                        class="absolute z-10 w-screen max-w-sm space-y-3 divide-y divide-gray-100 rounded-lg bg-white px-4 py-3 shadow-lg ring-1 ring-gray-950/5 transition dark:divide-white/5 dark:bg-gray-900 dark:ring-white/10"
+                                                        x-on:submit.prevent="saveLink"
+                                                        x-cloak
+                                                        x-float.offset.placement.bottom-start="{ offset: 8 }"
+                                                        x-ref="linkEditor"
+                                                        x-on:click.outside="$el.close"
+                                                        x-transition:enter-start="opacity-0"
+                                                        x-transition:leave-end="opacity-0"
+                                                    >
+                                                        <label class="grid gap-y-2">
+                                                            <span
+                                                                class="text-sm font-medium leading-6 text-gray-950 dark:text-white"
+                                                            >
+                                                                URL
+                                                            </span>
+
+                                                            <x-filament::input.wrapper>
+                                                                <x-filament::input
+                                                                    type="url"
+                                                                    x-model="linkUrl"
+                                                                    x-ref="linkInput"
+                                                                />
+                                                            </x-filament::input.wrapper>
+                                                        </label>
+
+                                                        <div class="flex flex-wrap items-center gap-3">
+                                                            <x-filament::button
+                                                                type="submit"
+                                                                size="sm"
+                                                            >
+                                                                Save
+                                                            </x-filament::button>
+
+                                                            <x-filament::button
+                                                                type="button"
+                                                                size="sm"
+                                                                x-show="linkUrl"
+                                                                x-on:click="removeLink"
+                                                                color="gray"
+                                                            >
+                                                                Remove
+                                                            </x-filament::button>
+                                                        </div>
+                                                    </form>
+                                                </div>
+
+                                                <div>
+                                                    <button
+                                                        class="rounded p-0.5"
+                                                        type="button"
+                                                        x-on:click="$refs.colorPicker.toggle"
+                                                        x-bind:class="{
+                                                            'bg-gray-200 dark:bg-gray-700': isActive('textStyle',
+                                                                updatedAt)
+                                                        }"
+                                                    >
+                                                        @svg('heroicon-c-swatch', 'mt-0.5 h-4 w-4')
+                                                    </button>
+
+                                                    <div
+                                                        class="absolute z-10 max-w-xs divide-y divide-gray-100 rounded-lg bg-white px-4 py-3 shadow-lg ring-1 ring-gray-950/5 transition dark:divide-white/5 dark:bg-gray-900 dark:ring-white/10"
+                                                        x-cloak
+                                                        x-float.offset.placement.top-start="{ offset: 8 }"
+                                                        x-ref="colorPicker"
+                                                        x-transition:enter-start="opacity-0"
+                                                        x-transition:leave-end="opacity-0"
+                                                    >
+                                                        <div class="flex flex-wrap items-center gap-2">
+                                                            <button
+                                                                class="flex h-5 w-5 items-center rounded-full border bg-gray-50 dark:border-gray-400 dark:bg-gray-800"
+                                                                type="button"
+                                                                x-on:click="removeColor()"
+                                                                x-bind:class="{
+                                                                    'ring-2 ring-offset-2 ring-primary-600 dark:ring-offset-gray-900':
+                                                                        !isActive(
+                                                                            'textStyle', updatedAt),
+                                                                }"
+                                                            >
+                                                                <span class="sr-only">
+                                                                    None
+                                                                </span>
+
+                                                                <div
+                                                                    class="flex-1 rotate-45 border-t dark:border-gray-400">
+                                                                </div>
+                                                            </button>
+
+                                                            <button
+                                                                class="h-5 w-5 rounded-full bg-[#ef4444]"
+                                                                type="button"
+                                                                x-on:click="setColor('#ef4444')"
+                                                                x-bind:class="{
+                                                                    'ring-2 ring-offset-2 ring-primary-600 dark:ring-offset-gray-900': updatedAt &&
+                                                                        isActive('textStyle', { color: '#ef4444' }),
+                                                                }"
+                                                            >
+                                                                <span class="sr-only">
+                                                                    Red
+                                                                </span>
+                                                            </button>
+
+                                                            <button
+                                                                class="h-5 w-5 rounded-full bg-[#ec4899]"
+                                                                type="button"
+                                                                x-on:click="setColor('#ec4899')"
+                                                                x-bind:class="{
+                                                                    'ring-2 ring-offset-2 ring-primary-600 dark:ring-offset-gray-900': updatedAt &&
+                                                                        isActive('textStyle', { color: '#ec4899' }),
+                                                                }"
+                                                            >
+                                                                <span class="sr-only">
+                                                                    Pink
+                                                                </span>
+                                                            </button>
+
+                                                            <button
+                                                                class="h-5 w-5 rounded-full bg-[#3b82f6]"
+                                                                type="button"
+                                                                x-on:click="setColor('#3b82f6')"
+                                                                x-bind:class="{
+                                                                    'ring-2 ring-offset-2 ring-primary-600 dark:ring-offset-gray-900': updatedAt &&
+                                                                        isActive('textStyle', { color: '#3b82f6' }),
+                                                                }"
+                                                            >
+                                                                <span class="sr-only">
+                                                                    Blue
+                                                                </span>
+                                                            </button>
+
+                                                            <button
+                                                                class="h-5 w-5 rounded-full bg-[#22c55e]"
+                                                                type="button"
+                                                                x-on:click="setColor('#22c55e')"
+                                                                x-bind:class="{
+                                                                    'ring-2 ring-offset-2 ring-primary-600 dark:ring-offset-gray-900': updatedAt &&
+                                                                        isActive('textStyle', { color: '#22c55e' }),
+                                                                }"
+                                                            >
+                                                                <span class="sr-only">
+                                                                    Green
+                                                                </span>
+                                                            </button>
+
+                                                            <button
+                                                                class="h-5 w-5 rounded-full bg-[#eab308]"
+                                                                type="button"
+                                                                x-on:click="setColor('#eab308')"
+                                                                x-bind:class="{
+                                                                    'ring-2 ring-offset-2 ring-primary-600 dark:ring-offset-gray-900': updatedAt &&
+                                                                        isActive('textStyle', { color: '#eab308' }),
+                                                                }"
+                                                            >
+                                                                <span class="sr-only">
+                                                                    Yellow
+                                                                </span>
+                                                            </button>
+
+                                                            <button
+                                                                class="h-5 w-5 rounded-full bg-[#737373]"
+                                                                type="button"
+                                                                x-on:click="setColor('#737373')"
+                                                                x-bind:class="{
+                                                                    'ring-2 ring-offset-2 ring-primary-600 dark:ring-offset-gray-900': updatedAt &&
+                                                                        isActive('textStyle', { color: '#737373' }),
+                                                                }"
+                                                            >
+                                                                <span class="sr-only">
+                                                                    Gray
+                                                                </span>
+                                                            </button>
+                                                        </div>
+                                                    </div>
+                                                </div>
+
+                                                <div>
+                                                    <button
+                                                        class="rounded p-0.5"
+                                                        type="button"
+                                                        x-on:click="$refs.emojiPicker.toggle"
+                                                    >
+                                                        @svg('heroicon-c-face-smile', 'mt-0.5 h-4 w-4')
+                                                    </button>
+
+                                                    <div
+                                                        class="absolute z-10 max-w-xs divide-y divide-gray-100 rounded-lg bg-white px-4 py-3 shadow-lg ring-1 ring-gray-950/5 transition dark:divide-white/5 dark:bg-gray-900 dark:ring-white/10"
+                                                        x-cloak
+                                                        x-float.offset.placement.top-start="{ offset: 8 }"
+                                                        x-ref="emojiPicker"
+                                                        x-transition:enter-start="opacity-0"
+                                                        x-transition:leave-end="opacity-0"
+                                                    >
+                                                        <div class="flex flex-wrap items-center gap-2">
+                                                            <template
+                                                                x-for="emoji in ['😀', '😂', '👍', '👎', '🙏', '😕', '🤔', '😊', '🎉', '💼', '🕒', '📅', '🔒', '❗', '❓', '💡', '🚫', '✅', '🤖', '📧', '🌐', '💬', '📈', '📉', '🤝']"
+                                                            >
+                                                                <button
+                                                                    class="h-5 w-5 rounded hover:bg-gray-100 dark:hover:bg-gray-800"
+                                                                    type="button"
+                                                                    x-on:click="insertContent(emoji)"
+                                                                    x-text="emoji"
+                                                                    x-bind:key="emoji"
+                                                                ></button>
+                                                            </template>
+                                                        </div>
+                                                    </div>
+                                                </div>
                                             </div>
                                         </template>
 
@@ -356,11 +574,13 @@
                                 </div>
                             </div>
                         </form>
-                        @if ($conversation->type === ConversationType::Channel)
-                            @php
-                                $isManager = (bool) $conversation->managers()->find(auth()->user());
-                            @endphp
-                            <div class="{{ $isManager ? 'justify-between' : 'justify-end' }} flex items-center">
+
+                        @php
+                            $isManager = (bool) $conversation->managers()->find(auth()->user());
+                        @endphp
+
+                        <div class="{{ $isManager ? 'justify-between' : 'justify-end' }} flex items-center">
+                            @if ($conversation->type === ConversationType::Channel)
                                 @if ($isManager)
                                     <div class="flex gap-3">
                                         {{ $this->editChannelAction }}
@@ -368,14 +588,18 @@
                                         {{ $this->deleteChannelAction }}
                                     </div>
                                 @endif
+                            @endif
 
-                                <div class="flex gap-3">
+                            <div class="flex gap-3">
+                                {{ $this->updateNotificationPreferenceAction }}
+
+                                @if ($conversation->type === ConversationType::Channel)
                                     {{ $this->addUserToChannelAction }}
 
                                     {{ $this->leaveChannelAction }}
-                                </div>
+                                @endif
                             </div>
-                        @endif
+                        </div>
                     </div>
                 </div>
             @else
@@ -384,7 +608,7 @@
                 </div>
             @endif
         </div>
-        <script src="{{ FilamentAsset::getScriptSrc('userToUserChat', 'canyon-gbs/in-app-communication') }}"></script>
+        <script src="{{ url('js/canyon-gbs/in-app-communication/userToUserChat.js') }}"></script>
         <style>
             .tiptap .is-editor-empty:first-child::before {
                 color: #adb5bd;
@@ -397,6 +621,62 @@
             .ProseMirror-focused {
                 outline-color: transparent;
             }
+
+            span[data-type="mention"][data-id="{{ auth()->id() }}"] {
+                background-color: #fcd34d55;
+                border-radius: 3px;
+            }
         </style>
     </div>
+
+    <x-filament::modal
+        id="confirmSafeLink"
+        width="2xl"
+    >
+        <x-slot name="heading">
+            <h3 class="text-3xl">Link confirmation</h3>
+        </x-slot>
+
+        <x-slot name="description">
+            <div
+                class="mt-4 flex flex-col"
+                x-data="{ href: null }"
+                x-on:open-modal.window="href = $event.detail.href"
+            >
+                You are about to open another browser tab and visit:
+                <strong
+                    class="mt-2"
+                    x-text="href"
+                ></strong>
+            </div>
+        </x-slot>
+
+        <x-slot name="footerActions">
+            <div
+                class="flex w-full justify-between"
+                x-data="{ href: null }"
+                x-on:open-modal.window="href = $event.detail.href"
+            >
+                <x-filament::button
+                    x-on:click="close()"
+                    color="gray"
+                    outlined
+                >
+                    Cancel
+                </x-filament::button>
+                <a
+                    :href="href"
+                    target="_blank"
+                >
+                    <x-filament::button
+                        color="primary"
+                        x-on:click="close()"
+                    >
+                        Continue
+                    </x-filament::button>
+                </a>
+            </div>
+        </x-slot>
+    </x-filament::modal>
+
 </x-filament-panels::page>

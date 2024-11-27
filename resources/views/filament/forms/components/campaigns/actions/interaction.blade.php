@@ -1,7 +1,7 @@
 {{--
 <COPYRIGHT>
 
-    Copyright © 2022-2023, Canyon GBS LLC. All rights reserved.
+    Copyright © 2016-2024, Canyon GBS LLC. All rights reserved.
 
     Advising App™ is licensed under the Elastic License 2.0. For more details,
     see https://github.com/canyongbs/advisingapp/blob/main/LICENSE.
@@ -39,8 +39,8 @@
     use AdvisingApp\Interaction\Models\InteractionStatus;
     use AdvisingApp\Interaction\Models\InteractionDriver;
     use AdvisingApp\Interaction\Models\InteractionOutcome;
-    use AdvisingApp\Interaction\Models\InteractionCampaign;
     use AdvisingApp\Interaction\Models\InteractionRelation;
+    use AdvisingApp\Interaction\Models\InteractionInitiative;
 @endphp
 
 <x-filament::fieldset>
@@ -50,13 +50,14 @@
 
     <dl class="max-w-md divide-y divide-gray-200 text-gray-900 dark:divide-gray-700 dark:text-white">
         <div class="flex flex-col pb-3">
-            <dt class="mb-1 text-sm text-gray-500 dark:text-gray-400">Campaign</dt>
-            <dd class="text-sm font-semibold">{{ InteractionCampaign::find($action['interaction_campaign_id'])?->name }}
-            </dd>
+            <dt class="mb-1 text-sm text-gray-500 dark:text-gray-400">Initiative</dt>
+            <dd class="text-sm font-semibold">
+                {{ InteractionInitiative::find($action['interaction_initiative_id'])?->name }}</dd>
         </div>
         <div class="flex flex-col pt-3">
             <dt class="mb-1 text-sm text-gray-500 dark:text-gray-400">Driver</dt>
-            <dd class="text-sm font-semibold">{{ InteractionDriver::find($action['interaction_driver_id'])?->name }}</dd>
+            <dd class="text-sm font-semibold">{{ InteractionDriver::find($action['interaction_driver_id'])?->name }}
+            </dd>
         </div>
         <div class="flex flex-col pt-3">
             <dt class="mb-1 text-sm text-gray-500 dark:text-gray-400">Division</dt>

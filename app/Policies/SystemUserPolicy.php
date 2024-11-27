@@ -3,7 +3,7 @@
 /*
 <COPYRIGHT>
 
-    Copyright © 2022-2023, Canyon GBS LLC. All rights reserved.
+    Copyright © 2016-2024, Canyon GBS LLC. All rights reserved.
 
     Advising App™ is licensed under the Elastic License 2.0. For more details,
     see https://github.com/canyongbs/advisingapp/blob/main/LICENSE.
@@ -53,7 +53,7 @@ class SystemUserPolicy
     public function view(Authenticatable $authenticatable, SystemUser $model): Response
     {
         return $authenticatable->canOrElse(
-            abilities: ['system_user.*.view', "system_user.{$model->id}.view"],
+            abilities: ["system_user.{$model->id}.view"],
             denyResponse: 'You do not have permission to view this user.'
         );
     }
@@ -69,7 +69,7 @@ class SystemUserPolicy
     public function update(Authenticatable $authenticatable, SystemUser $model): Response
     {
         return $authenticatable->canOrElse(
-            abilities: ['system_user.*.update', "system_user.{$model->id}.update"],
+            abilities: ["system_user.{$model->id}.update"],
             denyResponse: 'You do not have permission to update this user.'
         );
     }
@@ -77,7 +77,7 @@ class SystemUserPolicy
     public function delete(Authenticatable $authenticatable, SystemUser $model): Response
     {
         return $authenticatable->canOrElse(
-            abilities: ['system_user.*.delete', "system_user.{$model->id}.delete"],
+            abilities: ["system_user.{$model->id}.delete"],
             denyResponse: 'You do not have permission to delete this user.'
         );
     }
@@ -85,7 +85,7 @@ class SystemUserPolicy
     public function restore(Authenticatable $authenticatable, SystemUser $model): Response
     {
         return $authenticatable->canOrElse(
-            abilities: ['system_user.*.restore', "system_user.{$model->id}.restore"],
+            abilities: ["system_user.{$model->id}.restore"],
             denyResponse: 'You do not have permission to restore this user.'
         );
     }
@@ -93,7 +93,7 @@ class SystemUserPolicy
     public function forceDelete(Authenticatable $authenticatable, SystemUser $model): Response
     {
         return $authenticatable->canOrElse(
-            abilities: ['system_user.*.force-delete', "system_user.{$model->id}.force-delete"],
+            abilities: ["system_user.{$model->id}.force-delete"],
             denyResponse: 'You do not have permission to permanently delete this user.'
         );
     }

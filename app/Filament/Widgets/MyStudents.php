@@ -3,7 +3,7 @@
 /*
 <COPYRIGHT>
 
-    Copyright © 2022-2023, Canyon GBS LLC. All rights reserved.
+    Copyright © 2016-2024, Canyon GBS LLC. All rights reserved.
 
     Advising App™ is licensed under the Elastic License 2.0. For more details,
     see https://github.com/canyongbs/advisingapp/blob/main/LICENSE.
@@ -36,6 +36,8 @@
 
 namespace App\Filament\Widgets;
 
+use Illuminate\Support\Number;
+use Filament\Widgets\StatsOverviewWidget;
 use Filament\Widgets\StatsOverviewWidget\Stat;
 use AdvisingApp\StudentDataModel\Models\Student;
 
@@ -46,7 +48,7 @@ class MyStudents extends StatsOverviewWidget
         return [
             Stat::make(
                 'Students (Subscribed)',
-                $this->formatCount(
+                Number::abbreviate(
                     auth()->user()->subscriptions()->where('subscribable_type', (new Student())->getMorphClass())->count()
                 )
             ),

@@ -3,7 +3,7 @@
 /*
 <COPYRIGHT>
 
-    Copyright © 2022-2023, Canyon GBS LLC. All rights reserved.
+    Copyright © 2016-2024, Canyon GBS LLC. All rights reserved.
 
     Advising App™ is licensed under the Elastic License 2.0. For more details,
     see https://github.com/canyongbs/advisingapp/blob/main/LICENSE.
@@ -35,24 +35,24 @@
 */
 
 use App\Models\User;
+use AdvisingApp\Segment\Models\Segment;
 use AdvisingApp\Campaign\Models\Campaign;
 use AdvisingApp\Prospect\Models\Prospect;
+use AdvisingApp\Segment\Enums\SegmentType;
 use Illuminate\Database\Eloquent\Collection;
 use AdvisingApp\Campaign\Models\CampaignAction;
 use AdvisingApp\Authorization\Enums\LicenseType;
 use AdvisingApp\StudentDataModel\Models\Student;
 use AdvisingApp\Campaign\Enums\CampaignActionType;
-use AdvisingApp\CaseloadManagement\Models\Caseload;
-use AdvisingApp\CaseloadManagement\Enums\CaseloadType;
 use AdvisingApp\StudentDataModel\Models\Contracts\Educatable;
 
-it('will create the appropriate records for educatables in the caseload', function (array $priorCareTeam, Collection $educatables, bool $removePrior) {
-    $caseload = Caseload::factory()->create([
-        'type' => CaseloadType::Static,
+it('will create the appropriate records for educatables in the segment', function (array $priorCareTeam, Collection $educatables, bool $removePrior) {
+    $segment = Segment::factory()->create([
+        'type' => SegmentType::Static,
     ]);
 
-    $educatables->each(function (Educatable $educatable) use ($caseload, $priorCareTeam) {
-        $caseload->subjects()->create([
+    $educatables->each(function (Educatable $educatable) use ($segment, $priorCareTeam) {
+        $segment->subjects()->create([
             'subject_id' => $educatable->getKey(),
             'subject_type' => $educatable->getMorphClass(),
         ]);
@@ -61,7 +61,7 @@ it('will create the appropriate records for educatables in the caseload', functi
     });
 
     $campaign = Campaign::factory()->create([
-        'caseload_id' => $caseload->id,
+        'segment_id' => $segment->id,
     ]);
 
     $users = User::factory()->licensed(LicenseType::cases())->count(3)->create();
@@ -92,44 +92,44 @@ it('will create the appropriate records for educatables in the caseload', functi
 })->with(
     [
         'no prior care team | prospects | remove prior false' => [
-            'priorCareTeam' => [],
-            'educatables' => fn () => Prospect::factory()->count(3)->create(),
-            'removePrior' => false,
+            [],
+            fn () => Prospect::factory()->count(3)->create(),
+            false,
         ],
         'no prior care team | prospects | remove prior true' => [
-            'priorCareTeam' => [],
-            'educatables' => fn () => Prospect::factory()->count(3)->create(),
-            'removePrior' => true,
+            [],
+            fn () => Prospect::factory()->count(3)->create(),
+            true,
         ],
         'prior care team | prospects | remove prior false' => [
-            'priorCareTeam' => fn () => User::factory()->licensed(LicenseType::cases())->count(3)->create()->pluck('id')->toArray(),
-            'educatables' => fn () => Prospect::factory()->count(3)->create(),
-            'removePrior' => false,
+            fn () => User::factory()->licensed(LicenseType::cases())->count(3)->create()->pluck('id')->toArray(),
+            fn () => Prospect::factory()->count(3)->create(),
+            false,
         ],
         'prior care team | prospects | remove prior true' => [
-            'priorCareTeam' => fn () => User::factory()->licensed(LicenseType::cases())->count(3)->create()->pluck('id')->toArray(),
-            'educatables' => fn () => Prospect::factory()->count(3)->create(),
-            'removePrior' => true,
+            fn () => User::factory()->licensed(LicenseType::cases())->count(3)->create()->pluck('id')->toArray(),
+            fn () => Prospect::factory()->count(3)->create(),
+            true,
         ],
         'no prior care team | students | remove prior false' => [
-            'priorCareTeam' => [],
-            'educatables' => fn () => Student::factory()->count(3)->create(),
-            'removePrior' => false,
+            [],
+            fn () => Student::factory()->count(3)->create(),
+            false,
         ],
         'no prior care team | students | remove prior true' => [
-            'priorCareTeam' => [],
-            'educatables' => fn () => Student::factory()->count(3)->create(),
-            'removePrior' => true,
+            [],
+            fn () => Student::factory()->count(3)->create(),
+            true,
         ],
         'prior care team | students | remove prior false' => [
-            'priorCareTeam' => fn () => User::factory()->licensed(LicenseType::cases())->count(3)->create()->pluck('id')->toArray(),
-            'educatables' => fn () => Student::factory()->count(3)->create(),
-            'removePrior' => false,
+            fn () => User::factory()->licensed(LicenseType::cases())->count(3)->create()->pluck('id')->toArray(),
+            fn () => Student::factory()->count(3)->create(),
+            false,
         ],
         'prior care team | students | remove prior true' => [
-            'priorCareTeam' => fn () => User::factory()->licensed(LicenseType::cases())->count(3)->create()->pluck('id')->toArray(),
-            'educatables' => fn () => Student::factory()->count(3)->create(),
-            'removePrior' => true,
+            fn () => User::factory()->licensed(LicenseType::cases())->count(3)->create()->pluck('id')->toArray(),
+            fn () => Student::factory()->count(3)->create(),
+            true,
         ],
     ]
 );

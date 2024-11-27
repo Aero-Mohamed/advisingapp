@@ -3,7 +3,7 @@
 /*
 <COPYRIGHT>
 
-    Copyright © 2022-2023, Canyon GBS LLC. All rights reserved.
+    Copyright © 2016-2024, Canyon GBS LLC. All rights reserved.
 
     Advising App™ is licensed under the Elastic License 2.0. For more details,
     see https://github.com/canyongbs/advisingapp/blob/main/LICENSE.
@@ -68,13 +68,17 @@ class EngagementPolicy
         }
 
         return $authenticatable->canOrElse(
-            abilities: ['engagement.*.view', "engagement.{$engagement->id}.view"],
+            abilities: ["engagement.{$engagement->id}.view"],
             denyResponse: 'You do not have permission to view this engagement.'
         );
     }
 
-    public function create(Authenticatable $authenticatable): Response
+    public function create(Authenticatable $authenticatable, ?Prospect $prospect = null): Response
     {
+        if (filled($prospect?->student_id)) {
+            return Response::deny('You cannot create an engagement for a Prospect that has been converted to a Student.');
+        }
+
         return $authenticatable->canOrElse(
             abilities: 'engagement.create',
             denyResponse: 'You do not have permission to create engagements.'
@@ -92,7 +96,7 @@ class EngagementPolicy
         }
 
         return $authenticatable->canOrElse(
-            abilities: ['engagement.*.update', "engagement.{$engagement->id}.update"],
+            abilities: ["engagement.{$engagement->id}.update"],
             denyResponse: 'You do not have permission to update this engagement.'
         );
     }
@@ -108,7 +112,7 @@ class EngagementPolicy
         }
 
         return $authenticatable->canOrElse(
-            abilities: ['engagement.*.delete', "engagement.{$engagement->id}.delete"],
+            abilities: ["engagement.{$engagement->id}.delete"],
             denyResponse: 'You do not have permission to delete this engagement.'
         );
     }
@@ -120,7 +124,7 @@ class EngagementPolicy
         }
 
         return $authenticatable->canOrElse(
-            abilities: ['engagement.*.restore', "engagement.{$engagement->id}.restore"],
+            abilities: ["engagement.{$engagement->id}.restore"],
             denyResponse: 'You do not have permission to restore this engagement.'
         );
     }
@@ -136,7 +140,7 @@ class EngagementPolicy
         }
 
         return $authenticatable->canOrElse(
-            abilities: ['engagement.*.force-delete', "engagement.{$engagement->id}.force-delete"],
+            abilities: ["engagement.{$engagement->id}.force-delete"],
             denyResponse: 'You do not have permission to permanently delete this engagement.'
         );
     }

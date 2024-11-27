@@ -3,7 +3,7 @@
 /*
 <COPYRIGHT>
 
-    Copyright © 2022-2023, Canyon GBS LLC. All rights reserved.
+    Copyright © 2016-2024, Canyon GBS LLC. All rights reserved.
 
     Advising App™ is licensed under the Elastic License 2.0. For more details,
     see https://github.com/canyongbs/advisingapp/blob/main/LICENSE.
@@ -40,18 +40,20 @@ use Closure;
 use App\Models\User;
 use Filament\Forms\Form;
 use Filament\Tables\Table;
-use App\Filament\Columns\IdColumn;
 use Filament\Tables\Columns\TextColumn;
+use App\Models\Scopes\WithoutSuperAdmin;
 use Filament\Forms\Components\TextInput;
+use App\Filament\Tables\Columns\IdColumn;
 use Filament\Tables\Actions\AttachAction;
 use Filament\Tables\Actions\DetachAction;
-use App\Filament\Resources\RelationManagers\RelationManager;
+use Illuminate\Database\Eloquent\Builder;
+use Filament\Resources\RelationManagers\RelationManager;
 
 class UsersRelationManager extends RelationManager
 {
     protected static string $relationship = 'users';
 
-    protected static ?string $recordTitleAttribute = 'email';
+    protected static ?string $recordTitleAttribute = 'name';
 
     public function form(Form $form): Form
     {
@@ -74,13 +76,21 @@ class UsersRelationManager extends RelationManager
             ->headerActions([
                 AttachAction::make()
                     ->label('Add user to this team')
-                    //TODO: remove this if we support multiple teams
+                    ->recordSelectOptionsQuery(function (Builder $query) {
+                        $query->tap(new WithoutSuperAdmin());
+                    })
                     ->form(fn (AttachAction $action): array => [
                         $action->getRecordSelect()
                             ->rules([
                                 fn (): Closure => function (string $attribute, $value, Closure $fail) {
+                                    //TODO: remove this if we support multiple teams
                                     if (User::findOrFail($value)->teams()->count() > 0) {
                                         $fail('This user already belongs to a team.');
+                                    }
+
+                                    //TODO: remove this if we want to allow super admin user as team member.
+                                    if (User::findOrFail($value)->isSuperAdmin()) {
+                                        $fail('Super admin users cannot be added to a team.');
                                     }
                                 },
                             ]),

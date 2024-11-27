@@ -3,7 +3,7 @@
 /*
 <COPYRIGHT>
 
-    Copyright © 2022-2023, Canyon GBS LLC. All rights reserved.
+    Copyright © 2016-2024, Canyon GBS LLC. All rights reserved.
 
     Advising App™ is licensed under the Elastic License 2.0. For more details,
     see https://github.com/canyongbs/advisingapp/blob/main/LICENSE.
@@ -37,6 +37,7 @@
 namespace AdvisingApp\IntegrationAwsSesEventHandling\Http\Controllers;
 
 use Exception;
+use App\Models\Tenant;
 use Illuminate\Http\Request;
 use App\Http\Controllers\Controller;
 use AdvisingApp\IntegrationAwsSesEventHandling\Events\SesOpenEvent;
@@ -57,19 +58,26 @@ class AwsSesInboundWebhookController extends Controller
     {
         $data = SesEventData::fromRequest($request);
 
-        match ($data->eventType) {
-            'Bounce' => SesBounceEvent::dispatch($data),
-            'Complaint' => SesComplaintEvent::dispatch($data),
-            'Delivery' => SesDeliveryEvent::dispatch($data),
-            'Send' => SesSendEvent::dispatch($data),
-            'Reject' => SesRejectEvent::dispatch($data),
-            'Open' => SesOpenEvent::dispatch($data),
-            'Click' => SesClickEvent::dispatch($data),
-            'Rendering Failure' => SesRenderingFailureEvent::dispatch($data),
-            'DeliveryDelay' => SesDeliveryDelayEvent::dispatch($data),
-            'Subscription' => SesSubscriptionEvent::dispatch($data),
-            default => throw new Exception('Unknown AWS SES event type'),
-        };
+        /** @var Tenant $tenant */
+        $tenant = Tenant::query()->findOrFail(data_get($data->mail->tags, 'tenant_id'))->first();
+
+        $tenant->execute(function () use ($data) {
+            // We are currently not handling the "Click", "Complaint", "Open", "Send", or "Subscription" event types
+            // Since we are only looking to identify whether or not email delivery was successful/failed
+            match ($data->eventType) {
+                'Bounce' => SesBounceEvent::dispatch($data),
+                'Click' => SesClickEvent::dispatch($data),
+                'Complaint' => SesComplaintEvent::dispatch($data),
+                'Delivery' => SesDeliveryEvent::dispatch($data),
+                'DeliveryDelay' => SesDeliveryDelayEvent::dispatch($data),
+                'Open' => SesOpenEvent::dispatch($data),
+                'Reject' => SesRejectEvent::dispatch($data),
+                'RenderingFailure' => SesRenderingFailureEvent::dispatch($data),
+                'Send' => SesSendEvent::dispatch($data),
+                'Subscription' => SesSubscriptionEvent::dispatch($data),
+                default => throw new Exception('Unknown AWS SES event type'),
+            };
+        });
 
         return response(status: 200);
     }

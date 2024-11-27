@@ -3,7 +3,7 @@
 /*
 <COPYRIGHT>
 
-    Copyright © 2022-2023, Canyon GBS LLC. All rights reserved.
+    Copyright © 2016-2024, Canyon GBS LLC. All rights reserved.
 
     Advising App™ is licensed under the Elastic License 2.0. For more details,
     see https://github.com/canyongbs/advisingapp/blob/main/LICENSE.
@@ -41,9 +41,9 @@ use App\DataTransferObjects\LicenseManagement\LicenseData;
 
 class LicenseSettings extends Settings
 {
-    public ?string $license_key;
+    public ?string $license_key = null;
 
-    public ?LicenseData $data;
+    public ?LicenseData $data = null;
 
     public static function group(): string
     {

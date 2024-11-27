@@ -3,7 +3,7 @@
 /*
 <COPYRIGHT>
 
-    Copyright © 2022-2023, Canyon GBS LLC. All rights reserved.
+    Copyright © 2016-2024, Canyon GBS LLC. All rights reserved.
 
     Advising App™ is licensed under the Elastic License 2.0. For more details,
     see https://github.com/canyongbs/advisingapp/blob/main/LICENSE.
@@ -61,11 +61,11 @@ class TaskViewAction extends ViewAction
                 ->action(fn (Task $record) => $record->getStateMachine('status')->transitionTo(TaskStatus::Completed))
                 ->cancelParentActions()
                 ->hidden(fn (Task $record) => $record->getStateMachine('status')->getStateTransitions()->doesntContain(TaskStatus::Completed->value) || auth()?->user()?->cannot("task.{$record->id}.update")),
-            Action::make('mark_as_cancelled')
-                ->label('Mark as Cancelled')
-                ->action(fn (Task $record) => $record->getStateMachine('status')->transitionTo(TaskStatus::Cancelled))
+            Action::make('mark_as_canceled')
+                ->label('Mark as Canceled')
+                ->action(fn (Task $record) => $record->getStateMachine('status')->transitionTo(TaskStatus::Canceled))
                 ->cancelParentActions()
-                ->hidden(fn (Task $record) => $record->getStateMachine('status')->getStateTransitions()->doesntContain(TaskStatus::Cancelled->value) || auth()?->user()?->cannot("task.{$record->id}.update")),
+                ->hidden(fn (Task $record) => $record->getStateMachine('status')->getStateTransitions()->doesntContain(TaskStatus::Canceled->value) || auth()?->user()?->cannot("task.{$record->id}.update")),
         ])->infolist($this->taskInfoList());
     }
 }

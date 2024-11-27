@@ -3,7 +3,7 @@
 /*
 <COPYRIGHT>
 
-    Copyright © 2022-2023, Canyon GBS LLC. All rights reserved.
+    Copyright © 2016-2024, Canyon GBS LLC. All rights reserved.
 
     Advising App™ is licensed under the Elastic License 2.0. For more details,
     see https://github.com/canyongbs/advisingapp/blob/main/LICENSE.
@@ -39,12 +39,13 @@ namespace AdvisingApp\Engagement\Filament\Pages;
 use Carbon\Carbon;
 use App\Models\User;
 use Filament\Pages\Page;
+use Illuminate\Support\Str;
+use Filament\Actions\Action;
 use Livewire\Attributes\Url;
 use Livewire\WithPagination;
 use App\Models\Authenticatable;
 use Filament\Actions\ViewAction;
 use AdvisingApp\Task\Models\Task;
-use Filament\Actions\CreateAction;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Database\Eloquent\Model;
@@ -52,22 +53,20 @@ use AdvisingApp\Prospect\Models\Prospect;
 use App\Actions\GetRecordFromMorphAndKey;
 use AdvisingApp\Engagement\Models\Engagement;
 use AdvisingApp\Authorization\Enums\LicenseType;
+use AdvisingApp\CaseManagement\Models\CaseModel;
 use AdvisingApp\StudentDataModel\Models\Student;
 use AdvisingApp\Timeline\Actions\SyncTimelineData;
 use Illuminate\Contracts\Database\Eloquent\Builder;
 use AdvisingApp\Engagement\Models\EngagementResponse;
 use Illuminate\Database\Query\Builder as QueryBuilder;
-use AdvisingApp\ServiceManagement\Models\ServiceRequest;
 use AdvisingApp\StudentDataModel\Models\Contracts\Educatable;
-use AdvisingApp\Engagement\Filament\Actions\EngagementCreateAction;
-use AdvisingApp\Timeline\Filament\Pages\Concerns\LoadsTimelineRecords;
+use AdvisingApp\Engagement\Filament\Actions\SendEngagementAction;
+use AdvisingApp\Timeline\Livewire\Concerns\CanLoadTimelineRecords;
 
 class MessageCenter extends Page
 {
     use WithPagination;
-    use LoadsTimelineRecords;
-
-    protected static ?string $navigationIcon = 'heroicon-o-inbox';
+    use CanLoadTimelineRecords;
 
     protected static string $view = 'engagement::filament.pages.message-center';
 
@@ -107,14 +106,17 @@ class MessageCenter extends Page
     #[Url(as: 'hasOpenTasks')]
     public bool $filterOpenTasks = false;
 
-    #[Url(as: 'hasOpenServiceRequests')]
-    public bool $filterOpenServiceRequests = false;
+    #[Url(as: 'hasOpenCases')]
+    public bool $filterOpenCases = false;
 
     #[Url(as: 'startDate')]
     public ?string $filterStartDate = null;
 
     #[Url(as: 'endDate')]
     public ?string $filterEndDate = null;
+
+    #[Url(as: 'hasMemberOfCareTeam')]
+    public bool $filterMemberOfCareTeam = false;
 
     public int $inboxPerPage = 10;
 
@@ -150,9 +152,10 @@ class MessageCenter extends Page
             'filterPeopleType',
             'filterSubscribed',
             'filterOpenTasks',
-            'filterOpenServiceRequests',
+            'filterOpenCases',
             'filterStartDate',
             'filterEndDate',
+            'filterMemberOfCareTeam',
         ];
 
         if (in_array($property, $filters)) {
@@ -292,12 +295,18 @@ class MessageCenter extends Page
                         ->pluck('concern_id')
                 );
             })
-            ->when($this->filterOpenServiceRequests === true, function (Builder $query) use ($idColumn) {
+            ->when($this->filterOpenCases === true, function (Builder $query) use ($idColumn) {
                 $query->whereIn(
                     $idColumn,
-                    ServiceRequest::query()
+                    CaseModel::query()
                         ->open()
                         ->pluck('respondent_id')
+                );
+            })
+            ->when($this->filterMemberOfCareTeam === true, function (Builder $query) use ($idColumn) {
+                $query->whereIn(
+                    $idColumn,
+                    $this->user->careTeams()->pluck('educatable_id')
                 );
             });
     }
@@ -307,11 +316,11 @@ class MessageCenter extends Page
         $this->mountAction('create');
     }
 
-    public function createAction(): CreateAction
+    public function createAction(): Action
     {
-        return EngagementCreateAction::make($this->recordModel)->after(function () {
-            $this->refreshSelectedEducatable();
-        });
+        return SendEngagementAction::make()
+            ->educatable($this->recordModel)
+            ->after(fn () => $this->refreshSelectedEducatable());
     }
 
     protected function getViewData(): array
@@ -320,10 +329,6 @@ class MessageCenter extends Page
 
         $studentPopulationQuery = null;
         $prospectPopulationQuery = null;
-
-        $studentsTable = config('database.adm_materialized_views_enabled')
-        ? 'students_local'
-        : 'students';
 
         /** @var Authenticatable $user */
         $user = auth()->user();
@@ -341,17 +346,17 @@ class MessageCenter extends Page
 
             $studentPopulationQuery = Student::query()
                 ->when($this->search, function ($query, $search) {
-                    $query->where('full_name', 'like', "%{$search}%")
+                    $query->whereRaw('lower(full_name) like ?', ['%' . Str::lower($search) . '%'])
                         ->orWhere('sisid', 'like', "%{$search}%")
                         ->orWhere('otherid', 'like', "%{$search}%")
                         ->orWhere('email', 'like', "%{$search}%")
                         ->orWhere('mobile', 'like', "%{$search}%")
                         ->orWhere('phone', 'like', "%{$search}%");
                 })
-                ->joinSub($studentLatestActivity, 'latest_activity', function ($join) use ($studentsTable) {
-                    $join->on("{$studentsTable}.sisid", '=', 'latest_activity.educatable_id');
+                ->joinSub($studentLatestActivity, 'latest_activity', function ($join) {
+                    $join->on('students.sisid', '=', 'latest_activity.educatable_id');
                 })
-                ->select("{$studentsTable}.sisid", "{$studentsTable}.full_name", 'latest_activity.latest_activity', DB::raw("'student' as type"));
+                ->select('students.sisid', 'students.full_name', 'latest_activity.latest_activity', DB::raw("'student' as type"));
         }
 
         if ($this->filterPeopleType === 'prospects' || $this->filterPeopleType === 'all') {
@@ -360,7 +365,7 @@ class MessageCenter extends Page
 
             $prospectPopulationQuery = Prospect::query()
                 ->when($this->search, function ($query, $search) {
-                    $query->where('full_name', 'like', "%{$search}%");
+                    $query->whereRaw('lower(full_name) like ?', ['%' . Str::lower($search) . '%']);
                 })
                 ->joinSub($prospectLatestActivity, 'latest_activity', function ($join) {
                     $join->on(DB::raw('prospects.id::VARCHAR'), '=', 'latest_activity.educatable_id');

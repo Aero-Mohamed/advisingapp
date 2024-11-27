@@ -3,7 +3,7 @@
 /*
 <COPYRIGHT>
 
-    Copyright © 2022-2023, Canyon GBS LLC. All rights reserved.
+    Copyright © 2016-2024, Canyon GBS LLC. All rights reserved.
 
     Advising App™ is licensed under the Elastic License 2.0. For more details,
     see https://github.com/canyongbs/advisingapp/blob/main/LICENSE.
@@ -40,6 +40,7 @@ use App\Models\Authenticatable;
 use AdvisingApp\Task\Models\Task;
 use Illuminate\Auth\Access\Response;
 use App\Concerns\PerformsLicenseChecks;
+use AdvisingApp\Prospect\Models\Prospect;
 use AdvisingApp\Authorization\Enums\LicenseType;
 use App\Policies\Contracts\PerformsChecksBeforeAuthorization;
 
@@ -71,13 +72,17 @@ class TaskPolicy implements PerformsChecksBeforeAuthorization
         }
 
         return $authenticatable->canOrElse(
-            abilities: ['task.*.view', "task.{$task->id}.view"],
+            abilities: ["task.{$task->id}.view"],
             denyResponse: 'You do not have permission to view this task.'
         );
     }
 
-    public function create(Authenticatable $authenticatable): Response
+    public function create(Authenticatable $authenticatable, ?Prospect $prospect = null): Response
     {
+        if ($prospect?->student()->exists()) {
+            return Response::deny('You cannot create tasks for a Prospect that has been converted to a Student.');
+        }
+
         return $authenticatable->canOrElse(
             abilities: 'task.create',
             denyResponse: 'You do not have permission to create tasks.'
@@ -86,12 +91,16 @@ class TaskPolicy implements PerformsChecksBeforeAuthorization
 
     public function update(Authenticatable $authenticatable, Task $task): Response
     {
+        if ($task->concern_type === (new Prospect())->getMorphClass() && filled($task->concern->student_id)) {
+            return Response::deny('You cannot edit this task as the related Prospect has been converted to a Student.');
+        }
+
         if (! $authenticatable->hasLicense($task->concern?->getLicenseType())) {
             return Response::deny('You do not have permission to update this task.');
         }
 
         return $authenticatable->canOrElse(
-            abilities: ['task.*.update', "task.{$task->id}.update"],
+            abilities: ["task.{$task->id}.update"],
             denyResponse: 'You do not have permission to update this task.'
         );
     }
@@ -103,7 +112,7 @@ class TaskPolicy implements PerformsChecksBeforeAuthorization
         }
 
         return $authenticatable->canOrElse(
-            abilities: ['task.*.delete', "task.{$task->id}.delete"],
+            abilities: ["task.{$task->id}.delete"],
             denyResponse: 'You do not have permission to delete this task.'
         );
     }
@@ -115,7 +124,7 @@ class TaskPolicy implements PerformsChecksBeforeAuthorization
         }
 
         return $authenticatable->canOrElse(
-            abilities: ['task.*.restore', "task.{$task->id}.restore"],
+            abilities: ["task.{$task->id}.restore"],
             denyResponse: 'You do not have permission to restore this task.'
         );
     }
@@ -127,7 +136,7 @@ class TaskPolicy implements PerformsChecksBeforeAuthorization
         }
 
         return $authenticatable->canOrElse(
-            abilities: ['task.*.force-delete', "task.{$task->id}.force-delete"],
+            abilities: ["task.{$task->id}.force-delete"],
             denyResponse: 'You do not have permission to permanently delete this task.'
         );
     }

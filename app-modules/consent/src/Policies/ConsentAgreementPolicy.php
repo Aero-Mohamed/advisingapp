@@ -3,7 +3,7 @@
 /*
 <COPYRIGHT>
 
-    Copyright © 2022-2023, Canyon GBS LLC. All rights reserved.
+    Copyright © 2016-2024, Canyon GBS LLC. All rights reserved.
 
     Advising App™ is licensed under the Elastic License 2.0. For more details,
     see https://github.com/canyongbs/advisingapp/blob/main/LICENSE.
@@ -63,7 +63,7 @@ class ConsentAgreementPolicy
     public function view(Authenticatable $authenticatable, ConsentAgreement $agreement): Response
     {
         return $authenticatable->canOrElse(
-            abilities: ['consent_agreement.*.view', "consent_agreement.{$agreement->id}.view"],
+            abilities: ["consent_agreement.{$agreement->id}.view"],
             denyResponse: 'You do not have permission to view this consent agreement.'
         );
     }
@@ -76,7 +76,7 @@ class ConsentAgreementPolicy
     public function update(Authenticatable $authenticatable, ConsentAgreement $agreement): Response
     {
         return $authenticatable->canOrElse(
-            abilities: ['consent_agreement.*.update', "consent_agreement.{$agreement->id}.update"],
+            abilities: ["consent_agreement.{$agreement->id}.update"],
             denyResponse: 'You do not have permission to update this consent agreement.'
         );
     }

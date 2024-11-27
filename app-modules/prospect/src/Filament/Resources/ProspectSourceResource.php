@@ -3,7 +3,7 @@
 /*
 <COPYRIGHT>
 
-    Copyright © 2022-2023, Canyon GBS LLC. All rights reserved.
+    Copyright © 2016-2024, Canyon GBS LLC. All rights reserved.
 
     Advising App™ is licensed under the Elastic License 2.0. For more details,
     see https://github.com/canyongbs/advisingapp/blob/main/LICENSE.
@@ -37,8 +37,8 @@
 namespace AdvisingApp\Prospect\Filament\Resources;
 
 use Filament\Resources\Resource;
-use App\Filament\Clusters\ProspectManagement;
 use AdvisingApp\Prospect\Models\ProspectSource;
+use App\Filament\Clusters\ConstituentManagement;
 use AdvisingApp\Prospect\Filament\Resources\ProspectSourceResource\Pages\EditProspectSource;
 use AdvisingApp\Prospect\Filament\Resources\ProspectSourceResource\Pages\ViewProspectSource;
 use AdvisingApp\Prospect\Filament\Resources\ProspectSourceResource\Pages\ListProspectSources;
@@ -54,7 +54,9 @@ class ProspectSourceResource extends Resource
 
     protected static ?int $navigationSort = 2;
 
-    protected static ?string $cluster = ProspectManagement::class;
+    protected static ?string $cluster = ConstituentManagement::class;
+
+    protected static ?string $navigationGroup = 'Prospects';
 
     public static function getRelations(): array
     {

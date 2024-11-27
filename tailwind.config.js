@@ -1,7 +1,7 @@
 /*
 <COPYRIGHT>
 
-    Copyright © 2022-2023, Canyon GBS LLC. All rights reserved.
+    Copyright © 2016-2024, Canyon GBS LLC. All rights reserved.
 
     Advising App™ is licensed under the Elastic License 2.0. For more details,
     see https://github.com/canyongbs/advisingapp/blob/main/LICENSE.
@@ -58,7 +58,7 @@ export default {
         './app-modules/**/resources/views/**/*.php',
         './resources/views/**/*.blade.php',
         './resources/views/filament/**/*.blade.php',
-        './vendor/awcodes/filament-tiptap-editor/resources/**/*.blade.php',
+        './vendor/canyongbs/filament-tiptap-editor/resources/**/*.blade.php',
         './vendor/filament/**/*.blade.php',
         './node_modules/flowbite/**/*.js',
     ],
@@ -66,6 +66,9 @@ export default {
         extend: {
             colors: {
                 gray: require('tailwindcss/colors').zinc,
+            },
+            fontSize: {
+                'xxs': ['.5rem'],
             },
         },
         // Changes to colors also need to be reflected in FilamentServiceProvider
@@ -174,7 +177,13 @@ export default {
                 900: '#7c1f53',
                 950: '#4b0c2f',
             },
+            turkish: {
+                300 : '#c0d7d8',
+                500 : '#43b7b2',
+            }
+
         },
+
     },
     plugins: [
         forms,

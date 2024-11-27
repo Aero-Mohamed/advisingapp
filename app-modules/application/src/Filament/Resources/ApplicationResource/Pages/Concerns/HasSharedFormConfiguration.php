@@ -3,7 +3,7 @@
 /*
 <COPYRIGHT>
 
-    Copyright © 2022-2023, Canyon GBS LLC. All rights reserved.
+    Copyright © 2016-2024, Canyon GBS LLC. All rights reserved.
 
     Advising App™ is licensed under the Elastic License 2.0. For more details,
     see https://github.com/canyongbs/advisingapp/blob/main/LICENSE.
@@ -40,7 +40,6 @@ use Filament\Forms\Get;
 use Filament\Forms\Components\Grid;
 use AdvisingApp\Form\Enums\Rounding;
 use AdvisingApp\Form\Rules\IsDomain;
-use App\Filament\Fields\ColorSelect;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Toggle;
 use Filament\Forms\Components\Section;
@@ -49,7 +48,7 @@ use Filament\Forms\Components\Repeater;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TagsInput;
 use Filament\Forms\Components\TextInput;
-use FilamentTiptapEditor\Enums\TiptapOutput;
+use App\Filament\Forms\Components\ColorSelect;
 use AdvisingApp\Application\Models\Application;
 use AdvisingApp\Application\Models\ApplicationStep;
 use AdvisingApp\Application\Models\ApplicationField;
@@ -132,7 +131,6 @@ trait HasSharedFormConfiguration
     public function fieldBuilder(): TiptapEditor
     {
         return TiptapEditor::make('content')
-            ->output(TiptapOutput::Json)
             ->blocks(FormFieldBlockRegistry::get())
             ->tools(['bold', 'italic', 'small', '|', 'heading', 'bullet-list', 'ordered-list', 'hr', '|', 'link', 'grid', 'blocks'])
             ->placeholder('Drag blocks here to build your form')
@@ -141,6 +139,8 @@ trait HasSharedFormConfiguration
                 if ($component->isDisabled()) {
                     return;
                 }
+
+                $record->wasRecentlyCreated && $component->processImages();
 
                 $application = $record instanceof Application ? $record : $record->submissible;
                 $applicationStep = $record instanceof ApplicationStep ? $record : null;
@@ -153,7 +153,7 @@ trait HasSharedFormConfiguration
                 $content = [];
 
                 if (filled($component->getState())) {
-                    $content = $component->decodeBlocksBeforeSave($component->getJSON(decoded: true));
+                    $content = $component->decodeBlocks($component->getJSON(decoded: true));
                 }
 
                 $content['content'] = $this->saveFieldsFromComponents(

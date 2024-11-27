@@ -3,7 +3,7 @@
 /*
 <COPYRIGHT>
 
-    Copyright © 2022-2023, Canyon GBS LLC. All rights reserved.
+    Copyright © 2016-2024, Canyon GBS LLC. All rights reserved.
 
     Advising App™ is licensed under the Elastic License 2.0. For more details,
     see https://github.com/canyongbs/advisingapp/blob/main/LICENSE.
@@ -38,6 +38,7 @@ namespace App\Filament\Widgets;
 
 use Illuminate\Support\Carbon;
 use Filament\Widgets\ChartWidget;
+use Illuminate\Support\Facades\Cache;
 use AdvisingApp\Prospect\Models\Prospect;
 
 class ProspectGrowthChart extends ChartWidget
@@ -66,28 +67,33 @@ class ProspectGrowthChart extends ChartWidget
 
     protected function getData(): array
     {
-        $totalCreatedPerMonth = Prospect::query()
-            ->toBase()
-            ->selectRaw('date_trunc(\'month\', created_at) as month')
-            ->selectRaw('count(*) as total')
-            ->where('created_at', '>', now()->subYear())
-            ->groupBy('month')
-            ->orderBy('month')
-            ->pluck('total', 'month');
+        $runningTotalPerMonth = Cache::tags(['prospects'])
+            ->remember('prospect-growth-chart-data', now()->addHour(), function (): array {
+                $totalCreatedPerMonth = Prospect::query()
+                    ->toBase()
+                    ->selectRaw('date_trunc(\'month\', created_at) as month')
+                    ->selectRaw('count(*) as total')
+                    ->where('created_at', '>', now()->subYear())
+                    ->groupBy('month')
+                    ->orderBy('month')
+                    ->pluck('total', 'month');
 
-        $runningTotal = Prospect::query()
-            ->where('created_at', '<', now()->subYear())
-            ->count();
+                $runningTotal = Prospect::query()
+                    ->where('created_at', '<', now()->subYear())
+                    ->count();
 
-        $runningTotalPerMonth = [];
+                $runningTotalPerMonth = [];
 
-        foreach (range(11, 0) as $month) {
-            $month = Carbon::now()->subMonths($month);
+                foreach (range(11, 0) as $month) {
+                    $month = Carbon::now()->subMonths($month);
 
-            $runningTotal += $totalCreatedPerMonth[$month->startOfMonth()->toDateTimeString()] ?? 0;
+                    $runningTotal += $totalCreatedPerMonth[$month->startOfMonth()->toDateTimeString()] ?? 0;
 
-            $runningTotalPerMonth[$month->format('M Y')] = $runningTotal;
-        }
+                    $runningTotalPerMonth[$month->format('M Y')] = $runningTotal;
+                }
+
+                return $runningTotalPerMonth;
+            });
 
         return [
             'datasets' => [

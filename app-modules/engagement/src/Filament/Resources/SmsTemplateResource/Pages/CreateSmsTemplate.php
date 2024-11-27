@@ -3,7 +3,7 @@
 /*
 <COPYRIGHT>
 
-    Copyright © 2022-2023, Canyon GBS LLC. All rights reserved.
+    Copyright © 2016-2024, Canyon GBS LLC. All rights reserved.
 
     Advising App™ is licensed under the Elastic License 2.0. For more details,
     see https://github.com/canyongbs/advisingapp/blob/main/LICENSE.
@@ -38,12 +38,14 @@ namespace AdvisingApp\Engagement\Filament\Resources\SmsTemplateResource\Pages;
 
 use Filament\Forms\Form;
 use Filament\Resources\Resource;
+use Filament\Forms\Components\Actions;
 use FilamentTiptapEditor\TiptapEditor;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
 use Filament\Resources\Pages\CreateRecord;
-use FilamentTiptapEditor\Enums\TiptapOutput;
+use AdvisingApp\Engagement\Enums\EngagementDeliveryMethod;
 use AdvisingApp\Engagement\Filament\Resources\SmsTemplateResource;
+use AdvisingApp\Engagement\Filament\Resources\Actions\DraftTemplateWithAiAction;
 
 class CreateSmsTemplate extends CreateRecord
 {
@@ -63,15 +65,22 @@ class CreateSmsTemplate extends CreateRecord
                 // TODO Implement length validation (320 characters max)
                 // https://www.twilio.com/docs/glossary/what-sms-character-limit#:~:text=Twilio's%20platform%20supports%20long%20messages,best%20deliverability%20and%20user%20experience.
                 TiptapEditor::make('content')
-                    ->mergeTags([
+                    ->mergeTags($mergeTags = [
+                        'student first name',
+                        'student last name',
                         'student full name',
                         'student email',
+                        'student preferred name',
                     ])
                     ->profile('sms')
-                    ->output(TiptapOutput::Json)
                     ->columnSpanFull()
                     ->extraInputAttributes(['style' => 'min-height: 12rem;'])
                     ->required(),
+                Actions::make([
+                    DraftTemplateWithAiAction::make()
+                        ->deliveryMethod(EngagementDeliveryMethod::Sms)
+                        ->mergeTags($mergeTags),
+                ]),
             ]);
     }
 

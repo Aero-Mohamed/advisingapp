@@ -3,7 +3,7 @@
 /*
 <COPYRIGHT>
 
-    Copyright © 2022-2023, Canyon GBS LLC. All rights reserved.
+    Copyright © 2016-2024, Canyon GBS LLC. All rights reserved.
 
     Advising App™ is licensed under the Elastic License 2.0. For more details,
     see https://github.com/canyongbs/advisingapp/blob/main/LICENSE.
@@ -37,7 +37,6 @@
 namespace AdvisingApp\MeetingCenter\Models;
 
 use App\Models\BaseModel;
-use App\Models\Attributes\NoPermissions;
 use Illuminate\Notifications\Notifiable;
 use AdvisingApp\Prospect\Models\Prospect;
 use AdvisingApp\StudentDataModel\Models\Student;
@@ -46,7 +45,6 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use AdvisingApp\MeetingCenter\Enums\EventAttendeeStatus;
 use AdvisingApp\Notification\Models\Contracts\NotifiableInterface;
 
-#[NoPermissions]
 /**
  * @mixin IdeHelperEventAttendee
  */

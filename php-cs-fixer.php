@@ -3,7 +3,7 @@
 /*
 <COPYRIGHT>
 
-    Copyright © 2022-2023, Canyon GBS LLC. All rights reserved.
+    Copyright © 2016-2024, Canyon GBS LLC. All rights reserved.
 
     Advising App™ is licensed under the Elastic License 2.0. For more details,
     see https://github.com/canyongbs/advisingapp/blob/main/LICENSE.
@@ -36,6 +36,7 @@
 
 use PhpCsFixer\Config;
 use PhpCsFixer\Finder;
+use PhpCsFixer\Runner\Parallel\ParallelConfigFactory;
 
 $rules = [
     '@PSR12' => true,
@@ -151,8 +152,17 @@ $rules = [
     'whitespace_after_comma_in_array' => true,
     'trim_array_spaces' => true,
     'single_space_around_construct' => true,
-    'fully_qualified_strict_types' => true,
+    'fully_qualified_strict_types' => [
+        'import_symbols' => true,
+        'leading_backslash_in_global_namespace' => false,
+    ],
+    'global_namespace_import' => [
+        'import_classes' => true,
+        'import_constants' => true,
+        'import_functions' => true,
+    ],
     'single_line_empty_body' => true,
+    'no_useless_nullsafe_operator' => true,
 ];
 
 $finder = Finder::create()
@@ -183,4 +193,5 @@ return (new Config())
     ->setCacheFile(__DIR__ . '/.php-cs-fixer.cache')
     ->setRiskyAllowed(false)
     ->setRules($rules)
+    ->setParallelConfig(ParallelConfigFactory::detect())
     ->setFinder($finder);

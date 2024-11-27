@@ -3,7 +3,7 @@
 /*
 <COPYRIGHT>
 
-    Copyright © 2022-2023, Canyon GBS LLC. All rights reserved.
+    Copyright © 2016-2024, Canyon GBS LLC. All rights reserved.
 
     Advising App™ is licensed under the Elastic License 2.0. For more details,
     see https://github.com/canyongbs/advisingapp/blob/main/LICENSE.
@@ -36,6 +36,7 @@
 
 namespace AdvisingApp\Campaign\Settings;
 
+use App\Settings\DisplaySettings;
 use Spatie\LaravelSettings\Settings;
 
 class CampaignSettings extends Settings
@@ -49,7 +50,7 @@ class CampaignSettings extends Settings
 
     public function getActionExecutionTimezone(): string
     {
-        return $this->action_execution_timezone ?? config('app.timezone');
+        return $this->action_execution_timezone ?? app(DisplaySettings::class)->timezone ?? config('app.timezone');
     }
 
     public function getActionExecutionTimezoneLabel(): string

@@ -3,7 +3,7 @@
 /*
 <COPYRIGHT>
 
-    Copyright © 2022-2023, Canyon GBS LLC. All rights reserved.
+    Copyright © 2016-2024, Canyon GBS LLC. All rights reserved.
 
     Advising App™ is licensed under the Elastic License 2.0. For more details,
     see https://github.com/canyongbs/advisingapp/blob/main/LICENSE.
@@ -43,14 +43,6 @@ return new class () extends SettingsMigration {
         $this->migrator->inGroup('google-analytics', function (SettingsBlueprint $blueprint): void {
             $blueprint->add('is_enabled', false);
             $blueprint->add('id');
-        });
-    }
-
-    public function down(): void
-    {
-        $this->migrator->inGroup('google-analytics', function (SettingsBlueprint $blueprint): void {
-            $blueprint->delete('is_enabled');
-            $blueprint->delete('id');
         });
     }
 };

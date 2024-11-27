@@ -3,7 +3,7 @@
 /*
 <COPYRIGHT>
 
-    Copyright © 2022-2023, Canyon GBS LLC. All rights reserved.
+    Copyright © 2016-2024, Canyon GBS LLC. All rights reserved.
 
     Advising App™ is licensed under the Elastic License 2.0. For more details,
     see https://github.com/canyongbs/advisingapp/blob/main/LICENSE.
@@ -39,6 +39,7 @@ namespace App\Models;
 use Spatie\MediaLibrary\HasMedia;
 use AdvisingApp\Division\Models\Division;
 use Spatie\MediaLibrary\InteractsWithMedia;
+use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\MorphToMany;
 
@@ -48,12 +49,14 @@ use Illuminate\Database\Eloquent\Relations\MorphToMany;
 class NotificationSetting extends BaseModel implements HasMedia
 {
     use InteractsWithMedia;
+    use SoftDeletes;
 
     protected $fillable = [
         'name',
         'primary_color',
         'related_to_type',
         'related_to_id',
+        'from_name',
     ];
 
     public function registerMediaCollections(): void

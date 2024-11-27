@@ -3,7 +3,7 @@
 /*
 <COPYRIGHT>
 
-    Copyright © 2022-2023, Canyon GBS LLC. All rights reserved.
+    Copyright © 2016-2024, Canyon GBS LLC. All rights reserved.
 
     Advising App™ is licensed under the Elastic License 2.0. For more details,
     see https://github.com/canyongbs/advisingapp/blob/main/LICENSE.
@@ -36,6 +36,7 @@
 
 namespace AdvisingApp\Authorization\Enums;
 
+use App\Models\Authenticatable;
 use App\Settings\LicenseSettings;
 use Filament\Support\Contracts\HasLabel;
 use AdvisingApp\Authorization\Models\License;
@@ -80,7 +81,12 @@ enum LicenseType: string implements HasLabel
 
     public function getSeatsInUse(): int
     {
-        return License::query()->where('type', $this)->count();
+        return License::query()
+            ->whereDoesntHave('user', function ($query) {
+                $query->role(Authenticatable::SUPER_ADMIN_ROLE);
+            })
+            ->where('type', $this)
+            ->count();
     }
 
     public function getAvailableSeats(): int

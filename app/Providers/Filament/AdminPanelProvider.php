@@ -3,7 +3,7 @@
 /*
 <COPYRIGHT>
 
-    Copyright © 2022-2023, Canyon GBS LLC. All rights reserved.
+    Copyright © 2016-2024, Canyon GBS LLC. All rights reserved.
 
     Advising App™ is licensed under the Elastic License 2.0. For more details,
     see https://github.com/canyongbs/advisingapp/blob/main/LICENSE.
@@ -37,8 +37,8 @@
 namespace App\Providers\Filament;
 
 use Filament\Panel;
+use App\Models\Tenant;
 use Filament\PanelProvider;
-use App\Models\SettingsProperty;
 use App\Filament\Pages\Dashboard;
 use Filament\Navigation\MenuItem;
 use Filament\Actions\ExportAction;
@@ -96,11 +96,14 @@ class AdminPanelProvider extends PanelProvider
             ->login(Login::class)
             ->viteTheme('resources/css/filament/admin/theme.css')
             ->favicon(function () {
-                $themeSettings = app(ThemeSettings::class);
-                $settingsProperty = SettingsProperty::getInstance('theme.is_favicon_active');
-                $favicon = $settingsProperty->getFirstMedia('favicon');
+                if (! Tenant::checkCurrent()) {
+                    return asset('/images/default-favicon-251024.png');
+                }
 
-                return $themeSettings->is_favicon_active && $favicon ? $favicon->getTemporaryUrl(now()->addMinutes(5)) : asset('/images/default-favicon.png');
+                $themeSettings = app(ThemeSettings::class);
+                $favicon = $themeSettings::getSettingsPropertyModel('theme.is_favicon_active')->getFirstMedia('favicon');
+
+                return $themeSettings->is_favicon_active && $favicon ? $favicon->getTemporaryUrl(now()->addMinutes(5)) : asset('/images/default-favicon-251024.png');
             })
             ->readOnlyRelationManagersOnResourceViewPagesByDefault(false)
             ->maxContentWidth('full')
@@ -131,35 +134,86 @@ class AdminPanelProvider extends PanelProvider
             ])
             ->navigationGroups([
                 NavigationGroup::make()
-                    ->label('Artificial Intelligence'),
+                    ->label('Artificial Intelligence')
+                    ->icon('heroicon-o-sparkles')
+                    ->collapsed(),
                 NavigationGroup::make()
-                    ->label('Retention CRM'),
+                    ->label('Retention CRM')
+                    ->icon('heroicon-o-academic-cap')
+                    ->collapsed(),
                 NavigationGroup::make()
-                    ->label('Recruitment CRM'),
+                    ->label('Recruitment CRM')
+                    ->icon('heroicon-o-magnifying-glass')
+                    ->collapsed(),
                 NavigationGroup::make()
-                    ->label('Engagement Features'),
+                    ->label('Engagement Features')
+                    ->icon('heroicon-o-signal')
+                    ->collapsed(),
                 NavigationGroup::make()
-                    ->label('Premium Features'),
+                    ->label('Premium Features')
+                    ->icon('heroicon-o-rocket-launch')
+                    ->collapsed(),
                 NavigationGroup::make()
-                    ->label('Reporting'),
+                    ->label('Reporting')
+                    ->icon('heroicon-o-document-chart-bar')
+                    ->collapsed(),
                 NavigationGroup::make()
-                    ->label('Users and Permissions'),
+                    ->label('Product Administration')
+                    ->icon('heroicon-o-wrench-screwdriver')
+                    ->collapsed(),
                 NavigationGroup::make()
-                    ->label('Product Administration'),
+                    ->label('Global Administration')
+                    ->icon('heroicon-o-adjustments-vertical')
+                    ->collapsed(),
             ])
+            ->sidebarCollapsibleOnDesktop()
             ->plugins([
                 FilamentSpatieLaravelHealthPlugin::make()
                     ->usingPage(ProductHealth::class),
                 FilamentFullCalendarPlugin::make(),
             ])
             ->userMenuItems([
-                'profile' => MenuItem::make()
-                    ->url(fn () => EditProfile::getUrl()),
+                MenuItem::make()
+                    ->label('Profile Settings')
+                    ->url(fn () => EditProfile::getUrl())
+                    ->icon('heroicon-s-cog-6-tooth'),
+                MenuItem::make()
+                    ->label('Recent Updates')
+                    ->url(function (ThemeSettings $themeSettings) {
+                        return $themeSettings->recent_updates_url;
+                    })
+                    ->icon('heroicon-s-megaphone')
+                    ->openUrlInNewTab()
+                    ->visible(function (ThemeSettings $themeSettings) {
+                        return $themeSettings->is_recent_updates_url_enabled && ! empty($themeSettings->recent_updates_url);
+                    }),
+                MenuItem::make()
+                    ->label('Get Support')
+                    ->url(function (ThemeSettings $themeSettings) {
+                        return $themeSettings->support_url;
+                    })
+                    ->icon('heroicon-s-lifebuoy')
+                    ->openUrlInNewTab()
+                    ->visible(function (ThemeSettings $themeSettings) {
+                        return $themeSettings->is_support_url_enabled && ! empty($themeSettings->support_url);
+                    }),
             ])
+            ->colors(fn (ThemeSettings $themeSettings): array => array_merge(config('default-colors'), $themeSettings->color_overrides))
             ->renderHook(
                 'panels::scripts.before',
                 fn () => view('filament.scripts.scroll-sidebar-to-active-menu-item'),
-            );
+            )
+            ->renderHook(
+                'panels::head.end',
+                fn (ThemeSettings $themeSettings) => ($themeSettings->url) ? view('filament.layout.theme', ['url' => $themeSettings->url]) : null,
+            )
+            ->bootUsing(function (Panel $panel) {
+                if (! Tenant::current()) {
+                    return;
+                }
+
+                $panel->darkMode(app(ThemeSettings::class)->has_dark_mode);
+            });
     }
 
     public function boot(): void {}

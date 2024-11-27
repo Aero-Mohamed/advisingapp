@@ -3,7 +3,7 @@
 /*
 <COPYRIGHT>
 
-    Copyright © 2022-2023, Canyon GBS LLC. All rights reserved.
+    Copyright © 2016-2024, Canyon GBS LLC. All rights reserved.
 
     Advising App™ is licensed under the Elastic License 2.0. For more details,
     see https://github.com/canyongbs/advisingapp/blob/main/LICENSE.
@@ -63,7 +63,7 @@ class ProspectSourcePolicy
     public function view(Authenticatable $authenticatable, ProspectSource $prospectSource): Response
     {
         return $authenticatable->canOrElse(
-            abilities: ['prospect_source.*.view', "prospect_source.{$prospectSource->id}.view"],
+            abilities: ["prospect_source.{$prospectSource->id}.view"],
             denyResponse: 'You do not have permission to view this prospect source.'
         );
     }
@@ -79,7 +79,7 @@ class ProspectSourcePolicy
     public function update(Authenticatable $authenticatable, ProspectSource $prospectSource): Response
     {
         return $authenticatable->canOrElse(
-            abilities: ['prospect_source.*.update', "prospect_source.{$prospectSource->id}.update"],
+            abilities: ["prospect_source.{$prospectSource->id}.update"],
             denyResponse: 'You do not have permission to update this prospect source.'
         );
     }
@@ -87,7 +87,7 @@ class ProspectSourcePolicy
     public function delete(Authenticatable $authenticatable, ProspectSource $prospectSource): Response
     {
         return $authenticatable->canOrElse(
-            abilities: ['prospect_source.*.delete', "prospect_source.{$prospectSource->id}.delete"],
+            abilities: ["prospect_source.{$prospectSource->id}.delete"],
             denyResponse: 'You do not have permission to delete this prospect source.'
         );
     }
@@ -95,7 +95,7 @@ class ProspectSourcePolicy
     public function restore(Authenticatable $authenticatable, ProspectSource $prospectSource): Response
     {
         return $authenticatable->canOrElse(
-            abilities: ['prospect_source.*.restore', "prospect_source.{$prospectSource->id}.restore"],
+            abilities: ["prospect_source.{$prospectSource->id}.restore"],
             denyResponse: 'You do not have permission to restore this prospect source.'
         );
     }
@@ -103,7 +103,7 @@ class ProspectSourcePolicy
     public function forceDelete(Authenticatable $authenticatable, ProspectSource $prospectSource): Response
     {
         return $authenticatable->canOrElse(
-            abilities: ['prospect_source.*.force-delete', "prospect_source.{$prospectSource->id}.force-delete"],
+            abilities: ["prospect_source.{$prospectSource->id}.force-delete"],
             denyResponse: 'You do not have permission to force delete this prospect source.'
         );
     }

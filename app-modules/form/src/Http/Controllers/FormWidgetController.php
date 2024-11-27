@@ -3,7 +3,7 @@
 /*
 <COPYRIGHT>
 
-    Copyright © 2022-2023, Canyon GBS LLC. All rights reserved.
+    Copyright © 2016-2024, Canyon GBS LLC. All rights reserved.
 
     Advising App™ is licensed under the Elastic License 2.0. For more details,
     see https://github.com/canyongbs/advisingapp/blob/main/LICENSE.
@@ -37,51 +37,63 @@
 namespace AdvisingApp\Form\Http\Controllers;
 
 use Closure;
-use Illuminate\Support\Str;
+use Throwable;
 use Illuminate\Http\Request;
 use AdvisingApp\Form\Models\Form;
 use Illuminate\Http\JsonResponse;
 use Filament\Support\Colors\Color;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\URL;
 use App\Http\Controllers\Controller;
 use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Facades\Validator;
+use AdvisingApp\Prospect\Models\Prospect;
+use App\Features\GenerateProspectFeature;
 use AdvisingApp\Form\Models\FormSubmission;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Validation\ValidationException;
 use Symfony\Component\HttpFoundation\Response;
 use AdvisingApp\Form\Models\FormAuthentication;
+use AdvisingApp\Prospect\Models\ProspectSource;
+use AdvisingApp\Prospect\Models\ProspectStatus;
 use AdvisingApp\Form\Actions\GenerateFormKitSchema;
-use AdvisingApp\Form\Actions\GenerateSubmissibleValidation;
+use AdvisingApp\Form\Actions\ProcessSubmissionField;
+use AdvisingApp\Form\Actions\GenerateSubmissibleValidator;
+use AdvisingApp\Form\Http\Requests\RegisterProspectRequest;
+use AdvisingApp\Prospect\Enums\SystemProspectClassification;
 use AdvisingApp\Form\Actions\ResolveSubmissionAuthorFromEmail;
 use AdvisingApp\Form\Notifications\AuthenticateFormNotification;
-use AdvisingApp\Form\Filament\Blocks\EducatableEmailFormFieldBlock;
 use AdvisingApp\IntegrationGoogleRecaptcha\Settings\GoogleRecaptchaSettings;
 
 class FormWidgetController extends Controller
 {
     public function view(GenerateFormKitSchema $generateSchema, Form $form): JsonResponse
     {
-        return response()->json(
-            [
-                'name' => $form->name,
-                'description' => $form->description,
-                'is_authenticated' => $form->is_authenticated,
-                ...($form->is_authenticated ? [
-                    'authentication_url' => URL::signedRoute('forms.request-authentication', ['form' => $form]),
-                ] : [
-                    'submission_url' => URL::signedRoute('forms.submit', ['form' => $form]),
-                ]),
-                'recaptcha_enabled' => $form->recaptcha_enabled,
-                ...($form->recaptcha_enabled ? [
-                    'recaptcha_site_key' => app(GoogleRecaptchaSettings::class)->site_key,
-                ] : []),
-                'schema' => $generateSchema($form),
-                'primary_color' => Color::all()[$form->primary_color ?? 'blue'],
-                'rounding' => $form->rounding,
-                'on_screen_response' => $form->on_screen_response,
-            ],
-        );
+        return response()->json([
+            'name' => $form->name,
+            'description' => $form->description,
+            'is_authenticated' => $form->is_authenticated,
+            ...($form->is_authenticated ? [
+                'authentication_url' => URL::signedRoute(
+                    name: 'forms.request-authentication',
+                    parameters: ['form' => $form],
+                    absolute: false,
+                ),
+            ] : [
+                'submission_url' => URL::signedRoute(
+                    name: 'forms.submit',
+                    parameters: ['form' => $form],
+                    absolute: false,
+                ),
+            ]),
+            'recaptcha_enabled' => $form->recaptcha_enabled,
+            ...($form->recaptcha_enabled ? [
+                'recaptcha_site_key' => app(GoogleRecaptchaSettings::class)->site_key,
+            ] : []),
+            'schema' => $generateSchema($form),
+            'primary_color' => Color::all()[$form->primary_color ?? 'blue'],
+            'rounding' => $form->rounding,
+            'on_screen_response' => $form->on_screen_response,
+        ]);
     }
 
     public function requestAuthentication(Request $request, ResolveSubmissionAuthorFromEmail $resolveSubmissionAuthorFromEmail, Form $form): JsonResponse
@@ -93,9 +105,20 @@ class FormWidgetController extends Controller
         $author = $resolveSubmissionAuthorFromEmail($data['email']);
 
         if (! $author) {
-            throw ValidationException::withMessages([
-                'email' => 'A student with that email address could not be found. Please contact your system administrator.',
-            ]);
+            if (! GenerateProspectFeature::active() || ! $form->generate_prospects) {
+                throw ValidationException::withMessages([
+                    'email' => 'A student with that email address could not be found. Please contact your system administrator.',
+                ]);
+            }
+
+            return response()->json([
+                'registrationAllowed' => true,
+                'authentication_url' => URL::signedRoute(
+                    name: 'forms.register-prospect',
+                    parameters: ['form' => $form],
+                    absolute: false,
+                ),
+            ], 404);
         }
 
         $code = random_int(100000, 999999);
@@ -112,10 +135,14 @@ class FormWidgetController extends Controller
 
         return response()->json([
             'message' => "We've sent an authentication code to {$data['email']}.",
-            'authentication_url' => URL::signedRoute('forms.authenticate', [
-                'form' => $form,
-                'authentication' => $authentication,
-            ]),
+            'authentication_url' => URL::signedRoute(
+                name: 'forms.authenticate',
+                parameters: [
+                    'form' => $form,
+                    'authentication' => $authentication,
+                ],
+                absolute: false,
+            ),
         ]);
     }
 
@@ -138,17 +165,21 @@ class FormWidgetController extends Controller
         ]);
 
         return response()->json([
-            'submission_url' => URL::signedRoute('forms.submit', [
-                'authentication' => $authentication,
-                'form' => $authentication->submissible,
-            ]),
+            'submission_url' => URL::signedRoute(
+                name: 'forms.submit',
+                parameters: [
+                    'authentication' => $authentication,
+                    'form' => $authentication->submissible,
+                ],
+                absolute: false,
+            ),
         ]);
     }
 
     public function store(
         Request $request,
-        GenerateSubmissibleValidation $generateValidation,
-        ResolveSubmissionAuthorFromEmail $resolveSubmissionAuthorFromEmail,
+        GenerateSubmissibleValidator $generateSubmissibleValidator,
+        ProcessSubmissionField $processSubmissionField,
         Form $form,
     ): JsonResponse {
         $authentication = $request->query('authentication');
@@ -164,102 +195,133 @@ class FormWidgetController extends Controller
             abort(Response::HTTP_UNAUTHORIZED);
         }
 
-        $validator = Validator::make(
-            $request->all(),
-            $generateValidation($form)
-        );
+        $validator = $generateSubmissibleValidator($form);
 
         if ($validator->fails()) {
-            return response()->json(
-                [
-                    'errors' => (object) $validator->errors(),
-                ],
-                Response::HTTP_UNPROCESSABLE_ENTITY
-            );
+            return response()->json([
+                'errors' => $validator->errors(),
+            ], Response::HTTP_UNPROCESSABLE_ENTITY);
         }
-
-        /** @var ?FormSubmission $submission */
-        $submission = $authentication ? $form->submissions()
-            ->requested()
-            ->whereMorphedTo('author', $authentication->author)
-            ->first() : null;
-
-        $submission ??= $form->submissions()->make();
-
-        if ($authentication) {
-            $submission->author()->associate($authentication->author);
-
-            $authentication->delete();
-        }
-
-        $submission->submitted_at = now();
-
-        $submission->save();
 
         $data = $validator->validated();
 
-        unset($data['recaptcha-token']);
+        DB::beginTransaction();
 
-        if ($form->is_wizard) {
-            foreach ($form->steps as $step) {
-                $stepFields = $step->fields()->pluck('type', 'id')->all();
+        try {
+            /** @var ?FormSubmission $submission */
+            $submission = $authentication ? $form->submissions()
+                ->requested()
+                ->whereMorphedTo('author', $authentication->author)
+                ->first() : null;
 
-                foreach ($data[$step->label] as $fieldId => $response) {
-                    $submission->fields()->attach(
+            $submission ??= $form->submissions()->make();
+
+            if ($authentication) {
+                $submission->author()->associate($authentication->author);
+
+                $authentication->delete();
+            }
+
+            $submission->submitted_at = now();
+
+            $submission->save();
+
+            unset($data['recaptcha-token']);
+
+            if ($form->is_wizard) {
+                foreach ($form->steps as $step) {
+                    $stepFields = $step->fields()->pluck('type', 'id')->all();
+
+                    foreach ($data[$step->label] as $fieldId => $response) {
+                        $processSubmissionField(
+                            $submission,
+                            $fieldId,
+                            $response,
+                            $stepFields,
+                        );
+                    }
+                }
+            } else {
+                $formFields = $form->fields()->pluck('type', 'id')->all();
+
+                foreach ($data as $fieldId => $response) {
+                    $processSubmissionField(
+                        $submission,
                         $fieldId,
-                        ['id' => Str::orderedUuid(), 'response' => $response],
+                        $response,
+                        $formFields,
                     );
-
-                    if ($submission->author) {
-                        continue;
-                    }
-
-                    if ($stepFields[$fieldId] !== EducatableEmailFormFieldBlock::type()) {
-                        continue;
-                    }
-
-                    $author = $resolveSubmissionAuthorFromEmail($response);
-
-                    if (! $author) {
-                        continue;
-                    }
-
-                    $submission->author()->associate($author);
                 }
             }
-        } else {
-            $formFields = $form->fields()->pluck('type', 'id')->all();
 
-            foreach ($data as $fieldId => $response) {
-                $submission->fields()->attach(
-                    $fieldId,
-                    ['id' => Str::orderedUuid(), 'response' => $response],
-                );
+            $submission->save();
 
-                if ($submission->author) {
-                    continue;
-                }
+            DB::commit();
+        } catch (Throwable $e) {
+            DB::rollBack();
 
-                if ($formFields[$fieldId] !== EducatableEmailFormFieldBlock::type()) {
-                    continue;
-                }
+            report($e);
 
-                $author = $resolveSubmissionAuthorFromEmail($response);
-
-                if (! $author) {
-                    continue;
-                }
-
-                $submission->author()->associate($author);
-            }
+            return response()->json([
+                'errors' => ['An error occurred while submitting this form.'],
+            ], Response::HTTP_INTERNAL_SERVER_ERROR);
         }
 
-        $submission->save();
+        return response()->json([
+            'message' => 'Form submitted successfully.',
+        ]);
+    }
 
-        return response()->json(
-            [
-                'message' => 'Form submitted successfully.',
-            ]
-        );
+    public function registerProspect(RegisterProspectRequest $request, Form $form): JsonResponse
+    {
+        $data = $request->validated();
+
+        $prospect = Prospect::query()
+            ->make([
+                ...$data,
+                'full_name' => "{$data['first_name']} {$data['last_name']}",
+            ]);
+
+        $status = ProspectStatus::query()
+            ->where('classification', SystemProspectClassification::New)
+            ->first();
+
+        if ($status) {
+            $prospect->status()->associate($status);
+        }
+
+        $source = ProspectSource::query()
+            ->where('name', 'Advising App')
+            ->first();
+
+        if ($source) {
+            $prospect->source()->associate($source);
+        }
+
+        $prospect->save();
+
+        $code = random_int(100000, 999999);
+
+        $authentication = new FormAuthentication();
+        $authentication->author()->associate($prospect);
+        $authentication->submissible()->associate($form);
+        $authentication->code = Hash::make($code);
+        $authentication->save();
+
+        Notification::route('mail', [
+            $request->get('email') => $prospect->getAttributeValue($prospect::displayNameKey()),
+        ])->notify(new AuthenticateFormNotification($authentication, $code));
+
+        return response()->json([
+            'message' => "We've sent an authentication code to {$request->get('email')}.",
+            'authentication_url' => URL::signedRoute(
+                name: 'forms.authenticate',
+                parameters: [
+                    'form' => $form,
+                    'authentication' => $authentication,
+                ],
+                absolute: false,
+            ),
+        ]);
     }
 }

@@ -3,7 +3,7 @@
 /*
 <COPYRIGHT>
 
-    Copyright © 2022-2023, Canyon GBS LLC. All rights reserved.
+    Copyright © 2016-2024, Canyon GBS LLC. All rights reserved.
 
     Advising App™ is licensed under the Elastic License 2.0. For more details,
     see https://github.com/canyongbs/advisingapp/blob/main/LICENSE.
@@ -58,6 +58,13 @@ class MailMessage extends BaseMailMessage
 
     public function settings(?NotificationSetting $setting): static
     {
+        if (! empty($setting->from_name)) {
+            $this->from(
+                address: config('mail.from.address'),
+                name: $setting->from_name,
+            );
+        }
+
         $this->viewData = [
             $this->viewData,
             'settings' => $setting,

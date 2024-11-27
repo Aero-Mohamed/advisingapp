@@ -1,9 +1,12 @@
 # Local Setup
 
 ### Requirements
-* [Docker](https://docs.docker.com/get-docker/)
-* [Docker Compose](https://docs.docker.com/compose/install/) (It is most likely that the way you installed Docker already came with Docker Compose, so on most systems you probably need not install this)
+* [Docker](https://docs.docker.com/get-docker/) version `26.0.0` or higher
+* [Docker Compose](https://docs.docker.com/compose/install/) version `2.25.0` or higher (It is most likely that the way you installed Docker already came with Docker Compose, so on most systems you probably need not install this)
 * [NVM (Node Version Manager)](https://github.com/nvm-sh/nvm) (Optional, but recommended)
+* Spin CLI
+  * [Spin MacOS](https://serversideup.net/open-source/spin/docs/installation/install-macos#install-docker-desktop)
+  * [Spin Linux](https://serversideup.net/open-source/spin/docs/installation/install-linux)
 
 ### Pre-Setup
 
@@ -27,39 +30,30 @@ nvm use
 
 Details on how to automatically use the correct version of Node when entering the project directory can be found on the [NVM GitHub page | Deeper Shell Integration](https://github.com/nvm-sh/nvm#deeper-shell-integration)
 
+#### Local hosts file
+
+In order to access the application in a web browser either in local or remote development you will need to place the following in your local `/etc/hosts` (or equivalent) file:
+
+```bash
+127.0.0.1 advisingapp.local
+127.0.0.1 mail.tools.advisingapp.local
+127.0.0.1 redis.tools.advisingapp.local
+127.0.0.1 test.advisingapp.local
+```
+
+> Note: If you want any other tenant domains other than `test.advisingapp.local` you will need to add them to your `etc/hosts` file in the same way as well.
+
 ### Setup
-This application makes use of [Spin](https://serversideup.net/open-source/spin/docs) for local development. Though not a requirement, it is highly recommended reading through the documentation on it.
 
-The `spin` executable is within your vendor folder, so you would have to type the path to it everytime to use it. To make this better, Spin recommends adding the following Bash alias:
-
+#### 1. Set up the `.env` file
+First, create an `.env` file based on `.env.example`
 ```bash
-alias spin='[ -f node_modules/.bin/spin ] && bash node_modules/.bin/spin || bash vendor/bin/spin'
-```
-
-This documentation will assume you have done so. If not you can simply replace `spin` throughout with `./vendor/bin/spin`.
-
-It may also be helpful to add some aliases for quick artisan and composer commands.
-
-```bash
-alias spina='spin exec -it php php artisan'
-alias spinc='spin exec -it php composer'
-```
-
-Make sure to add these after the `spin` alias.
-
-If you choose not to add these aliases, you can execute commands using `exec` like so:
-
-```bash
-spin exec -it php php artisan key:generate
-
-# or
-
-spin exec -it php php composer install
+cp .env.example .env
 ```
 
 ---
 
-After cloning this project, execute the following commands to install php dependencies:
+#### 2. Install Composer Dependencies
 
 ```bash
 docker run --rm \
@@ -67,51 +61,57 @@ docker run --rm \
     -v "$(pwd):/var/www/html" \
     -w /var/www/html \
     laravelsail/php82-composer:latest \
-    composer install --ignore-platform-reqs
-```
-You can install the php dependencies by simple running `composer install` on your host machine which can be quicker. But it can be best to install these making sure that the correct PHP version is being used while doing so.
-
-Then, create a `.env` file based on `.env.example`
-```bash
-cp .env.example .env
+    composer install --ignore-platform-reqs --no-scripts
 ```
 
-Next we need to get Spin to set up the containers and start running:
+---
+
+#### 3. Start the containers and open a shell into the main PHP container
+
+Run the following command to start the containers:
 
 ```bash
 spin up -d
 ```
 
-Finally, we will set up the application by running the following commands:
+Once the containers are started you can now start a shell into the main PHP container by running the following command:
+
 ```bash
-spina key:generate
-spina migrate:landlord:fresh
-npm install
-npm run build
+spin exec -it -u webuser advisingapp.local bash
 ```
 
-> #### Note:
-> If you do not have `nvm` installed and set up or you would prefer to run `npm` commands inside the container, you will need to run bash within the container and run the commands from there:
->
-> ```bash
-> spin exec -it php bash
-> ```
->
-> You will then have an interactive bash session within the container that you can run all commands from.
+All following commands will and should be run from within the PHP container.
+
+---
+
+#### 4. Set up the application
+
+We will set up the application by running the following commands:
+```bash
+php artisan migrate:landlord:fresh
+php artisan key:generate
+php artisan queue:restart
+php artisan schedule:interrupt
+npm ci
+php artisan filament:upgrade
+npm run build
+```
 
 The above commands will set up the application for the "landlord" database. The landlord database is in charge of holding all information on tenants. Next we will set up a tenant.
 
 ```bash
-spina tenant:create [A Name for the Tenant] [A domain for the tenant]
-spina queue:work --queue=landlord --stop-when-empty
-spina tenants:artisan "db:seed --database=tenant"
+php artisan tenants:create [A Name for the Tenant] [A domain for the tenant]
 ```
 
-These commands will create a new tenant with the name and domain you supplied, seed some data into it's sis database, and then refresh and seed the tenant's database.
+These commands will create a new tenant with the name and domain you supplied and then refresh and seed the tenant's database.
 
 After this the application should be accessible at the domain you supplied.
 
-Spin can be stopped by running `spin stop` and turning back on by running `spin up -d`
+Spin can be stopped by running `spin stop` and turned back on by running `spin up -d`
+
+Setup is now complete.
+
+---
 
 ### Customizing container settings and Ports
 
@@ -124,11 +124,9 @@ FORWARD_REDIS_PORT=6379
 FORWARD_MEILISEARCH_PORT=7700
 FORWARD_MAILPIT_PORT=1025
 FORWARD_MAILPIT_DASHBOARD_PORT=8025
-FORWARD_MINIO_PORT=9000
-FORWARD_MINIO_CONSOLE_PORT=8900
 ```
 
-Those variable will allow you to edit particular settings and forwarding ports for your local containers. A great example of this usage is within the database section below.
+Those variables will allow you to edit particular settings and forwarding ports for your local containers. A great example of this usage is within the database section below.
 
 ### Accessing the Database
 Within the containers, MySQL lives on port 3306. And by default it can be accessed outside of the containers on port 3308 as well.
@@ -137,51 +135,34 @@ If port 3306 is already in use on your system or you prefer to use another port,
 you can set the `FORWARD_DB_PORT` in your `.env` file to whatever available
 port you want.
 
-### Seed Mass ADM Data
-In order to seed the ADM data, you will need to first create a shell within your apps container by running the following command:
-```bash
-spin exec -it php bash
-```
-
-Then you can run the following command within the container to seed the data:
-
-```bash
-source .env ; gunzip < resources/sql/advising-app-adm-data.gz | PGPASSWORD=$SIS_DB_PASSWORD psql -h $SIS_DB_HOST -p $SIS_DB_PORT -U $SIS_DB_USERNAME -d $SIS_DB_DATABASE -q
-```
-
-### Minio (S3 Compatible Storage)
-Minio is a S3 compatible storage solution that is used for storing files locally.
-
-When first setting up you will need to create a bucket. This can be done by going to `localhost:8900` in your browser and logging in with `advisingapp` as the username and `password` as the password. Once logged in, you can create a bucket.
-
-By default, the application is set up in the `.env.example` to reference a bucket named `local`. Create a bucket with this name in Minio. Then change its access policy to "Custom" with the following policy configuration:
+### Storage
+This application makes use of S3 for storage. If you would like to use local storage. In order to do so, create a new public s3 bucket with the following policy:
 
 ```json
 {
-    "Version": "2012-10-17",
-    "Statement": [
-        {
-            "Sid": "AllowPublicRead",
-            "Effect": "Allow",
-            "Principal": {
-                "AWS": [
-                    "*"
-                ]
-            },
-            "Action": [
-                "s3:GetObject"
-            ],
-            "Resource": [
-                "arn:aws:s3:::local/PUBLIC/*"
-            ]
-        }
-    ]
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "AllowPublicRead",
+      "Effect": "Allow",
+      "Principal": {
+        "AWS": "*"
+      },
+      "Action": "s3:GetObject",
+      "Resource": "arn:aws:s3:::[YOUR_S3_BUCKET_NAME]/PUBLIC/*"
+    }
+  ]
 }
 ```
 
-In order to facilitate proper file upload with Livewire you will need to set the following in your local etc/hosts file:
-```
-127.0.0.1 minio
+After creating the bucket, you can set the following variables in your `.env` file:
+
+```dotenv
+AWS_S3_ACCESS_KEY_ID=
+AWS_S3_SECRET_ACCESS_KEY=
+AWS_S3_DEFAULT_REGION=
+AWS_S3_BUCKET=
+AWS_S3_ROOT=
 ```
 
 ### Queue and Scheduler

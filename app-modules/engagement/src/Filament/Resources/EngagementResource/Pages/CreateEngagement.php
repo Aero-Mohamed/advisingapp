@@ -3,7 +3,7 @@
 /*
 <COPYRIGHT>
 
-    Copyright © 2022-2023, Canyon GBS LLC. All rights reserved.
+    Copyright © 2016-2024, Canyon GBS LLC. All rights reserved.
 
     Advising App™ is licensed under the Elastic License 2.0. For more details,
     see https://github.com/canyongbs/advisingapp/blob/main/LICENSE.
@@ -45,15 +45,17 @@ use FilamentTiptapEditor\TiptapEditor;
 use Filament\Forms\Components\Checkbox;
 use Filament\Forms\Components\Fieldset;
 use Filament\Forms\Components\TextInput;
-use App\Filament\Fields\EducatableSelect;
+use Filament\Notifications\Notification;
+use AdvisingApp\Prospect\Models\Prospect;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Query\Expression;
 use Filament\Resources\Pages\CreateRecord;
-use FilamentTiptapEditor\Enums\TiptapOutput;
 use Filament\Forms\Components\Actions\Action;
 use Filament\Forms\Components\DateTimePicker;
 use AdvisingApp\Engagement\Models\EmailTemplate;
+use AdvisingApp\StudentDataModel\Models\Student;
 use Filament\Resources\Pages\ManageRelatedRecords;
+use App\Filament\Forms\Components\EducatableSelect;
 use Filament\Resources\RelationManagers\RelationManager;
 use AdvisingApp\Engagement\Enums\EngagementDeliveryMethod;
 use AdvisingApp\Engagement\Actions\CreateEngagementDeliverable;
@@ -70,8 +72,9 @@ class CreateEngagement extends CreateRecord
             ->schema([
                 Select::make('delivery_method')
                     ->label('What would you like to send?')
-                    ->options(EngagementDeliveryMethod::class)
+                    ->options(EngagementDeliveryMethod::getOptions())
                     ->default(EngagementDeliveryMethod::Email->value)
+                    ->disableOptionWhen(fn (string $value): bool => EngagementDeliveryMethod::tryFrom($value)?->getCaseDisabled())
                     ->selectablePlaceholder(false)
                     ->live(),
                 Fieldset::make('Content')
@@ -84,16 +87,16 @@ class CreateEngagement extends CreateRecord
                             ->columnSpanFull(),
                         TiptapEditor::make('body')
                             ->disk('s3-public')
-                            ->visibility('public')
-                            ->directory('editor-images/engagements')
                             ->label('Body')
                             ->mergeTags([
+                                'student first name',
+                                'student last name',
                                 'student full name',
                                 'student email',
+                                'student preferred name',
                             ])
                             ->showMergeTagsInBlocksPanel(! ($form->getLivewire() instanceof RelationManager))
                             ->profile('email')
-                            ->output(TiptapOutput::Json)
                             ->required()
                             ->hintAction(fn (TiptapEditor $component) => Action::make('loadEmailTemplate')
                                 ->form([
@@ -142,7 +145,9 @@ class CreateEngagement extends CreateRecord
                                         return;
                                     }
 
-                                    $component->state($template->content);
+                                    $component->state(
+                                        $component->generateImageUrls($template->content),
+                                    );
                                 }))
                             ->hidden(fn (Get $get): bool => $get('delivery_method') === EngagementDeliveryMethod::Sms->value)
                             ->helperText('You can insert student information by typing {{ and choosing a merge value to insert.')
@@ -163,6 +168,28 @@ class CreateEngagement extends CreateRecord
                             ->visible(fn (callable $get) => $get('send_later')),
                     ]),
             ]);
+    }
+
+    public function beforeCreate(): void
+    {
+        $record = null;
+
+        $data = $this->form->getState();
+
+        if ($data['recipient_type'] == app(Prospect::class)->getMorphClass()) {
+            $record = Prospect::find($data['recipient_id']);
+        } elseif ($data['recipient_type'] == app(Student::class)->getMorphClass()) {
+            $record = Student::find($data['recipient_id']);
+        }
+
+        if ($record && ! $record->canRecieveSms()) {
+            Notification::make()
+                ->title(ucfirst($data['recipient_type']) . ' does not have mobile number.')
+                ->danger()
+                ->send();
+
+            $this->halt();
+        }
     }
 
     public function afterCreate(): void

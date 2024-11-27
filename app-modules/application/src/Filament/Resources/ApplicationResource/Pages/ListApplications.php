@@ -3,7 +3,7 @@
 /*
 <COPYRIGHT>
 
-    Copyright © 2022-2023, Canyon GBS LLC. All rights reserved.
+    Copyright © 2016-2024, Canyon GBS LLC. All rights reserved.
 
     Advising App™ is licensed under the Elastic License 2.0. For more details,
     see https://github.com/canyongbs/advisingapp/blob/main/LICENSE.
@@ -36,16 +36,21 @@
 
 namespace AdvisingApp\Application\Filament\Resources\ApplicationResource\Pages;
 
+use Filament\Forms\Form;
 use Filament\Tables\Table;
-use App\Filament\Columns\IdColumn;
 use Filament\Actions\CreateAction;
 use Filament\Tables\Actions\Action;
 use Filament\Tables\Actions\EditAction;
 use Filament\Tables\Columns\TextColumn;
+use Illuminate\Database\Eloquent\Model;
+use Filament\Forms\Components\TextInput;
+use App\Filament\Tables\Columns\IdColumn;
 use Filament\Resources\Pages\ListRecords;
 use Filament\Tables\Actions\BulkActionGroup;
+use Filament\Tables\Actions\ReplicateAction;
 use Filament\Tables\Actions\DeleteBulkAction;
 use AdvisingApp\Application\Models\Application;
+use AdvisingApp\Application\Actions\DuplicateApplication;
 use AdvisingApp\Application\Filament\Resources\ApplicationResource;
 
 class ListApplications extends ListRecords
@@ -68,6 +73,28 @@ class ListApplications extends ListRecords
                     ->openUrlInNewTab()
                     ->color('gray'),
                 EditAction::make(),
+                ReplicateAction::make('Duplicate')
+                    ->label('Duplicate')
+                    ->modalHeading('Duplicate Application')
+                    ->modalSubmitActionLabel('Duplicate')
+                    ->mutateRecordDataUsing(function (array $data): array {
+                        $data['name'] = "Copy - {$data['name']}";
+
+                        return $data;
+                    })
+                    ->form(function (Form $form): Form {
+                        return $form->schema([
+                            TextInput::make('name')
+                                ->label('Name')
+                                ->required(),
+                        ]);
+                    })
+                    ->beforeReplicaSaved(function (Model $replica, array $data): void {
+                        $replica->name = $data['name'];
+                    })
+                    ->after(function (Application $replica, Application $record): void {
+                        resolve(DuplicateApplication::class, ['original' => $record, 'replica' => $replica])();
+                    }),
             ])
             ->bulkActions([
                 BulkActionGroup::make([

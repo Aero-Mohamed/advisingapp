@@ -3,7 +3,7 @@
 /*
 <COPYRIGHT>
 
-    Copyright © 2022-2023, Canyon GBS LLC. All rights reserved.
+    Copyright © 2016-2024, Canyon GBS LLC. All rights reserved.
 
     Advising App™ is licensed under the Elastic License 2.0. For more details,
     see https://github.com/canyongbs/advisingapp/blob/main/LICENSE.
@@ -36,8 +36,10 @@
 
 namespace AdvisingApp\Authorization\Filament\Pages;
 
+use App\Models\User;
 use Filament\Forms\Get;
 use Filament\Forms\Form;
+use App\Models\Authenticatable;
 use Filament\Pages\SettingsPage;
 use Filament\Forms\Components\Toggle;
 use Filament\Forms\Components\Section;
@@ -61,7 +63,10 @@ class ManageGoogleSsoSettings extends SettingsPage
 
     public static function canAccess(): bool
     {
-        return auth()->user()->can('authorization.view_google_sso_settings');
+        /** @var User $user */
+        $user = auth()->user();
+
+        return $user->hasRole(Authenticatable::SUPER_ADMIN_ROLE) && parent::canAccess();
     }
 
     public function form(Form $form): Form

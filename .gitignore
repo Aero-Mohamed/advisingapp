@@ -5,6 +5,8 @@
 /public/storage
 /storage/*.key
 /vendor
+.npm
+.composer
 .env
 .env.backup
 .env.production
@@ -34,3 +36,6 @@ public/api-docs/*
 /schema-directives.graphql
 /*tinkerwell.php
 .vault-password
+/rr
+_temp_graphql_parse_ide_helper_models.php
+/.bash_history

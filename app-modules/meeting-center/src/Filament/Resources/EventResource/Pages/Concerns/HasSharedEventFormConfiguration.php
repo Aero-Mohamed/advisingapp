@@ -3,7 +3,7 @@
 /*
 <COPYRIGHT>
 
-    Copyright © 2022-2023, Canyon GBS LLC. All rights reserved.
+    Copyright © 2016-2024, Canyon GBS LLC. All rights reserved.
 
     Advising App™ is licensed under the Elastic License 2.0. For more details,
     see https://github.com/canyongbs/advisingapp/blob/main/LICENSE.
@@ -36,12 +36,10 @@
 
 namespace AdvisingApp\MeetingCenter\Filament\Resources\EventResource\Pages\Concerns;
 
-use App\Models\User;
 use Filament\Forms\Get;
 use Filament\Forms\Components\Grid;
 use AdvisingApp\Form\Enums\Rounding;
 use AdvisingApp\Form\Rules\IsDomain;
-use App\Filament\Fields\ColorSelect;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Toggle;
 use Filament\Forms\Components\Section;
@@ -53,8 +51,8 @@ use Filament\Forms\Components\Component;
 use Filament\Forms\Components\TagsInput;
 use Filament\Forms\Components\TextInput;
 use AdvisingApp\MeetingCenter\Models\Event;
-use FilamentTiptapEditor\Enums\TiptapOutput;
 use Filament\Forms\Components\DateTimePicker;
+use App\Filament\Forms\Components\ColorSelect;
 use AdvisingApp\MeetingCenter\Models\EventRegistrationForm;
 use AdvisingApp\Form\Filament\Blocks\FormFieldBlockRegistry;
 use Illuminate\Database\Eloquent\Builder as EloquentBuilder;
@@ -66,9 +64,6 @@ trait HasSharedEventFormConfiguration
 {
     public function fields(): array
     {
-        /** @var User $user */
-        $user = auth()->user();
-
         return [
             TextInput::make('title')
                 ->string()
@@ -84,10 +79,10 @@ trait HasSharedEventFormConfiguration
                 ->minValue(1)
                 ->nullable(),
             DateTimePicker::make('starts_at')
-                ->timezone($user->timezone)
+                ->seconds(false)
                 ->required(),
             DateTimePicker::make('ends_at')
-                ->timezone($user->timezone)
+                ->seconds(false)
                 ->required(),
             Fieldset::make('Registration Form')
                 ->relationship('eventRegistrationForm')
@@ -172,7 +167,6 @@ trait HasSharedEventFormConfiguration
     public function fieldBuilder(): TiptapEditor
     {
         return TiptapEditor::make('content')
-            ->output(TiptapOutput::Json)
             ->blocks(FormFieldBlockRegistry::get())
             ->tools(['bold', 'italic', 'small', '|', 'heading', 'bullet-list', 'ordered-list', 'hr', '|', 'link', 'grid', 'blocks'])
             ->placeholder('Drag blocks here to build your form')
@@ -181,6 +175,8 @@ trait HasSharedEventFormConfiguration
                 if ($component->isDisabled()) {
                     return;
                 }
+
+                $record->wasRecentlyCreated && $component->processImages();
 
                 $form = $record instanceof EventRegistrationForm ? $record : $record->submissible;
                 $formStep = $record instanceof EventRegistrationFormStep ? $record : null;
@@ -193,7 +189,7 @@ trait HasSharedEventFormConfiguration
                 $content = [];
 
                 if (filled($component->getState())) {
-                    $content = $component->decodeBlocksBeforeSave($component->getJSON(decoded: true));
+                    $content = $component->decodeBlocks($component->getJSON(decoded: true));
                 }
 
                 $content['content'] = $this->saveFieldsFromComponents(

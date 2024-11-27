@@ -3,7 +3,7 @@
 /*
 <COPYRIGHT>
 
-    Copyright © 2022-2023, Canyon GBS LLC. All rights reserved.
+    Copyright © 2016-2024, Canyon GBS LLC. All rights reserved.
 
     Advising App™ is licensed under the Elastic License 2.0. For more details,
     see https://github.com/canyongbs/advisingapp/blob/main/LICENSE.
@@ -38,7 +38,7 @@ namespace App\Filament\Resources;
 
 use Filament\Resources\Resource;
 use App\Models\NotificationSetting;
-use App\Filament\Clusters\GlobalSettings;
+use App\Filament\Clusters\Communication;
 use App\Filament\Resources\NotificationSettingResource\Pages\EditNotificationSetting;
 use App\Filament\Resources\NotificationSettingResource\Pages\ListNotificationSettings;
 use App\Filament\Resources\NotificationSettingResource\Pages\CreateNotificationSetting;
@@ -49,11 +49,9 @@ class NotificationSettingResource extends Resource
 
     protected static ?string $navigationIcon = 'heroicon-o-bell';
 
-    protected static ?string $navigationGroup = 'Communication';
-
     protected static ?int $navigationSort = 110;
 
-    protected static ?string $cluster = GlobalSettings::class;
+    protected static ?string $cluster = Communication::class;
 
     public static function getRelations(): array
     {

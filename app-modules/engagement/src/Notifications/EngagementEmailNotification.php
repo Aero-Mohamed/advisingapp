@@ -3,7 +3,7 @@
 /*
 <COPYRIGHT>
 
-    Copyright © 2022-2023, Canyon GBS LLC. All rights reserved.
+    Copyright © 2016-2024, Canyon GBS LLC. All rights reserved.
 
     Advising App™ is licensed under the Elastic License 2.0. For more details,
     see https://github.com/canyongbs/advisingapp/blob/main/LICENSE.
@@ -36,6 +36,7 @@
 
 namespace AdvisingApp\Engagement\Notifications;
 
+use Throwable;
 use App\Models\Tenant;
 use Illuminate\Contracts\Queue\ShouldBeUnique;
 use AdvisingApp\Engagement\Models\EngagementDeliverable;
@@ -62,20 +63,25 @@ class EngagementEmailNotification extends BaseNotification implements EmailNotif
     {
         return MailMessage::make()
             ->subject($this->deliverable->engagement->subject)
-            ->greeting('Hello ' . $this->deliverable->engagement->recipient->display_name . '!')
-            ->content($this->deliverable->engagement->getBody())
-            ->salutation("Regards, {$this->deliverable->engagement->user->name}");
+            ->greeting("Hello {$this->deliverable->engagement->recipient->display_name}!")
+            ->content($this->deliverable->engagement->getBody());
     }
 
-    public function beforeSendHook(object $notifiable, OutboundDeliverable $deliverable, string $channel): void
+    public function failed(?Throwable $exception): void
     {
-        $deliverable->update([
-            'related_id' => $this->deliverable->id,
-            'related_type' => $this->deliverable->getMorphClass(),
-        ]);
+        $this->deliverable->markDeliveryFailed($exception->getMessage());
+
+        if (is_null($this->deliverable->engagement->engagement_batch_id)) {
+            $this->deliverable->engagement->user->notify(new EngagementFailedNotification($this->deliverable->engagement));
+        }
     }
 
-    public function afterSendHook(object $notifiable, OutboundDeliverable $deliverable): void
+    protected function beforeSendHook(object $notifiable, OutboundDeliverable $deliverable, string $channel): void
+    {
+        $deliverable->related()->associate($this->deliverable);
+    }
+
+    protected function afterSendHook(object $notifiable, OutboundDeliverable $deliverable): void
     {
         $updateData = array_filter([
             'external_reference_id' => $deliverable->external_reference_id,

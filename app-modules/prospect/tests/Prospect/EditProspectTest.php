@@ -3,7 +3,7 @@
 /*
 <COPYRIGHT>
 
-    Copyright © 2022-2023, Canyon GBS LLC. All rights reserved.
+    Copyright © 2016-2024, Canyon GBS LLC. All rights reserved.
 
     Advising App™ is licensed under the Elastic License 2.0. For more details,
     see https://github.com/canyongbs/advisingapp/blob/main/LICENSE.
@@ -36,12 +36,23 @@
 
 use App\Models\User;
 
+use function Pest\Laravel\seed;
 use function Pest\Laravel\actingAs;
 use function Pest\Livewire\livewire;
 
 use AdvisingApp\Prospect\Models\Prospect;
+use Filament\Tables\Actions\AttachAction;
+use AdvisingApp\Prospect\Models\ProspectStatus;
+use AdvisingApp\StudentDataModel\Models\Student;
+use AdvisingApp\BasicNeeds\Models\BasicNeedsProgram;
 use AdvisingApp\Prospect\Filament\Resources\ProspectResource;
+use AdvisingApp\Prospect\Database\Seeders\ProspectStatusSeeder;
+use AdvisingApp\Prospect\Filament\Resources\ProspectResource\Pages\EditProspect;
 use AdvisingApp\Prospect\Tests\Prospect\RequestFactories\EditProspectRequestFactory;
+use AdvisingApp\Prospect\Filament\Resources\ProspectResource\Actions\ConvertToStudent;
+use AdvisingApp\Prospect\Filament\Resources\ProspectResource\Actions\DisassociateStudent;
+use AdvisingApp\Prospect\Filament\Resources\ProspectResource\Pages\ManageProspectPrograms;
+use AdvisingApp\BasicNeeds\Filament\Resources\BasicNeedsProgramResource\RelationManagers\ProgramRelationManager;
 
 // TODO: Write EditProspect page tests
 //test('A successful action on the EditProspect page', function () {});
@@ -62,7 +73,7 @@ test('EditProspect is gated with proper access control', function () {
             ])
         )->assertForbidden();
 
-    livewire(ProspectResource\Pages\EditProspect::class, [
+    livewire(EditProspect::class, [
         'record' => $prospect->getRouteKey(),
     ])
         ->assertForbidden();
@@ -80,7 +91,7 @@ test('EditProspect is gated with proper access control', function () {
     // TODO: Finish these tests to ensure changes are allowed
     $request = collect(EditProspectRequestFactory::new()->create());
 
-    livewire(ProspectResource\Pages\EditProspect::class, [
+    livewire(EditProspect::class, [
         'record' => $prospect->getRouteKey(),
     ])
         ->fillForm($request->toArray())
@@ -104,6 +115,122 @@ test('EditProspect is gated with proper access control', function () {
         ->and($prospect->fresh()->address_2)->toEqual($request->get('address_2'))
         ->and($prospect->fresh()->birthdate->toDateString())->toEqual($request->get('birthdate'))
         ->and($prospect->fresh()->hsgrad)->toEqual($request->get('hsgrad'))
-        ->and($prospect->fresh()->assigned_to_id)->toEqual($request->get('assigned_to_id'))
         ->and($prospect->fresh()->created_by_id)->toEqual($request->get('created_by_id'));
+});
+
+it('can render manage basic needs program for prospect', function () {
+    $user = User::factory()->licensed([Student::getLicenseType(), Prospect::getLicenseType()])->create();
+
+    actingAs($user)
+        ->get(ProspectResource::getUrl('programs', [
+            'record' => Prospect::factory()->create(),
+        ]))->assertForbidden();
+
+    $user->givePermissionTo('prospect.*.update');
+    $user->givePermissionTo('prospect.view-any');
+    $user->givePermissionTo('basic_needs_program.view-any');
+
+    actingAs($user)
+        ->get(ProspectResource::getUrl('programs', [
+            'record' => Prospect::factory()->create(),
+        ]))->assertSuccessful();
+});
+
+it('can attach a basic needs program to a prospect', function () {
+    $user = User::factory()->licensed(Prospect::getLicenseType())->create();
+    $basicNeedsProgram = BasicNeedsProgram::factory()->create();
+    $prospect = Prospect::factory()->create();
+
+    $user->givePermissionTo('prospect.view-any');
+    $user->givePermissionTo('student.view-any');
+
+    actingAs($user);
+
+    livewire(ProgramRelationManager::class, [
+        'ownerRecord' => $prospect,
+        'pageClass' => ManageProspectPrograms::class,
+    ])
+        ->callTableAction(
+            AttachAction::class,
+            data: ['recordId' => $basicNeedsProgram->getKey()]
+        )->assertSuccessful();
+});
+
+test('convert action visible when prospect is not converted to student', function () {
+    $user = User::factory()->licensed(Prospect::getLicenseType())->create();
+
+    $prospect = Prospect::factory()->create();
+
+    $user->givePermissionTo('prospect.view-any');
+    $user->givePermissionTo('prospect.*.update');
+
+    actingAs($user);
+
+    livewire(EditProspect::class, [
+        'record' => $prospect->getRouteKey(),
+    ])
+        ->assertSuccessful()
+        ->assertActionVisible(ConvertToStudent::class)
+        ->assertActionHidden(DisassociateStudent::class);
+});
+
+test('edit page is forbidden when prospect is converted to student', function () {
+    $user = User::factory()->licensed([Prospect::getLicenseType(), Student::getLicenseType()])->create();
+
+    $prospect = Prospect::factory()
+        ->for(Student::factory(), 'student')
+        ->create();
+
+    $user->givePermissionTo('prospect.view-any');
+    $user->givePermissionTo('prospect.*.update');
+
+    actingAs($user);
+
+    livewire(EditProspect::class, [
+        'record' => $prospect->getRouteKey(),
+    ])
+        ->assertForbidden();
+});
+
+test('convert prospect to student', function () {
+    $user = User::factory()->licensed([Prospect::getLicenseType(), Student::getLicenseType()])->create();
+
+    $user->givePermissionTo('prospect.view-any');
+    $user->givePermissionTo('prospect.*.update');
+
+    actingAs($user);
+
+    seed([
+        ProspectStatusSeeder::class,
+    ]);
+
+    $prospect = Prospect::factory()
+        ->create();
+
+    $student = Student::factory()
+        ->create();
+
+    livewire(EditProspect::class, [
+        'record' => $prospect->getRouteKey(),
+    ])
+        ->callAction(
+            ConvertToStudent::class,
+            data: ['student_id' => $student->getKey()]
+        )->assertSuccessful();
+
+    $prospect->refresh();
+
+    $status = ProspectStatus::query()
+        ->where('classification', 'converted')
+        ->where('name', 'Converted')
+        ->where('is_system_protected', true)
+        ->firstOrFail();
+
+    expect($prospect)
+        ->status->toEqual($status);
+
+    expect($prospect->student)
+        ->sisid->toBe($student->sisid)
+        ->full_name->toBe($student->full_name)
+        ->email->toBe($student->email);
 });

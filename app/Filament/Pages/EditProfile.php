@@ -3,7 +3,7 @@
 /*
 <COPYRIGHT>
 
-    Copyright © 2022-2023, Canyon GBS LLC. All rights reserved.
+    Copyright © 2016-2024, Canyon GBS LLC. All rights reserved.
 
     Advising App™ is licensed under the Elastic License 2.0. For more details,
     see https://github.com/canyongbs/advisingapp/blob/main/LICENSE.
@@ -43,6 +43,7 @@ use Filament\Forms\Form;
 use Filament\Pages\Page;
 use Filament\Actions\Action;
 use Filament\Facades\Filament;
+use App\Settings\DisplaySettings;
 use Filament\Actions\ActionGroup;
 use Filament\Forms\Components\Grid;
 use Illuminate\Support\Facades\Hash;
@@ -57,12 +58,14 @@ use Illuminate\Database\Eloquent\Model;
 use Filament\Forms\Components\Component;
 use Filament\Forms\Components\TextInput;
 use Filament\Notifications\Notification;
+use App\Settings\CollegeBrandingSettings;
 use Filament\Forms\Components\RichEditor;
 use Filament\Forms\Components\TimePicker;
 use Illuminate\Validation\Rules\Password;
 use Filament\Forms\Components\Placeholder;
 use Filament\Forms\Components\DateTimePicker;
 use Illuminate\Contracts\Auth\Authenticatable;
+use AdvisingApp\Authorization\Enums\LicenseType;
 use Filament\Pages\Concerns\InteractsWithFormActions;
 use AdvisingApp\MeetingCenter\Managers\CalendarManager;
 use Filament\Forms\Components\Actions\Action as FormAction;
@@ -80,15 +83,17 @@ class EditProfile extends Page
 
     protected static ?string $slug = 'profile';
 
+    protected static ?string $title = 'Profile Settings';
+
     protected static bool $shouldRegisterNavigation = false;
 
     public ?array $data = [];
 
-    //TODO: I feel like a lot of these could be refactored into a settings file instead of adding them directly to the user migration.
     public function form(Form $form): Form
     {
         /** @var User $user */
         $user = auth()->user();
+        $hasCrmLicense = $user->hasAnyLicense([LicenseType::RetentionCrm, LicenseType::RecruitmentCrm]);
 
         $connectedAccounts = collect([
             Grid::make()
@@ -145,6 +150,7 @@ class EditProfile extends Page
             ->schema([
                 Section::make('Public Profile')
                     ->aside()
+                    ->visible($hasCrmLicense)
                     ->schema([
                         Toggle::make('has_enabled_public_profile')
                             ->label('Enable public profile')
@@ -191,6 +197,7 @@ class EditProfile extends Page
                             ->hint(fn (Get $get): string => $get('is_bio_visible_on_profile') ? 'Visible on profile' : 'Not visible on profile'),
                         Checkbox::make('is_bio_visible_on_profile')
                             ->label('Show Bio on profile')
+                            ->visible($hasCrmLicense)
                             ->live(),
                         TextInput::make('phone_number')
                             ->label('Contact phone number')
@@ -198,13 +205,15 @@ class EditProfile extends Page
                             ->hint(fn (Get $get): string => $get('is_phone_number_visible_on_profile') ? 'Visible on profile' : 'Not visible on profile'),
                         Checkbox::make('is_phone_number_visible_on_profile')
                             ->label('Show phone number on profile')
-                            ->live(),
+                            ->live()
+                            ->visible($hasCrmLicense),
                         Select::make('pronouns_id')
                             ->relationship('pronouns', 'label')
                             ->hint(fn (Get $get): string => $get('are_pronouns_visible_on_profile') ? 'Visible on profile' : 'Not visible on profile'),
                         Checkbox::make('are_pronouns_visible_on_profile')
                             ->label('Show Pronouns on profile')
-                            ->live(),
+                            ->live()
+                            ->visible($hasCrmLicense),
                         Placeholder::make('teams')
                             ->label(str('Team')->plural($user->teams->count()))
                             ->content($user->teams->pluck('name')->join(', ', ' and '))
@@ -233,15 +242,34 @@ class EditProfile extends Page
                             ->disabled($user->is_external),
                         Checkbox::make('is_email_visible_on_profile')
                             ->label('Show Email on profile')
-                            ->live(),
+                            ->live()
+                            ->visible($hasCrmLicense),
                         $this->getPasswordFormComponent()
                             ->hidden($user->is_external),
                         $this->getPasswordConfirmationFormComponent()
                             ->hidden($user->is_external),
                         TimezoneSelect::make('timezone')
                             ->required()
-                            ->selectablePlaceholder(false),
+                            ->selectablePlaceholder(false)
+                            ->helperText(function (): string {
+                                $timezone = config('app.timezone');
+
+                                if (
+                                    filled($displaySettingsTimezone = app(DisplaySettings::class)->timezone)
+                                ) {
+                                    $timezone = $displaySettingsTimezone;
+                                }
+
+                                return "Default: {$timezone}";
+                            }),
                     ]),
+                Section::make('Disable Branding Bar')
+                    ->aside()
+                    ->schema([
+                        Toggle::make('is_branding_bar_dismissed')
+                            ->label(''),
+                    ])
+                    ->visible(fn (CollegeBrandingSettings $settings) => $settings->dismissible),
                 Section::make('Connected Accounts')
                     ->description('Disconnect your external accounts.')
                     ->aside()
@@ -249,6 +277,7 @@ class EditProfile extends Page
                     ->visible($connectedAccounts->count()),
                 Section::make('Working Hours')
                     ->aside()
+                    ->visible($hasCrmLicense)
                     ->schema([
                         Toggle::make('working_hours_are_enabled')
                             ->label('Set Working Hours')
@@ -264,6 +293,7 @@ class EditProfile extends Page
                     ]),
                 Section::make('Office Hours')
                     ->aside()
+                    ->visible($hasCrmLicense)
                     ->schema([
                         Toggle::make('office_hours_are_enabled')
                             ->label('Enable Office Hours')
@@ -272,7 +302,7 @@ class EditProfile extends Page
                             ->label('Restrict appointments to existing students')
                             ->visible(fn (Get $get) => $get('office_hours_are_enabled')),
                         Section::make('Days')
-                            ->schema($this->getHoursForDays('working_hours'))
+                            ->schema($this->getHoursForDays('office_hours'))
                             ->visible(fn (Get $get) => $get('office_hours_are_enabled')),
                     ]),
                 Section::make('Out of Office')
@@ -352,6 +382,8 @@ class EditProfile extends Page
         $this->data['passwordConfirmation'] = null;
 
         $this->getSavedNotification()?->send();
+
+        $this->dispatch('refresh-branding-bar');
 
         if ($redirectUrl = $this->getRedirectUrl()) {
             $this->redirect($redirectUrl);

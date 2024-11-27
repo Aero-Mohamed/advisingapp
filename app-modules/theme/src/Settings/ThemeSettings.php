@@ -3,7 +3,7 @@
 /*
 <COPYRIGHT>
 
-    Copyright © 2022-2023, Canyon GBS LLC. All rights reserved.
+    Copyright © 2016-2024, Canyon GBS LLC. All rights reserved.
 
     Advising App™ is licensed under the Elastic License 2.0. For more details,
     see https://github.com/canyongbs/advisingapp/blob/main/LICENSE.
@@ -36,16 +36,46 @@
 
 namespace AdvisingApp\Theme\Settings;
 
-use Spatie\LaravelSettings\Settings;
+use App\Settings\SettingsWithMedia;
+use AdvisingApp\Theme\Settings\SettingsProperties\ThemeSettingsProperty;
 
-class ThemeSettings extends Settings
+class ThemeSettings extends SettingsWithMedia
 {
-    public bool $is_logo_active;
+    public bool $is_logo_active = false;
 
-    public bool $is_favicon_active;
+    public bool $is_favicon_active = false;
+
+    public array $color_overrides = [];
+
+    public bool $has_dark_mode = true;
+
+    public bool $is_support_url_enabled = false;
+
+    public bool $is_recent_updates_url_enabled = false;
+
+    public bool $is_custom_link_url_enabled = false;
+
+    public ?string $url = null;
+
+    public ?string $support_url = null;
+
+    public ?string $recent_updates_url = null;
+
+    public ?string $custom_link_label = null;
+
+    public ?string $custom_link_url = null;
+
+    public ?string $changelog_url = null;
+
+    public ?string $product_resource_hub_url = null;
 
     public static function group(): string
     {
         return 'theme';
+    }
+
+    public static function getSettingsPropertyModelClass(): string
+    {
+        return ThemeSettingsProperty::class;
     }
 }

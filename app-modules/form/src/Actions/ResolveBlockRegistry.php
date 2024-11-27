@@ -3,7 +3,7 @@
 /*
 <COPYRIGHT>
 
-    Copyright © 2022-2023, Canyon GBS LLC. All rights reserved.
+    Copyright © 2016-2024, Canyon GBS LLC. All rights reserved.
 
     Advising App™ is licensed under the Elastic License 2.0. For more details,
     see https://github.com/canyongbs/advisingapp/blob/main/LICENSE.
@@ -40,9 +40,9 @@ use AdvisingApp\Form\Models\Form;
 use AdvisingApp\Survey\Models\Survey;
 use AdvisingApp\Form\Models\Submissible;
 use AdvisingApp\Application\Models\Application;
+use AdvisingApp\CaseManagement\Models\CaseForm;
 use AdvisingApp\MeetingCenter\Models\EventRegistrationForm;
 use AdvisingApp\Form\Filament\Blocks\FormFieldBlockRegistry;
-use AdvisingApp\ServiceManagement\Models\ServiceRequestForm;
 use AdvisingApp\Survey\Filament\Blocks\SurveyFieldBlockRegistry;
 
 class ResolveBlockRegistry
@@ -50,7 +50,7 @@ class ResolveBlockRegistry
     public function __invoke(Submissible $submissible): array
     {
         return match ($submissible::class) {
-            Form::class, Application::class, EventRegistrationForm::class, ServiceRequestForm::class => FormFieldBlockRegistry::keyByType(),
+            Form::class, Application::class, EventRegistrationForm::class, CaseForm::class => FormFieldBlockRegistry::keyByType(),
             Survey::class => SurveyFieldBlockRegistry::keyByType(),
         };
     }

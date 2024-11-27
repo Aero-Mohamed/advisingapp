@@ -1,9 +1,9 @@
-union Interactable = Student | Prospect | ServiceRequest
+union Interactable = Student | Prospect | CaseModel
 
 enum InteractableType {
     Student @enum(value: "student")
     Prospect @enum(value: "prospect")
-    ServiceRequest @enum(value: "service_request")
+    CaseModel @enum(value: "case_model")
 }
 
 scalar InteractableId
@@ -22,7 +22,7 @@ type Interaction
     description: String!
 
     "The User related to the interaction."
-    user: User @belongsTo
+    user: User @belongsTo @canResolved(ability: "view")
 
     "The Interactable related to the interaction."
     interactable: Interactable @morphTo
@@ -33,11 +33,11 @@ type Interaction
     "The relation of the interaction."
     relation: InteractionRelation @belongsTo
 
-    "The campaign of the interaction."
-    campaign: InteractionCampaign @belongsTo
-
     "The driver of the interaction."
     driver: InteractionDriver @belongsTo
+
+    "The initiative of the interaction."
+    initiative: InteractionInitiative @belongsTo
 
     "The status of the interaction."
     status: InteractionStatus @belongsTo
@@ -64,20 +64,20 @@ type Interaction
 input InteractionInteractablesQuery {
     student: StudentsQuery
     prospect: ProspectsQuery
-    service_request: ServiceRequestQuery
+    caseModel: CaseModelQuery
 }
 
 input InteractionsQuery {
     id: UUID
     subject: String
     description: String
-    user: UserQuery
+    user: UsersQuery
     interactable: InteractionInteractablesQuery @morphToRelation
     interactable_id: InteractableId
     interactable_type: InteractableType
     relation: InteractionRelationQuery
-    campaign: InteractionCampaignQuery
     driver: InteractionDriverQuery
+    initiative: InteractionInitiativeQuery
     status: InteractionStatusesQuery
     outcome: InteractionOutcomeQuery
     division: DivisionQuery
@@ -127,7 +127,7 @@ input CreateInteractionInput {
 
     "The type of Interactable related to the interaction."
     interactable_type: InteractableType!
-        @rules(apply: ["required", "in:student,prospect,service_request"])
+        @rules(apply: ["required", "in:student,prospect,case_model"])
 
     "The type of interaction."
     interaction_type_id: UUID!
@@ -137,13 +137,13 @@ input CreateInteractionInput {
     interaction_relation_id: UUID!
         @rules(apply: ["required", "exists:interaction_relations,id"])
 
-    "The campaign of the interaction."
-    interaction_campaign_id: UUID!
-        @rules(apply: ["required", "exists:interaction_campaigns,id"])
-
     "The driver of the interaction."
     interaction_driver_id: UUID!
         @rules(apply: ["required", "exists:interaction_drivers,id"])
+
+    "The initiative of the interaction."
+    interaction_initiative_id: UUID!
+        @rules(apply: ["required", "exists:interaction_initiatives,id"])
 
     "The status of the interaction."
     interaction_status_id: UUID!
@@ -188,7 +188,7 @@ input UpdateInteractionInput {
     interactable_type: InteractableType
         @rules(
             apply: [
-                "in:student,prospect,service_request"
+                "in:student,prospect,case_model"
                 "required_with:interactable_id"
             ]
         )
@@ -200,12 +200,12 @@ input UpdateInteractionInput {
     interaction_relation_id: UUID
         @rules(apply: ["exists:interaction_relations,id"])
 
-    "The campaign of the interaction."
-    interaction_campaign_id: UUID
-        @rules(apply: ["exists:interaction_campaigns,id"])
-
     "The driver of the interaction."
     interaction_driver_id: UUID @rules(apply: ["exists:interaction_drivers,id"])
+
+    "The initiative of the interaction."
+    interaction_initiative_id: UUID
+        @rules(apply: ["exists:interaction_initiatives,id"])
 
     "The status of the interaction."
     interaction_status_id: UUID
@@ -256,7 +256,7 @@ extend type Mutation {
     interaction: InteractionMutations! @namespaced
 }
 
-#import ./interaction-campaign.graphql
+#import ./interaction-initiative.graphql
 #import ./interaction-driver.graphql
 #import ./interaction-outcome.graphql
 #import ./interaction-relation.graphql

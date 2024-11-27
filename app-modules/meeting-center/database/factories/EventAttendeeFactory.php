@@ -3,7 +3,7 @@
 /*
 <COPYRIGHT>
 
-    Copyright © 2022-2023, Canyon GBS LLC. All rights reserved.
+    Copyright © 2016-2024, Canyon GBS LLC. All rights reserved.
 
     Advising App™ is licensed under the Elastic License 2.0. For more details,
     see https://github.com/canyongbs/advisingapp/blob/main/LICENSE.
@@ -57,8 +57,8 @@ class EventAttendeeFactory extends Factory
             'status' => fake()->randomElement(EventAttendeeStatus::class),
             'email' => fake()->unique()->randomElement([
                 fake()->email(),
-                Student::inRandomOrder()->value('email'),
-                Prospect::inRandomOrder()->value('email'),
+                Student::factory()->create()->value('email'),
+                Prospect::factory()->create()->value('email'),
             ]),
             'event_id' => Event::inRandomOrder()->first() ?? Event::factory()->create(),
         ];

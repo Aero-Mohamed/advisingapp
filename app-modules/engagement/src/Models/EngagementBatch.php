@@ -3,7 +3,7 @@
 /*
 <COPYRIGHT>
 
-    Copyright © 2022-2023, Canyon GBS LLC. All rights reserved.
+    Copyright © 2016-2024, Canyon GBS LLC. All rights reserved.
 
     Advising App™ is licensed under the Elastic License 2.0. For more details,
     see https://github.com/canyongbs/advisingapp/blob/main/LICENSE.
@@ -36,9 +36,13 @@
 
 namespace AdvisingApp\Engagement\Models;
 
-use Exception;
+use DOMXPath;
+use Throwable;
+use DOMDocument;
 use App\Models\User;
 use App\Models\BaseModel;
+use Spatie\MediaLibrary\HasMedia;
+use Spatie\MediaLibrary\InteractsWithMedia;
 use AdvisingApp\Campaign\Models\CampaignAction;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use AdvisingApp\Engagement\Actions\CreateEngagementBatch;
@@ -49,9 +53,10 @@ use AdvisingApp\Engagement\DataTransferObjects\EngagementBatchCreationData;
 /**
  * @mixin IdeHelperEngagementBatch
  */
-class EngagementBatch extends BaseModel implements ExecutableFromACampaignAction
+class EngagementBatch extends BaseModel implements ExecutableFromACampaignAction, HasMedia
 {
     use HasManyEngagements;
+    use InteractsWithMedia;
 
     protected $fillable = [
         'user_id',
@@ -67,17 +72,37 @@ class EngagementBatch extends BaseModel implements ExecutableFromACampaignAction
         try {
             CreateEngagementBatch::dispatch(EngagementBatchCreationData::from([
                 'user' => $action->campaign->user,
-                'records' => $action->campaign->caseload->retrieveRecords(),
+                'records' => $action->campaign->segment->retrieveRecords()->filter(function ($record) {
+                    return $record->canRecieveSms();
+                }),
                 'deliveryMethod' => $action->data['delivery_method'],
                 'subject' => $action->data['subject'] ?? null,
                 'body' => $action->data['body'] ?? null,
             ]));
 
             return true;
-        } catch (Exception $e) {
+        } catch (Throwable $e) {
             return $e->getMessage();
         }
 
         // Do we need to be able to relate campaigns/actions to the RESULT of their actions?
+    }
+
+    public static function renderWithMergeTags(string $html): string
+    {
+        $dom = new DOMDocument();
+        libxml_use_internal_errors(true);
+        $dom->loadHTML($html, LIBXML_HTML_NOIMPLIED | LIBXML_HTML_NODEFDTD);
+
+        $xpath = new DOMXPath($dom);
+
+        $spans = $xpath->query("//span[@data-type='mergeTag']");
+
+        foreach ($spans as $span) {
+            $dataId = $span->getAttribute('data-id');
+            $span->nodeValue = "{{ {$dataId} }}";
+        }
+
+        return $dom->saveHTML();
     }
 }

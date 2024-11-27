@@ -3,7 +3,7 @@
 /*
 <COPYRIGHT>
 
-    Copyright © 2022-2023, Canyon GBS LLC. All rights reserved.
+    Copyright © 2016-2024, Canyon GBS LLC. All rights reserved.
 
     Advising App™ is licensed under the Elastic License 2.0. For more details,
     see https://github.com/canyongbs/advisingapp/blob/main/LICENSE.
@@ -86,7 +86,8 @@ return [
             'endpoint' => env('AWS_S3_ENDPOINT'),
             'use_path_style_endpoint' => env('AWS_S3_USE_PATH_STYLE_ENDPOINT', false),
             'throw' => false,
-            'root' => null,
+            'root' => env('AWS_S3_ROOT'),
+            'media_library_visibility' => 'private',
         ],
 
         's3-public' => [
@@ -99,7 +100,8 @@ return [
             'endpoint' => env('AWS_S3_ENDPOINT'),
             'use_path_style_endpoint' => env('AWS_S3_USE_PATH_STYLE_ENDPOINT', false),
             'throw' => false,
-            'root' => 'PUBLIC',
+            'root' => env('AWS_S3_PUBLIC_ROOT', env('AWS_S3_ROOT') . '/PUBLIC'),
+            'media_library_visibility' => 'public',
         ],
     ],
 

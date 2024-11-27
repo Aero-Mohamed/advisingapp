@@ -3,7 +3,7 @@
 /*
 <COPYRIGHT>
 
-    Copyright © 2022-2023, Canyon GBS LLC. All rights reserved.
+    Copyright © 2016-2024, Canyon GBS LLC. All rights reserved.
 
     Advising App™ is licensed under the Elastic License 2.0. For more details,
     see https://github.com/canyongbs/advisingapp/blob/main/LICENSE.
@@ -37,27 +37,33 @@
 namespace AdvisingApp\Campaign\Enums;
 
 use AdvisingApp\Task\Models\Task;
+use App\Settings\LicenseSettings;
 use AdvisingApp\Alert\Models\Alert;
 use Filament\Support\Contracts\HasLabel;
 use AdvisingApp\CareTeam\Models\CareTeam;
+use AdvisingApp\MeetingCenter\Models\Event;
 use AdvisingApp\Campaign\Models\CampaignAction;
 use AdvisingApp\Interaction\Models\Interaction;
+use AdvisingApp\CaseManagement\Models\CaseModel;
 use AdvisingApp\Notification\Models\Subscription;
 use AdvisingApp\Engagement\Models\EngagementBatch;
+use AdvisingApp\Campaign\Filament\Blocks\CaseBlock;
 use AdvisingApp\Campaign\Filament\Blocks\TaskBlock;
+use AdvisingApp\Campaign\Filament\Blocks\EventBlock;
 use AdvisingApp\Campaign\Filament\Blocks\CareTeamBlock;
-use AdvisingApp\ServiceManagement\Models\ServiceRequest;
 use AdvisingApp\Campaign\Filament\Blocks\InteractionBlock;
 use AdvisingApp\Campaign\Filament\Blocks\SubscriptionBlock;
 use AdvisingApp\Campaign\Filament\Blocks\ProactiveAlertBlock;
-use AdvisingApp\Campaign\Filament\Blocks\ServiceRequestBlock;
-use AdvisingApp\Campaign\Filament\Blocks\EngagementBatchBlock;
+use AdvisingApp\Campaign\Filament\Blocks\EngagementBatchSmsBlock;
+use AdvisingApp\Campaign\Filament\Blocks\EngagementBatchEmailBlock;
 
 enum CampaignActionType: string implements HasLabel
 {
-    case BulkEngagement = 'bulk_engagement';
+    case BulkEngagementEmail = 'bulk_engagement_email';
 
-    case ServiceRequest = 'service_request';
+    case BulkEngagementSms = 'bulk_engagement_sms';
+
+    case Case = 'case';
 
     case ProactiveAlert = 'proactive_alert';
 
@@ -69,24 +75,37 @@ enum CampaignActionType: string implements HasLabel
 
     case Subscription = 'subscription';
 
+    case Event = 'event';
+
     public static function blocks(): array
     {
-        return [
-            EngagementBatchBlock::make(),
-            ServiceRequestBlock::make(),
+        $blocks = [
+            EngagementBatchEmailBlock::make(),
+            EngagementBatchSmsBlock::make(),
             ProactiveAlertBlock::make(),
             InteractionBlock::make(),
             CareTeamBlock::make(),
             TaskBlock::make(),
             SubscriptionBlock::make(),
         ];
+
+        if (app(LicenseSettings::class)->data->addons->serviceManagement) {
+            $blocks[] = CaseBlock::make();
+        }
+
+        if (app(LicenseSettings::class)->data->addons->eventManagement) {
+            $blocks[] = EventBlock::make();
+        }
+
+        return $blocks;
     }
 
     public function getLabel(): ?string
     {
         return match ($this) {
-            CampaignActionType::BulkEngagement => 'Email or Text',
-            CampaignActionType::ServiceRequest => 'Service Request',
+            CampaignActionType::BulkEngagementEmail => 'Email',
+            CampaignActionType::BulkEngagementSms => 'Text Message',
+            CampaignActionType::Case => 'Case',
             CampaignActionType::ProactiveAlert => 'Proactive Alert',
             CampaignActionType::CareTeam => 'Care Team',
             default => $this->name,
@@ -96,26 +115,30 @@ enum CampaignActionType: string implements HasLabel
     public function getModel(): string
     {
         return match ($this) {
-            CampaignActionType::BulkEngagement => EngagementBatch::class,
-            CampaignActionType::ServiceRequest => ServiceRequest::class,
+            CampaignActionType::BulkEngagementEmail => EngagementBatch::class,
+            CampaignActionType::BulkEngagementSms => EngagementBatch::class,
+            CampaignActionType::Case => CaseModel::class,
             CampaignActionType::ProactiveAlert => Alert::class,
             CampaignActionType::Interaction => Interaction::class,
             CampaignActionType::CareTeam => CareTeam::class,
             CampaignActionType::Task => Task::class,
             CampaignActionType::Subscription => Subscription::class,
+            CampaignActionType::Event => Event::class,
         };
     }
 
     public function getEditFields(): array
     {
         $block = match ($this) {
-            CampaignActionType::BulkEngagement => EngagementBatchBlock::make(),
-            CampaignActionType::ServiceRequest => ServiceRequestBlock::make(),
+            CampaignActionType::BulkEngagementEmail => EngagementBatchEmailBlock::make(),
+            CampaignActionType::BulkEngagementSms => EngagementBatchSmsBlock::make(),
+            CampaignActionType::Case => CaseBlock::make(),
             CampaignActionType::ProactiveAlert => ProactiveAlertBlock::make(),
             CampaignActionType::Interaction => InteractionBlock::make(),
             CampaignActionType::CareTeam => CareTeamBlock::make(),
             CampaignActionType::Task => TaskBlock::make(),
             CampaignActionType::Subscription => SubscriptionBlock::make(),
+            CampaignActionType::Event => EventBlock::make(),
         };
 
         return $block->editFields();
@@ -124,26 +147,30 @@ enum CampaignActionType: string implements HasLabel
     public function getStepSummaryView(): string
     {
         return match ($this) {
-            CampaignActionType::BulkEngagement => 'filament.forms.components.campaigns.actions.bulk-engagement',
-            CampaignActionType::ServiceRequest => 'filament.forms.components.campaigns.actions.service-request',
+            CampaignActionType::BulkEngagementEmail => 'filament.forms.components.campaigns.actions.bulk-engagement',
+            CampaignActionType::BulkEngagementSms => 'filament.forms.components.campaigns.actions.bulk-engagement',
+            CampaignActionType::Case => 'filament.forms.components.campaigns.actions.case',
             CampaignActionType::ProactiveAlert => 'filament.forms.components.campaigns.actions.proactive-alert',
             CampaignActionType::Interaction => 'filament.forms.components.campaigns.actions.interaction',
             CampaignActionType::CareTeam => 'filament.forms.components.campaigns.actions.care-team',
             CampaignActionType::Task => 'filament.forms.components.campaigns.actions.task',
             CampaignActionType::Subscription => 'filament.forms.components.campaigns.actions.subscription',
+            CampaignActionType::Event => 'filament.forms.components.campaigns.actions.event',
         };
     }
 
     public function executeAction(CampaignAction $action): bool|string
     {
         return match ($this) {
-            CampaignActionType::BulkEngagement => EngagementBatch::executeFromCampaignAction($action),
-            CampaignActionType::ServiceRequest => ServiceRequest::executeFromCampaignAction($action),
+            CampaignActionType::BulkEngagementEmail => EngagementBatch::executeFromCampaignAction($action),
+            CampaignActionType::BulkEngagementSms => EngagementBatch::executeFromCampaignAction($action),
+            CampaignActionType::Case => CaseModel::executeFromCampaignAction($action),
             CampaignActionType::ProactiveAlert => Alert::executeFromCampaignAction($action),
             CampaignActionType::Interaction => Interaction::executeFromCampaignAction($action),
             CampaignActionType::CareTeam => CareTeam::executeFromCampaignAction($action),
             CampaignActionType::Task => Task::executeFromCampaignAction($action),
             CampaignActionType::Subscription => Subscription::executeFromCampaignAction($action),
+            CampaignActionType::Event => Event::executeFromCampaignAction($action),
         };
     }
 }

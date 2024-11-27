@@ -3,7 +3,7 @@
 /*
 <COPYRIGHT>
 
-    Copyright © 2022-2023, Canyon GBS LLC. All rights reserved.
+    Copyright © 2016-2024, Canyon GBS LLC. All rights reserved.
 
     Advising App™ is licensed under the Elastic License 2.0. For more details,
     see https://github.com/canyongbs/advisingapp/blob/main/LICENSE.
@@ -53,7 +53,7 @@ class CampaignActionPolicy
     public function view(Authenticatable $authenticatable, CampaignAction $campaignAction): Response
     {
         return $authenticatable->canOrElse(
-            abilities: ['campaign_action.*.view', "campaign_action.{$campaignAction->id}.view"],
+            abilities: ["campaign_action.{$campaignAction->id}.view"],
             denyResponse: 'You do not have permission to view this campaign action.'
         );
     }
@@ -69,7 +69,7 @@ class CampaignActionPolicy
     public function update(Authenticatable $authenticatable, CampaignAction $campaignAction): Response
     {
         return $authenticatable->canOrElse(
-            abilities: ['campaign_action.*.update', "campaign_action.{$campaignAction->id}.update"],
+            abilities: ["campaign_action.{$campaignAction->id}.update"],
             denyResponse: 'You do not have permission to update this campaign action.'
         );
     }
@@ -77,7 +77,7 @@ class CampaignActionPolicy
     public function delete(Authenticatable $authenticatable, CampaignAction $campaignAction): Response
     {
         return $authenticatable->canOrElse(
-            abilities: ['campaign_action.*.delete', "campaign_action.{$campaignAction->id}.delete"],
+            abilities: ["campaign_action.{$campaignAction->id}.delete"],
             denyResponse: 'You do not have permission to delete this campaign action.'
         );
     }
@@ -85,7 +85,7 @@ class CampaignActionPolicy
     public function restore(Authenticatable $authenticatable, CampaignAction $campaignAction): Response
     {
         return $authenticatable->canOrElse(
-            abilities: ['campaign_action.*.restore', "campaign_action.{$campaignAction->id}.restore"],
+            abilities: ["campaign_action.{$campaignAction->id}.restore"],
             denyResponse: 'You do not have permission to restore this campaign action.'
         );
     }
@@ -93,7 +93,7 @@ class CampaignActionPolicy
     public function forceDelete(Authenticatable $authenticatable, CampaignAction $campaignAction): Response
     {
         return $authenticatable->canOrElse(
-            abilities: ['campaign_action.*.force-delete', "campaign_action.{$campaignAction->id}.force-delete"],
+            abilities: ["campaign_action.{$campaignAction->id}.force-delete"],
             denyResponse: 'You do not have permission to permanently delete this campaign action.'
         );
     }

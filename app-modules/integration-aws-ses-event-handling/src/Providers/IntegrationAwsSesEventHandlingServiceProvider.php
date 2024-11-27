@@ -3,7 +3,7 @@
 /*
 <COPYRIGHT>
 
-    Copyright © 2022-2023, Canyon GBS LLC. All rights reserved.
+    Copyright © 2016-2024, Canyon GBS LLC. All rights reserved.
 
     Advising App™ is licensed under the Elastic License 2.0. For more details,
     see https://github.com/canyongbs/advisingapp/blob/main/LICENSE.
@@ -41,23 +41,30 @@ use Illuminate\Support\Facades\Event;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Mail\Events\MessageSending;
 use Illuminate\Database\Eloquent\Relations\Relation;
-use AdvisingApp\Authorization\AuthorizationRoleRegistry;
-use AdvisingApp\Authorization\AuthorizationPermissionRegistry;
+use AdvisingApp\IntegrationAwsSesEventHandling\Events\SesBounceEvent;
+use AdvisingApp\IntegrationAwsSesEventHandling\Events\SesRejectEvent;
+use AdvisingApp\IntegrationAwsSesEventHandling\Events\SesDeliveryEvent;
+use AdvisingApp\IntegrationAwsSesEventHandling\Events\SesDeliveryDelayEvent;
+use AdvisingApp\IntegrationAwsSesEventHandling\Listeners\HandleSesBounceEvent;
+use AdvisingApp\IntegrationAwsSesEventHandling\Listeners\HandleSesRejectEvent;
+use AdvisingApp\IntegrationAwsSesEventHandling\Events\SesRenderingFailureEvent;
+use AdvisingApp\IntegrationAwsSesEventHandling\Listeners\HandleSesDeliveryEvent;
 use AdvisingApp\IntegrationAwsSesEventHandling\IntegrationAwsSesEventHandlingPlugin;
+use AdvisingApp\IntegrationAwsSesEventHandling\Listeners\HandleSesDeliveryDelayEvent;
+use AdvisingApp\IntegrationAwsSesEventHandling\Listeners\HandleSesRenderingFailureEvent;
 use AdvisingApp\IntegrationAwsSesEventHandling\Listeners\EnsureSesConfigurationSetHeadersArePresent;
 
 class IntegrationAwsSesEventHandlingServiceProvider extends ServiceProvider
 {
     public function register()
     {
-        Panel::configureUsing(fn (Panel $panel) => $panel->plugin(new IntegrationAwsSesEventHandlingPlugin()));
+        Panel::configureUsing(fn (Panel $panel) => ($panel->getId() !== 'admin') || $panel->plugin(new IntegrationAwsSesEventHandlingPlugin()));
     }
 
     public function boot()
     {
         Relation::morphMap([]);
 
-        $this->registerRolesAndPermissions();
         $this->registerEvents();
     }
 
@@ -67,32 +74,30 @@ class IntegrationAwsSesEventHandlingServiceProvider extends ServiceProvider
             MessageSending::class,
             EnsureSesConfigurationSetHeadersArePresent::class
         );
-    }
 
-    protected function registerRolesAndPermissions()
-    {
-        $permissionRegistry = app(AuthorizationPermissionRegistry::class);
-
-        $permissionRegistry->registerApiPermissions(
-            module: 'integration-aws-ses-event-handling',
-            path: 'permissions/api/custom'
+        Event::listen(
+            SesBounceEvent::class,
+            HandleSesBounceEvent::class
         );
 
-        $permissionRegistry->registerWebPermissions(
-            module: 'integration-aws-ses-event-handling',
-            path: 'permissions/web/custom'
+        Event::listen(
+            SesDeliveryEvent::class,
+            HandleSesDeliveryEvent::class
         );
 
-        $roleRegistry = app(AuthorizationRoleRegistry::class);
-
-        $roleRegistry->registerApiRoles(
-            module: 'integration-aws-ses-event-handling',
-            path: 'roles/api'
+        Event::listen(
+            SesDeliveryDelayEvent::class,
+            HandleSesDeliveryDelayEvent::class
         );
 
-        $roleRegistry->registerWebRoles(
-            module: 'integration-aws-ses-event-handling',
-            path: 'roles/web'
+        Event::listen(
+            SesRejectEvent::class,
+            HandleSesRejectEvent::class
+        );
+
+        Event::listen(
+            SesRenderingFailureEvent::class,
+            HandleSesRenderingFailureEvent::class
         );
     }
 }

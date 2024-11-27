@@ -3,7 +3,7 @@
 /*
 <COPYRIGHT>
 
-    Copyright © 2022-2023, Canyon GBS LLC. All rights reserved.
+    Copyright © 2016-2024, Canyon GBS LLC. All rights reserved.
 
     Advising App™ is licensed under the Elastic License 2.0. For more details,
     see https://github.com/canyongbs/advisingapp/blob/main/LICENSE.
@@ -37,7 +37,9 @@
 namespace AdvisingApp\Campaign\Models;
 
 use App\Models\BaseModel;
+use Spatie\MediaLibrary\HasMedia;
 use OwenIt\Auditing\Contracts\Auditable;
+use Spatie\MediaLibrary\InteractsWithMedia;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use AdvisingApp\Campaign\Enums\CampaignActionType;
 use Illuminate\Contracts\Database\Eloquent\Builder;
@@ -47,9 +49,10 @@ use AdvisingApp\Audit\Models\Concerns\Auditable as AuditableTrait;
 /**
  * @mixin IdeHelperCampaignAction
  */
-class CampaignAction extends BaseModel implements Auditable
+class CampaignAction extends BaseModel implements Auditable, HasMedia
 {
     use AuditableTrait;
+    use InteractsWithMedia;
     use SoftDeletes;
 
     protected $fillable = [

@@ -3,7 +3,7 @@
 /*
 <COPYRIGHT>
 
-    Copyright © 2022-2023, Canyon GBS LLC. All rights reserved.
+    Copyright © 2016-2024, Canyon GBS LLC. All rights reserved.
 
     Advising App™ is licensed under the Elastic License 2.0. For more details,
     see https://github.com/canyongbs/advisingapp/blob/main/LICENSE.
@@ -44,6 +44,7 @@ class CreateProspectsTable extends Migration
     {
         Schema::create('prospects', function (Blueprint $table) {
             $table->uuid('id')->primary();
+
             $table->foreignUuid('status_id')->references('id')->on('prospect_statuses');
             $table->foreignUuid('source_id')->references('id')->on('prospect_sources');
             $table->string('first_name');
@@ -59,11 +60,15 @@ class CreateProspectsTable extends Migration
             $table->string('phone')->nullable();
             $table->string('address')->nullable();
             $table->string('address_2')->nullable();
+            $table->string('address_3')->nullable();
+            $table->string('city')->nullable();
+            $table->string('state')->nullable();
+            $table->string('postal')->nullable();
             $table->date('birthdate')->nullable();
             $table->string('hsgrad')->nullable();
-            // TODO Determine if there can be more than one assignment to a prospect
             $table->foreignUuid('assigned_to_id')->nullable()->references('id')->on('users');
             $table->foreignUuid('created_by_id')->nullable()->references('id')->on('users');
+
             $table->timestamps();
             $table->softDeletes();
         });

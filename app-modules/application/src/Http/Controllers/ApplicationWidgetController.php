@@ -3,7 +3,7 @@
 /*
 <COPYRIGHT>
 
-    Copyright © 2022-2023, Canyon GBS LLC. All rights reserved.
+    Copyright © 2016-2024, Canyon GBS LLC. All rights reserved.
 
     Advising App™ is licensed under the Elastic License 2.0. For more details,
     see https://github.com/canyongbs/advisingapp/blob/main/LICENSE.
@@ -65,7 +65,11 @@ class ApplicationWidgetController extends Controller
             [
                 'name' => $application->name,
                 'description' => $application->description,
-                'authentication_url' => URL::signedRoute('applications.request-authentication', ['application' => $application]),
+                'authentication_url' => URL::signedRoute(
+                    name: 'applications.request-authentication',
+                    parameters: ['application' => $application],
+                    absolute: false,
+                ),
                 'schema' => $generateSchema($application),
                 'primary_color' => Color::all()[$application->primary_color ?? 'blue'],
                 'rounding' => $application->rounding,
@@ -101,10 +105,14 @@ class ApplicationWidgetController extends Controller
 
         return response()->json([
             'message' => "We've sent an authentication code to {$data['email']}.",
-            'authentication_url' => URL::signedRoute('applications.authenticate', [
-                'application' => $application,
-                'authentication' => $authentication,
-            ]),
+            'authentication_url' => URL::signedRoute(
+                name: 'applications.authenticate',
+                parameters: [
+                    'application' => $application,
+                    'authentication' => $authentication,
+                ],
+                absolute: false,
+            ),
         ]);
     }
 
@@ -127,10 +135,14 @@ class ApplicationWidgetController extends Controller
         ]);
 
         return response()->json([
-            'submission_url' => URL::signedRoute('applications.submit', [
-                'authentication' => $authentication,
-                'application' => $authentication->submissible,
-            ]),
+            'submission_url' => URL::signedRoute(
+                name: 'applications.submit',
+                parameters: [
+                    'authentication' => $authentication,
+                    'application' => $authentication->submissible,
+                ],
+                absolute: false,
+            ),
         ]);
     }
 

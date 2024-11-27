@@ -3,7 +3,7 @@
 /*
 <COPYRIGHT>
 
-    Copyright © 2022-2023, Canyon GBS LLC. All rights reserved.
+    Copyright © 2016-2024, Canyon GBS LLC. All rights reserved.
 
     Advising App™ is licensed under the Elastic License 2.0. For more details,
     see https://github.com/canyongbs/advisingapp/blob/main/LICENSE.
@@ -37,7 +37,10 @@
 namespace AdvisingApp\Interaction\Observers;
 
 use App\Models\User;
+use Illuminate\Database\Eloquent\Model;
 use AdvisingApp\Interaction\Models\Interaction;
+use AdvisingApp\Timeline\Events\TimelineableRecordCreated;
+use AdvisingApp\Timeline\Events\TimelineableRecordDeleted;
 use AdvisingApp\Notification\Events\TriggeredAutoSubscription;
 
 class InteractionObserver
@@ -60,5 +63,18 @@ class InteractionObserver
         if ($user instanceof User) {
             TriggeredAutoSubscription::dispatch($user, $interaction);
         }
+
+        /** @var Model $entity */
+        $entity = $interaction->interactable;
+
+        TimelineableRecordCreated::dispatch($entity, $interaction);
+    }
+
+    public function deleted(Interaction $interaction): void
+    {
+        /** @var Model $entity */
+        $entity = $interaction->interactable;
+
+        TimelineableRecordDeleted::dispatch($entity, $interaction);
     }
 }

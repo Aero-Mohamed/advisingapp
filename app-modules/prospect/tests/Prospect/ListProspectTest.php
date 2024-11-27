@@ -3,7 +3,7 @@
 /*
 <COPYRIGHT>
 
-    Copyright © 2022-2023, Canyon GBS LLC. All rights reserved.
+    Copyright © 2016-2024, Canyon GBS LLC. All rights reserved.
 
     Advising App™ is licensed under the Elastic License 2.0. For more details,
     see https://github.com/canyongbs/advisingapp/blob/main/LICENSE.
@@ -42,7 +42,10 @@ use function Pest\Livewire\livewire;
 use AdvisingApp\Prospect\Models\Prospect;
 use AdvisingApp\Prospect\Models\ProspectSource;
 use AdvisingApp\Prospect\Models\ProspectStatus;
+use AdvisingApp\Authorization\Enums\LicenseType;
+use AdvisingApp\Notification\Models\Subscription;
 use AdvisingApp\Prospect\Filament\Resources\ProspectResource;
+use AdvisingApp\Prospect\Filament\Resources\ProspectResource\Pages\ListProspects;
 
 // TODO: Write ListProspects page test
 //test('The correct details are displayed on the ListProspects page', function () {});
@@ -76,7 +79,7 @@ test('ListProspects can bulk update characteristics', function () {
 
     $prospects = Prospect::factory()->count(3)->create();
 
-    $component = livewire(ProspectResource\Pages\ListProspects::class);
+    $component = livewire(ListProspects::class);
 
     $component->assertCanSeeTableRecords($prospects)
         ->assertCountTableRecords($prospects->count())
@@ -90,11 +93,6 @@ test('ListProspects can bulk update characteristics', function () {
     $hsgrad = '2000';
 
     $component
-        ->callTableBulkAction('bulk_update', $prospects, [
-            'field' => 'assigned_to_id',
-            'assigned_to_id' => $user->id,
-        ])
-        ->assertHasNoTableBulkActionErrors()
         ->callTableBulkAction('bulk_update', $prospects, [
             'field' => 'description',
             'description' => $description,
@@ -130,7 +128,6 @@ test('ListProspects can bulk update characteristics', function () {
         ->each(
             fn ($prospect) => $prospect
                 ->refresh()
-                ->assigned_to_id->toBe($user->id)
                 ->description->toBe($description)
                 ->email_bounce->toBeTrue()
                 ->hsgrad->toBe($hsgrad)
@@ -138,4 +135,30 @@ test('ListProspects can bulk update characteristics', function () {
                 ->source_id->toBe($source->id)
                 ->status_id->toBe($status->id)
         );
+});
+
+it('can filter prospects by `subscribed` prospects', function () {
+    $user = User::factory()->licensed(LicenseType::cases())->create();
+
+    $user->givePermissionTo('prospect.view-any');
+    $user->givePermissionTo('subscription.view-any');
+    $user->givePermissionTo('subscription.*.view');
+
+    actingAs($user);
+
+    $subscribedProspects = Prospect::factory()
+        ->count(3)
+        ->has(
+            Subscription::factory()->state(['user_id' => $user->getKey()]),
+            'subscriptions'
+        )
+        ->create();
+
+    $notSubscribedProspects = Prospect::factory()->count(3)->create();
+
+    livewire(ListProspects::class)
+        ->assertCanSeeTableRecords($notSubscribedProspects->merge($subscribedProspects))
+        ->filterTable('subscribed')
+        ->assertCanSeeTableRecords($subscribedProspects)
+        ->assertCanNotSeeTableRecords($notSubscribedProspects);
 });

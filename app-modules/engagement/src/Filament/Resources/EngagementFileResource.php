@@ -3,7 +3,7 @@
 /*
 <COPYRIGHT>
 
-    Copyright © 2022-2023, Canyon GBS LLC. All rights reserved.
+    Copyright © 2016-2024, Canyon GBS LLC. All rights reserved.
 
     Advising App™ is licensed under the Elastic License 2.0. For more details,
     see https://github.com/canyongbs/advisingapp/blob/main/LICENSE.
@@ -86,7 +86,28 @@ class EngagementFileResource extends Resource
                     ->label('File')
                     ->disk('s3')
                     ->collection('file')
-                    ->required(),
+                    ->required()
+                    ->acceptedFileTypes([
+                        'image/png',
+                        'image/jpeg',
+                        'image/gif',
+                        'application/pdf',
+                        'application/msword',
+                        'text/csv',
+                        'application/vnd.ms-excel',
+                        'application/msexcel',
+                        'application/ms-excel',
+                        'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+                        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+                        'application/vnd.ms-powerpoint',
+                        'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+                        'text/plain',
+                        'audio/mpeg',
+                        'video/mp4',
+                        'application/x-zip-compressed',
+                        'application/zip',
+                        'application/x-zip',
+                    ]),
             ]);
     }
 

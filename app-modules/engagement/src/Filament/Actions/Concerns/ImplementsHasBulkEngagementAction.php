@@ -3,7 +3,7 @@
 /*
 <COPYRIGHT>
 
-    Copyright © 2022-2023, Canyon GBS LLC. All rights reserved.
+    Copyright © 2016-2024, Canyon GBS LLC. All rights reserved.
 
     Advising App™ is licensed under the Elastic License 2.0. For more details,
     see https://github.com/canyongbs/advisingapp/blob/main/LICENSE.
@@ -61,13 +61,14 @@ trait ImplementsHasBulkEngagementAction
                 $this->engageActionData = [];
                 $this->engageActionRecords = [];
             })
-            ->modalDescription(fn () => 'The message has not been sent, are you sure you wish to return to the list view?')
+            ->modalHeading('Are you sure you wish to cancel?')
+            ->modalDescription('If you cancel, the message will not be sent.')
             ->closeModalByClickingAway(false)
             ->modalCloseButton(false)
             ->modalCancelAction(false)
             ->extraModalFooterActions([
                 Action::make('restoreBulkEngagementAction')
-                    ->label('Cancel')
+                    ->label('Continue Drafting')
                     ->action(function () {
                         $this->mountTableBulkAction('engage');
 

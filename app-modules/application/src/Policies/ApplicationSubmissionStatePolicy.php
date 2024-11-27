@@ -3,7 +3,7 @@
 /*
 <COPYRIGHT>
 
-    Copyright © 2022-2023, Canyon GBS LLC. All rights reserved.
+    Copyright © 2016-2024, Canyon GBS LLC. All rights reserved.
 
     Advising App™ is licensed under the Elastic License 2.0. For more details,
     see https://github.com/canyongbs/advisingapp/blob/main/LICENSE.
@@ -36,12 +36,30 @@
 
 namespace AdvisingApp\Application\Policies;
 
+use App\Enums\Feature;
 use App\Models\Authenticatable;
 use Illuminate\Auth\Access\Response;
+use Illuminate\Support\Facades\Gate;
+use App\Support\FeatureAccessResponse;
+use App\Concerns\PerformsFeatureChecks;
+use App\Policies\Contracts\PerformsChecksBeforeAuthorization;
 use AdvisingApp\Application\Models\ApplicationSubmissionState;
 
-class ApplicationSubmissionStatePolicy
+class ApplicationSubmissionStatePolicy implements PerformsChecksBeforeAuthorization
 {
+    use PerformsFeatureChecks;
+
+    public function before(Authenticatable $authenticatable): ?Response
+    {
+        if (! Gate::check(
+            collect($this->requiredFeatures())->map(fn (Feature $feature) => $feature->getGateName())
+        )) {
+            return FeatureAccessResponse::deny();
+        }
+
+        return null;
+    }
+
     public function viewAny(Authenticatable $authenticatable): Response
     {
         return $authenticatable->canOrElse(
@@ -53,7 +71,7 @@ class ApplicationSubmissionStatePolicy
     public function view(Authenticatable $authenticatable, ApplicationSubmissionState $model): Response
     {
         return $authenticatable->canOrElse(
-            abilities: ['application_submission_state.*.view', "application_submission_state.{$model->id}.view"],
+            abilities: ["application_submission_state.{$model->id}.view"],
             denyResponse: 'You do not have permission to view this state.'
         );
     }
@@ -69,7 +87,7 @@ class ApplicationSubmissionStatePolicy
     public function update(Authenticatable $authenticatable, ApplicationSubmissionState $model): Response
     {
         return $authenticatable->canOrElse(
-            abilities: ['application_submission_state.*.update', "application_submission_state.{$model->id}.update"],
+            abilities: ["application_submission_state.{$model->id}.update"],
             denyResponse: 'You do not have permission to update this state.'
         );
     }
@@ -77,7 +95,7 @@ class ApplicationSubmissionStatePolicy
     public function delete(Authenticatable $authenticatable, ApplicationSubmissionState $model): Response
     {
         return $authenticatable->canOrElse(
-            abilities: ['application_submission_state.*.delete', "application_submission_state.{$model->id}.delete"],
+            abilities: ["application_submission_state.{$model->id}.delete"],
             denyResponse: 'You do not have permission to delete this state.'
         );
     }
@@ -85,7 +103,7 @@ class ApplicationSubmissionStatePolicy
     public function restore(Authenticatable $authenticatable, ApplicationSubmissionState $model): Response
     {
         return $authenticatable->canOrElse(
-            abilities: ['application_submission_state.*.restore', "application_submission_state.{$model->id}.restore"],
+            abilities: ["application_submission_state.{$model->id}.restore"],
             denyResponse: 'You do not have permission to restore this state.'
         );
     }
@@ -93,8 +111,13 @@ class ApplicationSubmissionStatePolicy
     public function forceDelete(Authenticatable $authenticatable, ApplicationSubmissionState $model): Response
     {
         return $authenticatable->canOrElse(
-            abilities: ['application_submission_state.*.force-delete', "application_submission_state.{$model->id}.force-delete"],
+            abilities: ["application_submission_state.{$model->id}.force-delete"],
             denyResponse: 'You do not have permission to permanently delete this state.'
         );
+    }
+
+    protected function requiredFeatures(): array
+    {
+        return [Feature::OnlineAdmissions];
     }
 }

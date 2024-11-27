@@ -1,7 +1,7 @@
 {{--
 <COPYRIGHT>
 
-    Copyright © 2022-2023, Canyon GBS LLC. All rights reserved.
+    Copyright © 2016-2024, Canyon GBS LLC. All rights reserved.
 
     Advising App™ is licensed under the Elastic License 2.0. For more details,
     see https://github.com/canyongbs/advisingapp/blob/main/LICENSE.
@@ -47,9 +47,20 @@
             >
                 <div
                     class="sticky top-0 z-[5] flex h-12 w-full items-center justify-between bg-gray-100 px-4 dark:bg-gray-700">
-                    <h1 class="ml-2">{{ $educatable->display_name }}</h1>
-                    <x-filament::button wire:click="engage('{{ $educatable }}')">
-                        Engage
+                    <h1 class="ml-2 flex">
+                        {{ $educatable->display_name }}
+                        <span class="ml-2 flex space-x-2">
+                            <a
+                                href="{{ $educatable->filamentResource()::getUrl('view', ['record' => $educatable->identifier()]) }}">
+                                <x-filament::icon
+                                    class="mt-1 h-4 w-4 text-gray-400 dark:text-gray-100"
+                                    icon="heroicon-o-link"
+                                />
+                            </a>
+                        </span>
+                    </h1>
+                    <x-filament::button wire:click="engage('{{ $educatable->identifier() }}')">
+                        New Email or Text
                     </x-filament::button>
                 </div>
                 <div class="p-6">

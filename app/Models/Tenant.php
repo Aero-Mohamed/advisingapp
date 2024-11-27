@@ -3,7 +3,7 @@
 /*
 <COPYRIGHT>
 
-    Copyright © 2022-2023, Canyon GBS LLC. All rights reserved.
+    Copyright © 2016-2024, Canyon GBS LLC. All rights reserved.
 
     Advising App™ is licensed under the Elastic License 2.0. For more details,
     see https://github.com/canyongbs/advisingapp/blob/main/LICENSE.
@@ -36,8 +36,8 @@
 
 namespace App\Models;
 
-use App\Casts\TenantEncrypted;
 use App\Casts\LandlordEncrypted;
+use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Spatie\Multitenancy\Models\Tenant as SpatieTenant;
 use Spatie\Multitenancy\Models\Concerns\UsesLandlordConnection;
@@ -49,16 +49,19 @@ class Tenant extends SpatieTenant
 {
     use UsesLandlordConnection;
     use HasUuids;
+    use SoftDeletes;
 
     protected $fillable = [
         'name',
         'domain',
         'key',
         'config',
+        'setup_complete',
     ];
 
     protected $casts = [
         'key' => LandlordEncrypted::class,
-        'config' => TenantEncrypted::class,
+        'config' => LandlordEncrypted::class,
+        'setup_complete' => 'boolean',
     ];
 }

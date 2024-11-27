@@ -3,7 +3,7 @@
 /*
 <COPYRIGHT>
 
-    Copyright © 2022-2023, Canyon GBS LLC. All rights reserved.
+    Copyright © 2016-2024, Canyon GBS LLC. All rights reserved.
 
     Advising App™ is licensed under the Elastic License 2.0. For more details,
     see https://github.com/canyongbs/advisingapp/blob/main/LICENSE.
@@ -71,9 +71,9 @@ class SubscriptionBlock extends CampaignActionBlock
                 ->label('When should the journey step be executed?')
                 ->columnSpanFull()
                 ->timezone(app(CampaignSettings::class)->getActionExecutionTimezone())
-                ->helperText(app(CampaignSettings::class)->getActionExecutionTimezoneLabel())
+                ->hintIconTooltip('This time is set in ' . app(CampaignSettings::class)->getActionExecutionTimezoneLabel() . '.')
                 ->lazy()
-                ->hint(fn ($state): ?string => filled($state) ? $this->generateUserTimezoneHint(CarbonImmutable::parse($state)) : null)
+                ->helperText(fn ($state): ?string => filled($state) ? $this->generateUserTimezoneHint(CarbonImmutable::parse($state)) : null)
                 ->required()
                 ->minDate(now()),
         ];

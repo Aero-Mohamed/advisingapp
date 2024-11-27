@@ -3,7 +3,7 @@
 /*
 <COPYRIGHT>
 
-    Copyright © 2022-2023, Canyon GBS LLC. All rights reserved.
+    Copyright © 2016-2024, Canyon GBS LLC. All rights reserved.
 
     Advising App™ is licensed under the Elastic License 2.0. For more details,
     see https://github.com/canyongbs/advisingapp/blob/main/LICENSE.
@@ -35,6 +35,7 @@
 */
 
 use App\Models\User;
+use App\Models\Tenant;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Mail\Events\MessageSent;
@@ -81,7 +82,7 @@ it('The configuration set headers are present and emails are sent if configurati
 
     Event::assertDispatched(
         fn (MessageSent $event) => $event->message->getHeaders()->get('X-SES-CONFIGURATION-SET')->getBody() === $configurationSet
-            && $event->message->getHeaders()->get('X-SES-MESSAGE-TAGS')->getBody() === 'outbound_deliverable_id=' . OutboundDeliverable::first()->getKey()
+            && $event->message->getHeaders()->get('X-SES-MESSAGE-TAGS')->getBody() === sprintf('outbound_deliverable_id=%s, tenant_id=%s', OutboundDeliverable::first()->getKey(), Tenant::current()->getKey())
     );
 });
 
@@ -107,7 +108,6 @@ class TestEmailNotification extends BaseNotification implements EmailNotificatio
         return MailMessage::make()
             ->subject('Test Subject')
             ->greeting('Test Greeting')
-            ->content('This is a test email')
-            ->salutation('Test Salutation');
+            ->content('This is a test email');
     }
 }

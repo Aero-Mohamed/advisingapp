@@ -3,7 +3,7 @@
 /*
 <COPYRIGHT>
 
-    Copyright © 2022-2023, Canyon GBS LLC. All rights reserved.
+    Copyright © 2016-2024, Canyon GBS LLC. All rights reserved.
 
     Advising App™ is licensed under the Elastic License 2.0. For more details,
     see https://github.com/canyongbs/advisingapp/blob/main/LICENSE.
@@ -36,8 +36,13 @@
 
 namespace AdvisingApp\Authorization\Filament\Resources\RoleResource\Pages;
 
+use Filament\Tables\Table;
+use App\Models\Authenticatable;
 use Filament\Actions\CreateAction;
 use Filament\Resources\Components\Tab;
+use Filament\Tables\Actions\ViewAction;
+use Filament\Tables\Columns\TextColumn;
+use App\Filament\Tables\Columns\IdColumn;
 use Filament\Resources\Pages\ListRecords;
 use Illuminate\Contracts\Database\Eloquent\Builder;
 use AdvisingApp\Authorization\Filament\Resources\RoleResource;
@@ -54,6 +59,37 @@ class ListRoles extends ListRecords
             'api' => Tab::make('Api')
                 ->modifyQueryUsing(fn (Builder $query) => $query->api()),
         ];
+    }
+
+    public function table(Table $table): Table
+    {
+        return $table
+            ->modifyQueryUsing(function (Builder $query) {
+                /** @var User $user */
+                $user = auth()->user();
+
+                if (! $user?->isSuperAdmin()) {
+                    $query->where('name', '!=', Authenticatable::SUPER_ADMIN_ROLE);
+                }
+            })
+            ->columns([
+                IdColumn::make(),
+                TextColumn::make('name')
+                    ->searchable(),
+                TextColumn::make('guard_name')
+                    ->searchable(),
+                TextColumn::make('created_at')
+                    ->dateTime()
+                    ->sortable()
+                    ->toggleable(isToggledHiddenByDefault: true),
+                TextColumn::make('updated_at')
+                    ->dateTime()
+                    ->sortable()
+                    ->toggleable(isToggledHiddenByDefault: true),
+            ])
+            ->actions([
+                ViewAction::make(),
+            ]);
     }
 
     protected function getHeaderActions(): array

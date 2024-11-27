@@ -3,7 +3,7 @@
 /*
 <COPYRIGHT>
 
-    Copyright © 2022-2023, Canyon GBS LLC. All rights reserved.
+    Copyright © 2016-2024, Canyon GBS LLC. All rights reserved.
 
     Advising App™ is licensed under the Elastic License 2.0. For more details,
     see https://github.com/canyongbs/advisingapp/blob/main/LICENSE.
@@ -53,11 +53,12 @@ class SetPasswordNotification extends BaseNotification implements EmailNotificat
         return MailMessage::make()
             ->settings($this->resolveNotificationSetting($notifiable))
             ->line('A new account has been created for you.')
-            ->action('Set up your password', URL::temporarySignedRoute(
-                'login.one-time',
-                now()->addDay(),
-                ['user' => $notifiable],
-            ))
+            ->action('Set up your password', url(URL::temporarySignedRoute(
+                name: 'login.one-time',
+                expiration: now()->addDay(),
+                parameters: ['user' => $notifiable],
+                absolute: false,
+            )))
             ->line('For security reasons, this link will expire in 24 hours.')
             ->line('Please contact support if you need a new link or have any issues setting up your account.');
     }

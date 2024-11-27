@@ -3,7 +3,7 @@
 /*
 <COPYRIGHT>
 
-    Copyright © 2022-2023, Canyon GBS LLC. All rights reserved.
+    Copyright © 2016-2024, Canyon GBS LLC. All rights reserved.
 
     Advising App™ is licensed under the Elastic License 2.0. For more details,
     see https://github.com/canyongbs/advisingapp/blob/main/LICENSE.
@@ -62,7 +62,7 @@ class ProspectPolicy
     public function view(Authenticatable $authenticatable, Prospect $prospect): Response
     {
         return $authenticatable->canOrElse(
-            abilities: ['prospect.*.view', "prospect.{$prospect->id}.view"],
+            abilities: ["prospect.{$prospect->id}.view"],
             denyResponse: 'You do not have permission to view this prospect.'
         );
     }
@@ -85,8 +85,12 @@ class ProspectPolicy
 
     public function update(Authenticatable $authenticatable, Prospect $prospect): Response
     {
+        if (filled($prospect?->student_id)) {
+            return Response::deny('Edit access denied as Prospect has been converted to a Student.');
+        }
+
         return $authenticatable->canOrElse(
-            abilities: ['prospect.*.update', "prospect.{$prospect->id}.update"],
+            abilities: ["prospect.{$prospect->id}.update"],
             denyResponse: 'You do not have permission to update this prospect.'
         );
     }
@@ -94,7 +98,7 @@ class ProspectPolicy
     public function delete(Authenticatable $authenticatable, Prospect $prospect): Response
     {
         return $authenticatable->canOrElse(
-            abilities: ['prospect.*.delete', "prospect.{$prospect->id}.delete"],
+            abilities: ["prospect.{$prospect->id}.delete"],
             denyResponse: 'You do not have permission to delete this prospect.'
         );
     }
@@ -102,7 +106,7 @@ class ProspectPolicy
     public function restore(Authenticatable $authenticatable, Prospect $prospect): Response
     {
         return $authenticatable->canOrElse(
-            abilities: ['prospect.*.restore', "prospect.{$prospect->id}.restore"],
+            abilities: ["prospect.{$prospect->id}.restore"],
             denyResponse: 'You do not have permission to restore this prospect.'
         );
     }
@@ -110,7 +114,7 @@ class ProspectPolicy
     public function forceDelete(Authenticatable $authenticatable, Prospect $prospect): Response
     {
         return $authenticatable->canOrElse(
-            abilities: ['prospect.*.force-delete', "prospect.{$prospect->id}.force-delete"],
+            abilities: ["prospect.{$prospect->id}.force-delete"],
             denyResponse: 'You do not have permission to force delete this prospect.'
         );
     }

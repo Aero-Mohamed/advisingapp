@@ -3,7 +3,7 @@
 /*
 <COPYRIGHT>
 
-    Copyright © 2022-2023, Canyon GBS LLC. All rights reserved.
+    Copyright © 2016-2024, Canyon GBS LLC. All rights reserved.
 
     Advising App™ is licensed under the Elastic License 2.0. For more details,
     see https://github.com/canyongbs/advisingapp/blob/main/LICENSE.
@@ -38,11 +38,12 @@ namespace AdvisingApp\StudentDataModel\Filament\Resources\StudentResource\Relati
 
 use Filament\Tables\Table;
 use Filament\Infolists\Infolist;
-use App\Filament\Columns\IdColumn;
 use Filament\Tables\Actions\ViewAction;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Infolists\Components\TextEntry;
-use App\Filament\Resources\RelationManagers\RelationManager;
+use AdvisingApp\StudentDataModel\Models\Program;
+use Filament\Resources\RelationManagers\RelationManager;
+use AdvisingApp\StudentDataModel\Settings\StudentInformationSystemSettings;
 
 class ProgramsRelationManager extends RelationManager
 {
@@ -50,50 +51,117 @@ class ProgramsRelationManager extends RelationManager
 
     public function infolist(Infolist $infolist): Infolist
     {
+        $sisSystem = app(StudentInformationSystemSettings::class)->sis_system;
+
         return $infolist
             ->schema([
                 TextEntry::make('sisid')
                     ->label('SISID'),
                 TextEntry::make('otherid')
-                    ->label('STUID'),
+                    ->label('STUID')
+                    ->placeholder('-')
+                    ->visible($sisSystem?->hasProgramsOtherid() ?? true),
                 TextEntry::make('division')
-                    ->label('College'),
+                    ->label('College')
+                    ->placeholder('-')
+                    ->visible($sisSystem?->hasProgramsDivision() ?? true),
                 TextEntry::make('descr')
-                    ->label('Program'),
+                    ->label('Program')
+                    ->placeholder('-')
+                    ->visible($sisSystem?->hasProgramsDescr() ?? true),
+                TextEntry::make('acad_plan')
+                    ->label('Program details')
+                    ->placeholder('-')
+                    ->state(function (Program $record): ?string {
+                        $acadPlan = $record->acad_plan;
+
+                        if (blank($acadPlan)) {
+                            return null;
+                        }
+
+                        if (! is_array($acadPlan)) {
+                            return null;
+                        }
+
+                        $majors = $acadPlan['major'] ?? [];
+                        $minors = $acadPlan['minor'] ?? [];
+
+                        if (blank($majors) && blank($minors)) {
+                            return null;
+                        }
+
+                        $state = [];
+
+                        if (filled($majors)) {
+                            $state[] = 'Major: ' . implode(', ', $majors);
+                        }
+
+                        if (filled($minors)) {
+                            $state[] = 'Minor: ' . implode(', ', $minors);
+                        }
+
+                        return implode('; ', $state);
+                    })
+                    ->visible($sisSystem?->hasProgramsAcadPlan() ?? true)
+                    ->columnSpanFull(),
                 TextEntry::make('foi')
-                    ->label('Field of Interest'),
+                    ->label('Field of Interest')
+                    ->placeholder('-')
+                    ->visible($sisSystem?->hasProgramsFoi() ?? true),
                 TextEntry::make('cum_gpa')
-                    ->label('Cumulative GPA'),
+                    ->label('Cumulative GPA')
+                    ->placeholder('-')
+                    ->visible($sisSystem?->hasProgramsCumGpa() ?? true),
                 TextEntry::make('declare_dt')
-                    ->label('Start Date'),
+                    ->label('Start Date')
+                    ->placeholder('-')
+                    ->visible($sisSystem?->hasProgramsDeclareDt() ?? true),
                 TextEntry::make('change_dt')
-                    ->label('Last Action Date'),
+                    ->label('Last Action Date')
+                    ->placeholder('-')
+                    ->visible($sisSystem?->hasProgramsChangeDt() ?? true),
+                TextEntry::make('graduation_dt')
+                    ->label('Graduation Date')
+                    ->placeholder('-')
+                    ->visible($sisSystem?->hasProgramsGraduationDt() ?? true),
+                TextEntry::make('conferred_dt')
+                    ->label('Conferred Date')
+                    ->placeholder('-')
+                    ->visible($sisSystem?->hasProgramsConferredDt() ?? true),
             ]);
     }
 
     public function table(Table $table): Table
     {
+        $sisSystem = app(StudentInformationSystemSettings::class)->sis_system;
+
         return $table
             ->recordTitleAttribute('descr')
             ->columns([
-                IdColumn::make(),
                 TextColumn::make('otherid')
-                    ->label('STUID'),
+                    ->label('STUID')
+                    ->visible($sisSystem?->hasProgramsOtherid() ?? true),
                 TextColumn::make('division')
-                    ->label('College'),
+                    ->label('College')
+                    ->visible($sisSystem?->hasProgramsDivision() ?? true),
                 TextColumn::make('descr')
-                    ->label('Program'),
+                    ->label('Program')
+                    ->visible($sisSystem?->hasProgramsDescr() ?? true),
                 TextColumn::make('foi')
-                    ->label('Field of Interest'),
+                    ->label('Field of Interest')
+                    ->visible($sisSystem?->hasProgramsFoi() ?? true),
                 TextColumn::make('cum_gpa')
-                    ->label('Cumulative GPA'),
+                    ->label('Cumulative GPA')
+                    ->visible($sisSystem?->hasProgramsCumGpa() ?? true),
                 TextColumn::make('declare_dt')
-                    ->label('Start Date'),
+                    ->label('Start Date')
+                    ->visible($sisSystem?->hasProgramsDeclareDt() ?? true),
+                TextColumn::make('graduation_dt')
+                    ->label('Graduation Date')
+                    ->visible($sisSystem?->hasProgramsGraduationDt() ?? true),
             ])
-            ->headerActions([])
             ->actions([
                 ViewAction::make(),
-            ])
-            ->bulkActions([]);
+            ]);
     }
 }

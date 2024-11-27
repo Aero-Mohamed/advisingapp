@@ -3,7 +3,7 @@
 /*
 <COPYRIGHT>
 
-    Copyright © 2022-2023, Canyon GBS LLC. All rights reserved.
+    Copyright © 2016-2024, Canyon GBS LLC. All rights reserved.
 
     Advising App™ is licensed under the Elastic License 2.0. For more details,
     see https://github.com/canyongbs/advisingapp/blob/main/LICENSE.
@@ -36,16 +36,29 @@
 
 namespace AdvisingApp\Notification\Models;
 
+use Carbon\Carbon;
 use App\Models\BaseModel;
+use Illuminate\Support\Collection;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\SoftDeletes;
+use AdvisingApp\Notification\Drivers\SmsDriver;
+use AdvisingApp\Timeline\Models\CustomTimeline;
+use AdvisingApp\CaseManagement\Models\CaseModel;
+use AdvisingApp\Notification\Drivers\EmailDriver;
 use Illuminate\Database\Eloquent\Relations\MorphTo;
 use AdvisingApp\Notification\Enums\NotificationChannel;
+use AdvisingApp\Timeline\Models\Contracts\ProvidesATimeline;
 use AdvisingApp\Notification\Enums\NotificationDeliveryStatus;
+use AdvisingApp\Timeline\Timelines\OutboundDeliverableTimeline;
+use AdvisingApp\Notification\Drivers\Contracts\OutboundDeliverableDriver;
 
 /**
  * @mixin IdeHelperOutboundDeliverable
  */
-class OutboundDeliverable extends BaseModel
+class OutboundDeliverable extends BaseModel implements ProvidesATimeline
 {
+    use SoftDeletes;
+
     protected $fillable = [
         'channel',
         'content',
@@ -68,9 +81,13 @@ class OutboundDeliverable extends BaseModel
         'delivered_at' => 'datetime',
         'delivery_status' => NotificationDeliveryStatus::class,
         'last_delivery_attempt' => 'datetime',
+        'content' => 'array',
     ];
 
-    // The "related" relationship is whatever entity we might need to tie this back to
+    public array $timelineables = [
+        CaseModel::class,
+    ];
+
     public function related(): MorphTo
     {
         return $this->morphTo(
@@ -94,18 +111,18 @@ class OutboundDeliverable extends BaseModel
         return ! is_null($this->delivered_at);
     }
 
-    public function markDeliverySuccessful(): void
+    public function markDeliverySuccessful(?Carbon $at = null): void
     {
         if (! $this->hasBeenDelivered()) {
             $this->update([
                 'delivery_status' => NotificationDeliveryStatus::Successful,
-                'delivered_at' => now(),
-                'last_delivery_attempt' => now(),
+                'delivered_at' => $at ?? now(),
+                'last_delivery_attempt' => $at ?? now(),
             ]);
         }
     }
 
-    public function markDeliveryFailed(string $reason): void
+    public function markDeliveryFailed(?string $reason): void
     {
         if (! $this->hasBeenDelivered()) {
             $this->update([
@@ -114,5 +131,23 @@ class OutboundDeliverable extends BaseModel
                 'delivery_response' => $reason,
             ]);
         }
+    }
+
+    public function driver(): OutboundDeliverableDriver
+    {
+        return match ($this->channel) {
+            NotificationChannel::Email => new EmailDriver($this),
+            NotificationChannel::Sms => new SmsDriver($this),
+        };
+    }
+
+    public function timeline(): CustomTimeline
+    {
+        return new OutboundDeliverableTimeline($this);
+    }
+
+    public static function getTimelineData(Model $forModel): Collection
+    {
+        return $forModel->deliverables()->get();
     }
 }

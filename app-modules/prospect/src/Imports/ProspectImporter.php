@@ -3,7 +3,7 @@
 /*
 <COPYRIGHT>
 
-    Copyright © 2022-2023, Canyon GBS LLC. All rights reserved.
+    Copyright © 2016-2024, Canyon GBS LLC. All rights reserved.
 
     Advising App™ is licensed under the Elastic License 2.0. For more details,
     see https://github.com/canyongbs/advisingapp/blob/main/LICENSE.
@@ -157,7 +157,6 @@ class ProspectImporter extends Importer
         /** @var User $user */
         $user = $this->import->user;
 
-        $record->assignedTo()->associate($user);
         $record->createdBy()->associate($user);
     }
 

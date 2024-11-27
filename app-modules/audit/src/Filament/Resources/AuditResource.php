@@ -3,7 +3,7 @@
 /*
 <COPYRIGHT>
 
-    Copyright © 2022-2023, Canyon GBS LLC. All rights reserved.
+    Copyright © 2016-2024, Canyon GBS LLC. All rights reserved.
 
     Advising App™ is licensed under the Elastic License 2.0. For more details,
     see https://github.com/canyongbs/advisingapp/blob/main/LICENSE.
@@ -46,13 +46,17 @@ class AuditResource extends Resource
 {
     protected static ?string $model = Audit::class;
 
-    protected static ?string $navigationLabel = 'Other Records';
+    protected static ?string $navigationLabel = 'System Administration';
 
     protected static ?string $navigationIcon = 'heroicon-o-shield-check';
 
     protected static ?int $navigationSort = 40;
 
     protected static ?string $cluster = UsageAuditing::class;
+
+    protected static ?string $breadcrumb = 'System Administration';
+
+    protected static ?string $slug = 'system-administration';
 
     public static function getPages(): array
     {

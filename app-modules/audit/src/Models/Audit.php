@@ -3,7 +3,7 @@
 /*
 <COPYRIGHT>
 
-    Copyright © 2022-2023, Canyon GBS LLC. All rights reserved.
+    Copyright © 2016-2024, Canyon GBS LLC. All rights reserved.
 
     Advising App™ is licensed under the Elastic License 2.0. For more details,
     see https://github.com/canyongbs/advisingapp/blob/main/LICENSE.
@@ -43,7 +43,6 @@ use OwenIt\Auditing\Models\Audit as BaseAudit;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Spatie\Multitenancy\Models\Concerns\UsesTenantConnection;
-use AdvisingApp\Authorization\Models\Concerns\DefinesPermissions;
 
 /**
  * @mixin IdeHelperAudit
@@ -51,7 +50,6 @@ use AdvisingApp\Authorization\Models\Concerns\DefinesPermissions;
 class Audit extends BaseAudit
 {
     use HasFactory;
-    use DefinesPermissions;
     use MassPrunable;
     use HasUuids;
     use UsesTenantConnection;

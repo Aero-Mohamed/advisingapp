@@ -3,7 +3,7 @@
 /*
 <COPYRIGHT>
 
-    Copyright © 2022-2023, Canyon GBS LLC. All rights reserved.
+    Copyright © 2016-2024, Canyon GBS LLC. All rights reserved.
 
     Advising App™ is licensed under the Elastic License 2.0. For more details,
     see https://github.com/canyongbs/advisingapp/blob/main/LICENSE.
@@ -56,6 +56,12 @@ enum Feature: string
     case RealtimeChat = 'realtime-chat';
 
     case MobileApps = 'mobile-apps';
+
+    case ExperimentalReporting = 'experimental-reporting';
+
+    case ScheduleAndAppointments = 'schedule-and-appointments';
+
+    case CustomAiAssistants = 'custom-ai-assistants';
 
     public function generateGate(): void
     {

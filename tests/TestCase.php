@@ -3,7 +3,7 @@
 /*
 <COPYRIGHT>
 
-    Copyright © 2022-2023, Canyon GBS LLC. All rights reserved.
+    Copyright © 2016-2024, Canyon GBS LLC. All rights reserved.
 
     Advising App™ is licensed under the Elastic License 2.0. For more details,
     see https://github.com/canyongbs/advisingapp/blob/main/LICENSE.
@@ -37,23 +37,33 @@
 namespace Tests;
 
 use App\Models\Tenant;
+use Illuminate\Support\Str;
 use Tests\Concerns\LoadsFixtures;
+use Symfony\Component\Finder\Finder;
+use App\Jobs\UpdateTenantLicenseData;
+use Symfony\Component\Process\Process;
+use Illuminate\Support\Facades\Artisan;
 use Illuminate\Contracts\Console\Kernel;
+use Symfony\Component\Finder\SplFileInfo;
 use App\Multitenancy\Actions\CreateTenant;
 use Spatie\Permission\PermissionRegistrar;
+use Illuminate\Support\Facades\ParallelTesting;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use App\Multitenancy\DataTransferObjects\TenantConfig;
 use Illuminate\Foundation\Testing\RefreshDatabaseState;
 use Spatie\Multitenancy\Concerns\UsesMultitenancyConfig;
+use AdvisingApp\Authorization\Console\Commands\SetupRoles;
+use App\DataTransferObjects\LicenseManagement\LicenseData;
 use App\Multitenancy\DataTransferObjects\TenantMailConfig;
 use Illuminate\Foundation\Testing\TestCase as BaseTestCase;
 use App\Multitenancy\DataTransferObjects\TenantMailersConfig;
 use App\Multitenancy\DataTransferObjects\TenantDatabaseConfig;
 use Illuminate\Foundation\Testing\DatabaseTransactionsManager;
+use App\DataTransferObjects\LicenseManagement\LicenseAddonsData;
+use App\DataTransferObjects\LicenseManagement\LicenseLimitsData;
 use App\Multitenancy\DataTransferObjects\TenantSmtpMailerConfig;
-use App\Multitenancy\DataTransferObjects\TenantSisDatabaseConfig;
 use App\Multitenancy\DataTransferObjects\TenantS3FilesystemConfig;
-use AdvisingApp\Authorization\Console\Commands\SyncRolesAndPermissions;
+use App\DataTransferObjects\LicenseManagement\LicenseSubscriptionData;
 use Illuminate\Foundation\Testing\Traits\CanConfigureMigrationCommands;
 
 abstract class TestCase extends BaseTestCase
@@ -73,52 +83,81 @@ abstract class TestCase extends BaseTestCase
         Tenant::first()->makeCurrent();
 
         $this->beginDatabaseTransactionOnConnection($this->tenantDatabaseConnectionName());
-        $this->beginDatabaseTransactionOnConnection('sis');
     }
 
-    public function createTestingEnvironment(): void
+    public function createLandlordTestingEnvironment(): void
     {
         $this->artisan('migrate:fresh', [
             '--database' => $this->landlordDatabaseConnectionName(),
-            '--path' => 'database/migrations/landlord',
+            '--path' => 'database/landlord',
             ...$this->migrateFreshUsing(),
         ]);
 
-        $tenant = $this->createTenant(
+        $this->createTenant(
             name: 'Test Tenant',
             domain: 'test.advisingapp.local',
-            database: 'testing_tenant',
-            sisDatabase: 'testing',
+            database: ParallelTesting::token() ? 'testing_tenant_test_' . ParallelTesting::token() : 'testing_tenant',
         );
+    }
+
+    public function createTenantTestingEnvironment(Tenant $tenant = null): void
+    {
+        $tenant ??= Tenant::firstOrFail();
 
         $tenant->makeCurrent();
 
-        $this->artisan('migrate:fresh', $this->migrateFreshUsing());
+        $tenant->execute(function () use ($tenant) {
+            $this->artisan('migrate:fresh', [
+                '--database' => $this->tenantDatabaseConnectionName(),
+                '--seeder' => 'StudentSeeder',
+                ...$this->migrateFreshUsing(),
+            ]);
 
-        $this->artisan('migrate:fresh', [
-            '--database' => 'sis',
-            '--path' => 'app-modules/student-data-model/database/migrations/sis',
-            ...$this->migrateFreshUsing(),
-        ]);
+            Artisan::call(
+                command: SetupRoles::class,
+                parameters: [
+                    '--tenant' => $tenant->id,
+                ],
+            );
 
-        $this->artisan('app:setup-foreign-data-wrapper');
-
-        if (config('database.adm_materialized_views_enabled')) {
-            $this->artisan('app:create-adm-materialized-views');
-        }
-
-        $currentTenant = Tenant::current();
-
-        $this->artisan(
-            command: SyncRolesAndPermissions::class,
-            parameters: [
-                '--tenant' => $currentTenant->id,
-            ],
-        );
+            dispatch_sync(new UpdateTenantLicenseData(
+                $tenant,
+                new LicenseData(
+                    updatedAt: now(),
+                    subscription: new LicenseSubscriptionData(
+                        clientName: 'Jane Smith',
+                        partnerName: 'Fake Edu Tech',
+                        clientPo: 'abc123',
+                        partnerPo: 'def456',
+                        startDate: now(),
+                        endDate: now()->addYear(),
+                    ),
+                    limits: new LicenseLimitsData(
+                        conversationalAiSeats: 50,
+                        conversationalAiAssistants: 10,
+                        retentionCrmSeats: 25,
+                        recruitmentCrmSeats: 10,
+                        emails: 1000,
+                        sms: 1000,
+                        resetDate: now()->format('m-d'),
+                    ),
+                    addons: new LicenseAddonsData(
+                        onlineForms: true,
+                        onlineSurveys: true,
+                        onlineAdmissions: true,
+                        serviceManagement: true,
+                        knowledgeManagement: true,
+                        eventManagement: true,
+                        realtimeChat: true,
+                        mobileApps: true,
+                        experimentalReporting: true,
+                        scheduleAndAppointments: true,
+                    )
+                )
+            ));
+        });
 
         Tenant::forgetCurrent();
-
-        $this->app[Kernel::class]->setArtisan(null);
     }
 
     public function beginDatabaseTransactionOnConnection(string $name)
@@ -146,7 +185,7 @@ abstract class TestCase extends BaseTestCase
         });
     }
 
-    public function createTenant(string $name, string $domain, string $database, string $sisDatabase): Tenant
+    public function createTenant(string $name, string $domain, string $database): Tenant
     {
         return app(CreateTenant::class)(
             $name,
@@ -158,13 +197,6 @@ abstract class TestCase extends BaseTestCase
                     database: $database,
                     username: config('database.connections.landlord.username'),
                     password: config('database.connections.landlord.password'),
-                ),
-                sisDatabase: new TenantSisDatabaseConfig(
-                    host: config('database.connections.sis.host'),
-                    port: config('database.connections.sis.port'),
-                    database: $sisDatabase,
-                    username: config('database.connections.sis.username'),
-                    password: config('database.connections.sis.password'),
                 ),
                 s3Filesystem: new TenantS3FilesystemConfig(
                     key: config('filesystems.disks.s3.key'),
@@ -189,6 +221,7 @@ abstract class TestCase extends BaseTestCase
                     root: config('filesystems.disks.s3-public.root'),
                 ),
                 mail: new TenantMailConfig(
+                    isDemoModeEnabled: false,
                     mailers: new TenantMailersConfig(
                         smtp: new TenantSmtpMailerConfig(
                             host: config('mail.mailers.smtp.host'),
@@ -204,18 +237,103 @@ abstract class TestCase extends BaseTestCase
                     fromAddress: config('mail.from.address'),
                     fromName: config('mail.from.name')
                 ),
-            )
+            ),
+            licenseData: new LicenseData(
+                updatedAt: now(),
+                subscription: new LicenseSubscriptionData(
+                    clientName: 'Jane Smith',
+                    partnerName: 'Fake Edu Tech',
+                    clientPo: 'abc123',
+                    partnerPo: 'def456',
+                    startDate: now(),
+                    endDate: now()->addYear(),
+                ),
+                limits: new LicenseLimitsData(
+                    conversationalAiSeats: 50,
+                    conversationalAiAssistants: 10,
+                    retentionCrmSeats: 25,
+                    recruitmentCrmSeats: 10,
+                    emails: 1000,
+                    sms: 1000,
+                    resetDate: now()->format('m-d'),
+                ),
+                addons: new LicenseAddonsData(
+                    onlineForms: true,
+                    onlineSurveys: true,
+                    onlineAdmissions: true,
+                    serviceManagement: true,
+                    knowledgeManagement: true,
+                    eventManagement: true,
+                    realtimeChat: true,
+                    mobileApps: true,
+                    experimentalReporting: true,
+                    scheduleAndAppointments: true,
+                ),
+            ),
+            seedTenantDatabase: false
         );
     }
 
     protected function refreshTestDatabase()
     {
         if (! RefreshDatabaseState::$migrated) {
-            $this->createTestingEnvironment();
+            $this->createLandlordTestingEnvironment();
+
+            $this->createTenantTestingEnvironment();
+
+            $this->app[Kernel::class]->setArtisan(null);
 
             RefreshDatabaseState::$migrated = true;
         }
 
         $this->beginDatabaseTransactionOnConnection($this->landlordDatabaseConnectionName());
+    }
+
+    protected function calculateMigrationChecksum(array $paths): string
+    {
+        $finder = Finder::create()
+            ->in($paths)
+            ->name('*.php')
+            ->ignoreDotFiles(true)
+            ->ignoreVCS(true)
+            ->files();
+
+        $migrations = array_map(static function (SplFileInfo $fileInfo) {
+            return [$fileInfo->getMTime(), $fileInfo->getPath()];
+        }, iterator_to_array($finder));
+
+        // Reset the array keys so there is less data
+
+        $migrations = array_values($migrations);
+
+        // Add the current git branch
+
+        $checkBranch = new Process(['git', 'branch', '--show-current']);
+        $checkBranch->run();
+
+        $migrations['gitBranch'] = trim($checkBranch->getOutput());
+
+        // Create a hash
+
+        return hash('sha256', json_encode($migrations, JSON_THROW_ON_ERROR));
+    }
+
+    protected function storeMigrationChecksum(string $connection, string $checksum): void
+    {
+        file_put_contents($this->getMigrationChecksumFile($connection), $checksum);
+    }
+
+    protected function getCachedMigrationChecksum(string $connection): ?string
+    {
+        return rescue(fn () => file_get_contents($this->getMigrationChecksumFile($connection)), null, false);
+    }
+
+    protected function getMigrationChecksumFile(string $connection): string
+    {
+        $database = config("database.connections.{$connection}.database");
+
+        $databaseNameSlug = Str::slug($database);
+
+        return storage_path("app/migration-checksum_{$databaseNameSlug}.txt");
     }
 }

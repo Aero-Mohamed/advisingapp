@@ -3,7 +3,7 @@
 /*
 <COPYRIGHT>
 
-    Copyright © 2022-2023, Canyon GBS LLC. All rights reserved.
+    Copyright © 2016-2024, Canyon GBS LLC. All rights reserved.
 
     Advising App™ is licensed under the Elastic License 2.0. For more details,
     see https://github.com/canyongbs/advisingapp/blob/main/LICENSE.
@@ -39,10 +39,12 @@ namespace AdvisingApp\Authorization\Filament\Resources;
 use Filament\Forms\Form;
 use Filament\Tables\Table;
 use Filament\Resources\Resource;
-use App\Filament\Columns\IdColumn;
 use Filament\Tables\Actions\ViewAction;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Forms\Components\TextInput;
+use App\Filament\Clusters\UserManagement;
+use App\Filament\Tables\Columns\IdColumn;
+use Filament\Tables\Filters\SelectFilter;
 use AdvisingApp\Authorization\Models\Permission;
 use AdvisingApp\Authorization\Filament\Resources\PermissionResource\Pages\ViewPermission;
 use AdvisingApp\Authorization\Filament\Resources\PermissionResource\Pages\ListPermissions;
@@ -54,9 +56,9 @@ class PermissionResource extends Resource
 
     protected static ?string $navigationIcon = 'heroicon-o-key';
 
-    protected static ?string $navigationGroup = 'Users and Permissions';
+    protected static ?string $cluster = UserManagement::class;
 
-    protected static ?int $navigationSort = 70;
+    protected static ?int $navigationSort = 40;
 
     public static function form(Form $form): Form
     {
@@ -76,6 +78,8 @@ class PermissionResource extends Resource
         return $table
             ->columns([
                 IdColumn::make(),
+                TextColumn::make('group.name')
+                    ->sortable(),
                 TextColumn::make('name')
                     ->searchable(),
                 TextColumn::make('guard_name')
@@ -89,9 +93,17 @@ class PermissionResource extends Resource
                     ->sortable()
                     ->toggleable(isToggledHiddenByDefault: true),
             ])
+            ->filters([
+                SelectFilter::make('group')
+                    ->relationship('group', 'name')
+                    ->searchable()
+                    ->preload()
+                    ->multiple(),
+            ])
             ->actions([
                 ViewAction::make(),
-            ]);
+            ])
+            ->defaultSort('group.name', 'asc');
     }
 
     public static function getRelations(): array

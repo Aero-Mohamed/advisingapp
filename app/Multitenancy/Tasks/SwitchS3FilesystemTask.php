@@ -3,7 +3,7 @@
 /*
 <COPYRIGHT>
 
-    Copyright © 2022-2023, Canyon GBS LLC. All rights reserved.
+    Copyright © 2016-2024, Canyon GBS LLC. All rights reserved.
 
     Advising App™ is licensed under the Elastic License 2.0. For more details,
     see https://github.com/canyongbs/advisingapp/blob/main/LICENSE.
@@ -37,6 +37,7 @@
 namespace App\Multitenancy\Tasks;
 
 use Spatie\Multitenancy\Models\Tenant;
+use Illuminate\Support\Facades\Storage;
 use Spatie\Multitenancy\Tasks\SwitchTenantTask;
 use App\Multitenancy\DataTransferObjects\TenantConfig;
 
@@ -119,5 +120,7 @@ class SwitchS3FilesystemTask implements SwitchTenantTask
             'filesystems.disks.s3.throw' => $throw,
             'filesystems.disks.s3.root' => $root,
         ]);
+
+        Storage::forgetDisk('s3');
     }
 }

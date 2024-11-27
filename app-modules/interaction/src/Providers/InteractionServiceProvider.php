@@ -3,7 +3,7 @@
 /*
 <COPYRIGHT>
 
-    Copyright © 2022-2023, Canyon GBS LLC. All rights reserved.
+    Copyright © 2016-2024, Canyon GBS LLC. All rights reserved.
 
     Advising App™ is licensed under the Elastic License 2.0. For more details,
     see https://github.com/canyongbs/advisingapp/blob/main/LICENSE.
@@ -37,7 +37,7 @@
 namespace AdvisingApp\Interaction\Providers;
 
 use Filament\Panel;
-use App\Concerns\GraphSchemaDiscovery;
+use App\Concerns\ImplementsGraphQL;
 use Illuminate\Support\ServiceProvider;
 use AdvisingApp\Interaction\InteractionPlugin;
 use AdvisingApp\Interaction\Models\Interaction;
@@ -46,35 +46,38 @@ use Illuminate\Database\Eloquent\Relations\Relation;
 use AdvisingApp\Interaction\Models\InteractionDriver;
 use AdvisingApp\Interaction\Models\InteractionStatus;
 use AdvisingApp\Interaction\Models\InteractionOutcome;
-use AdvisingApp\Interaction\Models\InteractionCampaign;
 use AdvisingApp\Interaction\Models\InteractionRelation;
-use AdvisingApp\Authorization\AuthorizationRoleRegistry;
+use AdvisingApp\Interaction\Models\InteractionInitiative;
 use AdvisingApp\Interaction\Observers\InteractionObserver;
-use AdvisingApp\Authorization\AuthorizationPermissionRegistry;
+use AdvisingApp\Interaction\Observers\InteractionTypesObserver;
 use AdvisingApp\Interaction\Enums\InteractionStatusColorOptions;
+use AdvisingApp\Interaction\Observers\InteractionDriverObserver;
+use AdvisingApp\Interaction\Observers\InteractionStatusObserver;
+use AdvisingApp\Interaction\Observers\InteractionOutcomeObserver;
+use AdvisingApp\Interaction\Observers\InteractionRelationObserver;
+use AdvisingApp\Interaction\Observers\InteractionInitiativesObserver;
 
 class InteractionServiceProvider extends ServiceProvider
 {
-    use GraphSchemaDiscovery;
+    use ImplementsGraphQL;
 
-    public function register()
+    public function register(): void
     {
-        Panel::configureUsing(fn (Panel $panel) => $panel->plugin(new InteractionPlugin()));
+        Panel::configureUsing(fn (Panel $panel) => ($panel->getId() !== 'admin') || $panel->plugin(new InteractionPlugin()));
     }
 
-    public function boot()
+    public function boot(): void
     {
         Relation::morphMap([
-            'interaction' => Interaction::class,
-            'interaction_campaign' => InteractionCampaign::class,
             'interaction_driver' => InteractionDriver::class,
+            'interaction_initiative' => InteractionInitiative::class,
             'interaction_outcome' => InteractionOutcome::class,
             'interaction_relation' => InteractionRelation::class,
             'interaction_status' => InteractionStatus::class,
             'interaction_type' => InteractionType::class,
+            'interaction' => Interaction::class,
         ]);
 
-        $this->registerRolesAndPermissions();
         $this->registerObservers();
 
         $this->discoverSchema(__DIR__ . '/../../graphql/interaction.graphql');
@@ -82,35 +85,14 @@ class InteractionServiceProvider extends ServiceProvider
         $this->registerEnum(InteractionStatusColorOptions::class);
     }
 
-    protected function registerRolesAndPermissions()
-    {
-        $permissionRegistry = app(AuthorizationPermissionRegistry::class);
-
-        $permissionRegistry->registerApiPermissions(
-            module: 'interaction',
-            path: 'permissions/api/custom'
-        );
-
-        $permissionRegistry->registerWebPermissions(
-            module: 'interaction',
-            path: 'permissions/web/custom'
-        );
-
-        $roleRegistry = app(AuthorizationRoleRegistry::class);
-
-        $roleRegistry->registerApiRoles(
-            module: 'interaction',
-            path: 'roles/api'
-        );
-
-        $roleRegistry->registerWebRoles(
-            module: 'interaction',
-            path: 'roles/web'
-        );
-    }
-
     protected function registerObservers(): void
     {
         Interaction::observe(InteractionObserver::class);
+        InteractionOutcome::observe(InteractionOutcomeObserver::class);
+        InteractionStatus::observe(InteractionStatusObserver::class);
+        InteractionRelation::observe(InteractionRelationObserver::class);
+        InteractionInitiative::observe(InteractionInitiativesObserver::class);
+        InteractionType::observe(InteractionTypesObserver::class);
+        InteractionDriver::observe(InteractionDriverObserver::class);
     }
 }

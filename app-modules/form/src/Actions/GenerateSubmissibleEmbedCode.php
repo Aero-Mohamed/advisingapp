@@ -3,7 +3,7 @@
 /*
 <COPYRIGHT>
 
-    Copyright © 2022-2023, Canyon GBS LLC. All rights reserved.
+    Copyright © 2016-2024, Canyon GBS LLC. All rights reserved.
 
     Advising App™ is licensed under the Elastic License 2.0. For more details,
     see https://github.com/canyongbs/advisingapp/blob/main/LICENSE.
@@ -42,18 +42,23 @@ use Illuminate\Support\Facades\URL;
 use AdvisingApp\Survey\Models\Survey;
 use AdvisingApp\Form\Models\Submissible;
 use AdvisingApp\Application\Models\Application;
+use AdvisingApp\CaseManagement\Models\CaseForm;
 use AdvisingApp\MeetingCenter\Models\EventRegistrationForm;
-use AdvisingApp\ServiceManagement\Models\ServiceRequestForm;
 
 class GenerateSubmissibleEmbedCode
 {
     public function handle(Submissible $submissible): string
     {
-        // TODO Clean this up
         return match ($submissible::class) {
             Form::class => (function () use ($submissible) {
                 $scriptUrl = url('js/widgets/form/advising-app-form-widget.js?');
-                $formDefinitionUrl = URL::signedRoute('forms.define', ['form' => $submissible]);
+                $formDefinitionUrl = URL::to(
+                    URL::signedRoute(
+                        name: 'forms.define',
+                        parameters: ['form' => $submissible],
+                        absolute: false,
+                    )
+                );
 
                 return <<<EOD
                 <form-embed url="{$formDefinitionUrl}"></form-embed>
@@ -62,7 +67,13 @@ class GenerateSubmissibleEmbedCode
             })(),
             Application::class => (function () use ($submissible) {
                 $scriptUrl = url('js/widgets/application/advising-app-application-widget.js?');
-                $applicationDefinitionUrl = URL::signedRoute('applications.define', ['application' => $submissible]);
+                $applicationDefinitionUrl = URL::to(
+                    URL::signedRoute(
+                        name: 'applications.define',
+                        parameters: ['application' => $submissible],
+                        absolute: false,
+                    )
+                );
 
                 return <<<EOD
                 <application-embed url="{$applicationDefinitionUrl}"></application-embed>
@@ -71,7 +82,13 @@ class GenerateSubmissibleEmbedCode
             })(),
             Survey::class => (function () use ($submissible) {
                 $scriptUrl = url('js/widgets/survey/advising-app-survey-widget.js?');
-                $surveyDefinitionUrl = URL::signedRoute('surveys.define', ['survey' => $submissible]);
+                $surveyDefinitionUrl = URL::to(
+                    URL::signedRoute(
+                        name: 'surveys.define',
+                        parameters: ['survey' => $submissible],
+                        absolute: false,
+                    )
+                );
 
                 return <<<EOD
                 <survey-embed url="{$surveyDefinitionUrl}"></survey-embed>
@@ -81,20 +98,32 @@ class GenerateSubmissibleEmbedCode
             EventRegistrationForm::class => (function () use ($submissible) {
                 /** @var EventRegistrationForm $submissible */
                 $scriptUrl = url('js/widgets/events/advising-app-event-registration-form-widget.js?');
-                $formDefinitionUrl = URL::signedRoute('event-registration.define', ['event' => $submissible->event]);
+                $formDefinitionUrl = URL::to(
+                    URL::signedRoute(
+                        name: 'event-registration.define',
+                        parameters: ['event' => $submissible->event],
+                        absolute: false,
+                    )
+                );
 
                 return <<<EOD
                 <event-registration-embed url="{$formDefinitionUrl}"></event-registration-embed>
                 <script src="{$scriptUrl}"></script>
                 EOD;
             })(),
-            ServiceRequestForm::class => (function () use ($submissible) {
-                /** @var ServiceRequestForm $submissible */
-                $scriptUrl = url('js/widgets/service-request-form/advising-app-service-request-form-widget.js?');
-                $formDefinitionUrl = URL::signedRoute('service-request-forms.define', ['serviceRequestForm' => $submissible]);
+            CaseForm::class => (function () use ($submissible) {
+                /** @var CaseForm $submissible */
+                $scriptUrl = url('js/widgets/case-form/advising-app-case-form-widget.js?');
+                $formDefinitionUrl = URL::to(
+                    URL::signedRoute(
+                        name: 'case-forms.define',
+                        parameters: ['caseForm' => $submissible],
+                        absolute: false,
+                    )
+                );
 
                 return <<<EOD
-                <service-request-form-embed url="{$formDefinitionUrl}"></service-request-form-embed>
+                <case-form-embed url="{$formDefinitionUrl}"></case-form-embed>
                 <script src="{$scriptUrl}"></script>
                 EOD;
             })(),

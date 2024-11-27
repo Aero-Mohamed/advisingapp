@@ -3,7 +3,7 @@
 /*
 <COPYRIGHT>
 
-    Copyright © 2022-2023, Canyon GBS LLC. All rights reserved.
+    Copyright © 2016-2024, Canyon GBS LLC. All rights reserved.
 
     Advising App™ is licensed under the Elastic License 2.0. For more details,
     see https://github.com/canyongbs/advisingapp/blob/main/LICENSE.
@@ -38,10 +38,10 @@ namespace AdvisingApp\Authorization\Filament\Resources\PermissionResource\Relati
 
 use Filament\Forms\Form;
 use Filament\Tables\Table;
-use App\Filament\Columns\IdColumn;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Forms\Components\TextInput;
-use App\Filament\Resources\RelationManagers\RelationManager;
+use App\Filament\Tables\Columns\IdColumn;
+use Filament\Resources\RelationManagers\RelationManager;
 
 class RolesRelationManager extends RelationManager
 {

@@ -3,7 +3,7 @@
 /*
 <COPYRIGHT>
 
-    Copyright © 2022-2023, Canyon GBS LLC. All rights reserved.
+    Copyright © 2016-2024, Canyon GBS LLC. All rights reserved.
 
     Advising App™ is licensed under the Elastic License 2.0. For more details,
     see https://github.com/canyongbs/advisingapp/blob/main/LICENSE.
@@ -38,11 +38,10 @@ namespace AdvisingApp\StudentDataModel\Filament\Resources\StudentResource\Relati
 
 use Filament\Tables\Table;
 use Filament\Infolists\Infolist;
-use App\Filament\Columns\IdColumn;
 use Filament\Tables\Actions\ViewAction;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Infolists\Components\TextEntry;
-use App\Filament\Resources\RelationManagers\RelationManager;
+use Filament\Resources\RelationManagers\RelationManager;
 
 class EnrollmentsRelationManager extends RelationManager
 {
@@ -65,6 +64,33 @@ class EnrollmentsRelationManager extends RelationManager
                         ->label('Attempted'),
                     TextEntry::make('unt_earned')
                         ->label('Earned'),
+                    TextEntry::make('section')
+                        ->label('Section')
+                        ->default('N/A'),
+                    TextEntry::make('name')
+                        ->label('Name')
+                        ->default('N/A'),
+                    TextEntry::make('department')
+                        ->label('Department')
+                        ->default('N/A'),
+                    TextEntry::make('faculty_name')
+                        ->label('Faculty Name')
+                        ->default('N/A'),
+                    TextEntry::make('faculty_email')
+                        ->label('Faculty Email')
+                        ->default('N/A'),
+                    TextEntry::make('semester_code')
+                        ->label('Semester Code')
+                        ->default('N/A'),
+                    TextEntry::make('semester_name')
+                        ->label('Semester Name')
+                        ->default('N/A'),
+                    TextEntry::make('start_date')
+                        ->label('Start Date')
+                        ->default('N/A'),
+                    TextEntry::make('end_date')
+                        ->label('End Date')
+                        ->default('N/A'),
                 ]
             );
     }
@@ -74,7 +100,6 @@ class EnrollmentsRelationManager extends RelationManager
         return $table
             ->recordTitleAttribute('division')
             ->columns([
-                IdColumn::make(),
                 TextColumn::make('division')
                     ->label('College'),
                 TextColumn::make('class_nbr')
@@ -86,10 +111,8 @@ class EnrollmentsRelationManager extends RelationManager
                 TextColumn::make('unt_earned')
                     ->label('Earned'),
             ])
-            ->headerActions([])
             ->actions([
                 ViewAction::make(),
-            ])
-            ->bulkActions([]);
+            ]);
     }
 }
